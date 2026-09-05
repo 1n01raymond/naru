@@ -16,8 +16,13 @@ import {
   isImportJobTerminalState,
   redactPaths,
   settleImportJobFailure,
+  stagedImportPreviewSchema,
 } from "../src/import-job.js";
-import type { ImportJobEvent, ImportJobRequest } from "../src/import-job.js";
+import type {
+  ImportJobEvent,
+  ImportJobRequest,
+  ImportJobStagedPreview,
+} from "../src/import-job.js";
 
 const request: ImportJobRequest = {
   kind: "step",
@@ -392,5 +397,61 @@ describe("import job cancellation", () => {
     const settled = await settleImportJobFailure(reporter, new Error("adapter failed"), []);
     expect(isImportJobCancellation(settled)).toBe(false);
     expect(events.at(-1)).toMatchObject({ state: "failed", failure: { code: "COMPILE_FAILED" } });
+  });
+});
+
+describe("import job staged previews", () => {
+  const preview: ImportJobStagedPreview = {
+    schemaVersion: stagedImportPreviewSchema,
+    discipline: "architecture",
+    sha256: "a".repeat(64),
+    byteLength: 10,
+    nodeCount: 2,
+    rootCount: 1,
+    hierarchy: {
+      sha256: "b".repeat(64),
+      byteLength: 20,
+      columnsSha256: "c".repeat(64),
+      columnsByteLength: 8,
+    },
+    stagedCount: 1,
+    totalCount: 1,
+  };
+
+  it("announces a staged tree on the state it was reached in without moving the state", () => {
+    const { events, reporter } = recordJob();
+    reporter.settlePlan("rebuild");
+    reporter.enter("queued");
+    reporter.enter("inspecting");
+    reporter.enter("extracting");
+    reporter.staged(preview);
+    reporter.enter("compiling");
+    expect(events.map(({ state }) => state)).toEqual([
+      "queued",
+      "inspecting",
+      "extracting",
+      "extracting",
+      "compiling",
+    ]);
+    expect(events.map(({ sequence }) => sequence)).toEqual([0, 1, 2, 3, 4]);
+    const announcement = events[3];
+    if (announcement === undefined || !("staged" in announcement)) throw new Error("unreachable");
+    expect(announcement.schemaVersion).toBe(importJobEventSchema);
+    expect(announcement.staged).toEqual(preview);
+    expect(announcement.progress).toEqual(events[2]?.progress);
+    expect(events.filter((event) => "staged" in event && event.staged !== undefined)).toHaveLength(1);
+  });
+
+  it("refuses to stage once cancellation is requested or the job has settled", async () => {
+    const controller = new AbortController();
+    const { reporter } = recordJob({ signal: controller.signal });
+    reporter.settlePlan("rebuild");
+    reporter.enter("queued");
+    reporter.enter("inspecting");
+    reporter.enter("extracting");
+    controller.abort();
+    expect(() => reporter.staged(preview)).toThrow(ImportJobCancelledError);
+    await reporter.cancelled();
+    expect(() => reporter.staged(preview)).toThrow(TypeError);
   });
 });

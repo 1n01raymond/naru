@@ -297,7 +297,7 @@ rather than mistaking the drawing nodes for the whole assembly.
 ## Watch and cancel an import
 
 Both compile commands accept a lifecycle observer, and both emit the same
-versioned event stream, `naru.import-job-event.1`
+versioned event stream, `naru.import-job-event.2`
 ([ADR-0020](../../docs/adr/0020-cancellable-import-jobs.md), Proposed):
 
 ```ts
@@ -352,6 +352,33 @@ interruptible: the package writer is not atomic, so a cancel observed midway
 would leave a directory that looks like a package and is not one. That section
 runs to the end and the cancellation event reports
 `publishedBeforeCancellation: true`.
+
+### Stage each document's tree while the federation extracts
+
+`naru compile-ifc --staged-preview <directory>` (`stagedPreviewDirectory` on
+`compileIfcFederation`) asks the adapter for `--structure-preview` and watches
+that emission from the compiler
+([ADR-0021](../../docs/adr/0021-staged-hierarchy-first-import.md), Proposed).
+Each document's tree is verified by byte length and SHA-256 before it is
+parsed, checked against the inspected source's discipline, digest, and size,
+re-encoded as the `naru.package-hierarchy.1` sidecar pair the runtime already
+decodes (`hierarchy-<discipline>.json` + `.bin`), and published atomically --
+temporary name, then rename -- under a `staged.json` manifest
+(`naru.staged-import-preview.1`) that records every file's length and digest,
+rewritten after each document with `complete` flipping at the end. The same
+event stream reports it: a second `extracting` event carrying `staged`
+(discipline, source digest and size, node and root counts, sidecar digests,
+`stagedCount`/`totalCount`), the only event that repeats a state.
+
+The directory must be empty or absent. It is never a package -- no
+`scene.gltf`, no `scene.bin`, no digest chain -- and never a cache tier: a
+cache hit does not open it, a cancel removes it with the temporary split, and a
+completed import supersedes it. A tree whose digest, source identity, or
+discipline disagrees with the inspected source fails the compile with
+`StagedPreviewError` (`INVALID_STAGED_PREVIEW`), and the `failed` event names
+no path. The package a staged compile writes is byte-identical to one that never
+staged, and the staged directory is part of neither the job identity nor the
+cache key ([tests](test/ifc-federation.test.ts)).
 
 ## Current limits
 

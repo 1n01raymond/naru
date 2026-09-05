@@ -44,6 +44,19 @@ function createJobConsole(jsonEvents: boolean): JobConsole {
     }
     const { completed, total } = event.progress;
     const step = total === null ? String(completed) : `${completed}/${total}`;
+    if (
+      event.state !== "completed" &&
+      event.state !== "cancelled" &&
+      event.state !== "failed" &&
+      event.staged
+    ) {
+      const { staged } = event;
+      report(
+        `[naru] staged ${staged.discipline} ${staged.stagedCount}/${staged.totalCount} ` +
+          `(${staged.nodeCount.toLocaleString("en-US")} nodes)`,
+      );
+      return;
+    }
     report(`[naru] ${event.state} (${step})`);
   };
   return {
@@ -96,6 +109,11 @@ async function compileIfc(argumentList: readonly string[]): Promise<void> {
     terminal.report(`[naru] package ${result.report.output.packageDigest}`);
     if (result.cache.status !== "disabled") {
       terminal.report(`[naru] cache ${result.cache.status}: ${String(result.cache.key)}`);
+    }
+    if (result.stagedPreview) {
+      terminal.report(
+        `[naru] staged preview: ${result.stagedPreview.stagedCount}/${result.stagedPreview.totalCount} documents`,
+      );
     }
     terminal.report(`[naru] output: ${result.outputDirectory}`);
   } finally {

@@ -136,6 +136,8 @@ describe("naru compile-ifc arguments", () => {
         "--omit-default-node-transforms",
         "--relocate-hierarchy-nodes",
         "--retain-scene-ir",
+      "--staged-preview",
+      "staged",
       ]),
     ).toEqual({
       documents: [
@@ -153,6 +155,7 @@ describe("naru compile-ifc arguments", () => {
       omitDefaultNodeTransforms: true,
       relocateHierarchyNodes: true,
       retainSceneIr: true,
+      stagedPreviewDirectory: "staged",
       jsonEvents: false,
     });
   });

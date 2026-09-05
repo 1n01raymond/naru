@@ -43,7 +43,7 @@ a measurement.
 
 ## Decision
 
-### One versioned event stream, `naru.import-job-event.1`
+### One versioned event stream, `naru.import-job-event.2`
 
 `packages/compiler/src/import-job.ts` owns the contract. Both compilers accept
 `job?: ImportJobOptions` (`{jobId?, onEvent?, signal?}`) and report into it; they
@@ -57,6 +57,11 @@ a gapless zero-based `sequence`, monotonic `elapsedMs`, `progress`, and the
 literal `redaction: "no-filesystem-paths"`. The three terminal states are
 distinct union members carrying `result`, `cancellation`, or `failure`, so a
 consumer that wants a completion has to say so.
+
+Version 2 (ADR-0021) adds one optional field, `staged`, to the non-terminal
+event: a verified per-document tree published while `extracting` continues. It
+is the only event that repeats a state, the sequence stays gapless, progress is
+unchanged, and it carries digests and counts, never paths.
 
 `extracting` and `compiling` are skipped when a verified cache entry answers the
 request. `publishing` is skipped on that same path, because restoring an entry

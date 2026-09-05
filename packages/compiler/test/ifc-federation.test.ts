@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -11,6 +12,15 @@ import {
 import { describe, expect, it, vi } from "vitest";
 
 import { compileIfcFederation } from "../src/ifc-federation.js";
+import { importJobEventSchema } from "../src/import-job.js";
+import type { ImportJobEvent } from "../src/import-job.js";
+import {
+  StagedPreviewError,
+  stagedHierarchyColumnsFilename,
+  stagedHierarchyFilename,
+  stagedPreviewManifestFilename,
+} from "../src/staged-preview.js";
+import { decodePackageHierarchy } from "../../runtime-webgpu/src/package-hierarchy.js";
 
 const sceneTemplatePath = fileURLToPath(
   new URL("../../../artifacts/occt/repeated-fasteners.scene.json", import.meta.url),
@@ -164,6 +174,54 @@ scene.representations = scene.representations.map((representation) => {
     },
   };
 });
+if (args.includes("--structure-preview")) {
+  const previewDirectory = option("--structure-preview");
+  await mkdir(previewDirectory, { recursive: true });
+  const tamper = process.env.NARU_FAKE_PREVIEW ?? "";
+  const ids = scene.occurrences.map((occurrence) => occurrence.id);
+  const nodes = scene.occurrences.map((occurrence) => ({
+    id: occurrence.id,
+    type: "IfcBuildingElementProxy",
+    parent: occurrence.parentId === undefined ? null : ids.indexOf(occurrence.parentId),
+    name: occurrence.name,
+  }));
+  const preview = {
+    schemaVersion: "naru.ifc-structure-preview.1",
+    discipline: tamper === "wrong-discipline" ? "plumbing" : discipline,
+    uriHint,
+    documentId: scene.documents[0].id,
+    sourceDigest: tamper === "wrong-source" ? "b".repeat(64) : sourceDigest,
+    sourceBytes: source.byteLength,
+    schema: "IFC4",
+    nodes,
+  };
+  const previewBytes = Buffer.from(JSON.stringify(preview), "utf8");
+  const previewFilename = "structure-" + discipline + ".json";
+  await writeFile(previewDirectory + "/" + previewFilename, previewBytes);
+  const rootCount = nodes.filter((node) => node.parent === null).length;
+  await writeFile(previewDirectory + "/index.json", JSON.stringify({
+    schemaVersion: "naru.ifc-structure-preview-index.1",
+    disciplines: [discipline],
+    emissionOrder: [discipline],
+    complete: true,
+    documents: [{
+      discipline,
+      path: previewFilename,
+      sha256: tamper === "digest-mismatch"
+        ? "c".repeat(64)
+        : createHash("sha256").update(previewBytes).digest("hex"),
+      byteLength: previewBytes.byteLength,
+      nodeCount: nodes.length,
+      rootCount,
+    }],
+  }));
+  if (process.env.NARU_FAKE_PREVIEW_HOLD) {
+    const { existsSync } = await import("node:fs");
+    while (!existsSync(process.env.NARU_FAKE_PREVIEW_HOLD)) {
+      await new Promise((resolvePromise) => setTimeout(resolvePromise, 25));
+    }
+  }
+}
 const structure = Buffer.from(JSON.stringify(scene) + "\\n", "utf8");
 const geometry = Buffer.concat(streams);
 await writeFile(option("--scene"), structure);
@@ -610,5 +668,220 @@ describe("IFC federation compiler orchestration", () => {
         outputDirectory: "unused",
       }),
     ).rejects.toThrow(/Duplicate IFC discipline/u);
+  });
+});
+
+/** A federation fixture: one IFC source, the fake adapter, and its call counter. */
+async function stagedFixture() {
+  const root = await mkdtemp(join(tmpdir(), "naru-ifc-staged-"));
+  const sourcePath = join(root, "architecture.ifc");
+  const adapterPath = join(root, "fake-ifc-adapter.mjs");
+  const adapterCountPath = join(root, "adapter-count.txt");
+  await writeFile(adapterCountPath, "0", "utf8");
+  await writeFile(
+    sourcePath,
+    "ISO-10303-21;\nHEADER;\nFILE_SCHEMA(('IFC4'));\nENDSEC;\nDATA;\nENDSEC;\nEND-ISO-10303-21;\n",
+    "utf8",
+  );
+  await writeFile(adapterPath, fakeAdapterSource(adapterCountPath), "utf8");
+  const source = await readFile(sourcePath);
+  const compile = (
+    outputDirectory: string,
+    overrides: Partial<Parameters<typeof compileIfcFederation>[0]> = {},
+  ) =>
+    compileIfcFederation({
+      documents: [{ discipline: "architecture", sourcePath, uriHint: "projects/arc.ifc" }],
+      outputDirectory: join(root, outputDirectory),
+      pythonExecutable: process.execPath,
+      adapterScriptPath: adapterPath,
+      compactJson: true,
+      ...overrides,
+    });
+  return {
+    root,
+    sourceSha256: createHash("sha256").update(source).digest("hex"),
+    sourceBytes: source.byteLength,
+    adapterCountPath,
+    compile,
+  };
+}
+
+const sha256Of = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
+
+const stagedOf = (event: ImportJobEvent) => ("staged" in event ? event.staged : undefined);
+
+const exists = (path: string) =>
+  stat(path).then(
+    () => true,
+    () => false,
+  );
+
+describe("staged import preview", () => {
+  it("publishes a verified tree before compiling, and the package bytes do not move", async () => {
+    const fixture = await stagedFixture();
+    try {
+      const stagedDirectory = join(fixture.root, "staged");
+      const events: ImportJobEvent[] = [];
+      const staged = await fixture.compile("compiled-staged", {
+        stagedPreviewDirectory: stagedDirectory,
+        job: { onEvent: (event) => events.push(event) },
+      });
+      const plainEvents: ImportJobEvent[] = [];
+      const plain = await fixture.compile("compiled-plain", {
+        job: { onEvent: (event) => plainEvents.push(event) },
+      });
+
+      // The event stream: one staged announcement, before any compiling.
+      const stagedEvents = events.filter((event) => stagedOf(event) !== undefined);
+      expect(stagedEvents).toHaveLength(1);
+      const announcement = stagedEvents[0];
+      if (announcement === undefined) throw new Error("unreachable");
+      const stagedPreview = stagedOf(announcement);
+      expect(announcement.state).toBe("extracting");
+      expect(announcement.schemaVersion).toBe(importJobEventSchema);
+      expect(events.indexOf(announcement)).toBeLessThan(
+        events.findIndex((event) => event.state === "compiling"),
+      );
+      expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
+      expect(stagedPreview).toMatchObject({
+        schemaVersion: "naru.staged-import-preview.1",
+        discipline: "architecture",
+        sha256: fixture.sourceSha256,
+        byteLength: fixture.sourceBytes,
+        nodeCount: 12,
+        rootCount: 1,
+        stagedCount: 1,
+        totalCount: 1,
+      });
+      expect(JSON.stringify(announcement)).not.toContain(fixture.root);
+      expect(JSON.stringify(announcement)).not.toContain("architecture.ifc");
+
+      // The staged directory: manifest, one verified sidecar pair, nothing package-shaped.
+      const manifest = staged.stagedPreview;
+      if (manifest === undefined) throw new Error("expected a staged preview manifest");
+      expect(manifest.complete).toBe(true);
+      expect(manifest.jobId).toBe(events[0]?.jobId);
+      expect(manifest.disciplines).toEqual(["architecture"]);
+      expect(manifest.stagedCount).toBe(1);
+      expect(manifest.totalCount).toBe(1);
+      const manifestOnDisk: unknown = JSON.parse(
+        await readFile(join(stagedDirectory, stagedPreviewManifestFilename), "utf8"),
+      );
+      expect(manifestOnDisk).toEqual(manifest);
+      const document = manifest.documents[0];
+      if (document === undefined) throw new Error("expected one staged document");
+      expect(document.sourceDigest).toBe(fixture.sourceSha256);
+      expect(document.sourceBytes).toBe(fixture.sourceBytes);
+      expect(document.hierarchy.uri).toBe(stagedHierarchyFilename("architecture"));
+      expect(document.hierarchy.columnsUri).toBe(stagedHierarchyColumnsFilename("architecture"));
+      const hierarchyBytes = await readFile(join(stagedDirectory, document.hierarchy.uri));
+      const columnBytes = await readFile(join(stagedDirectory, document.hierarchy.columnsUri));
+      expect(hierarchyBytes.byteLength).toBe(document.hierarchy.byteLength);
+      expect(columnBytes.byteLength).toBe(document.hierarchy.columnsByteLength);
+      expect(sha256Of(hierarchyBytes)).toBe(document.hierarchy.sha256);
+      expect(sha256Of(columnBytes)).toBe(document.hierarchy.columnsSha256);
+      expect(stagedPreview?.hierarchy).toEqual({
+        sha256: document.hierarchy.sha256,
+        byteLength: document.hierarchy.byteLength,
+        columnsSha256: document.hierarchy.columnsSha256,
+        columnsByteLength: document.hierarchy.columnsByteLength,
+      });
+      const decoded = decodePackageHierarchy(
+        JSON.parse(hierarchyBytes.toString("utf8")),
+        new Uint8Array(columnBytes),
+        { maxEntries: 64 },
+      );
+      expect(decoded.entries).toHaveLength(12);
+      expect(decoded.documentNodeCount).toBe(0);
+      expect(decoded.relocatedCount).toBe(12);
+      expect(decoded.sceneId).toBe("document:sha256:de177178a4bb86a6");
+      expect(decoded.sourceDigest).toBe(fixture.sourceSha256);
+      expect(decoded.entries[0]?.depth).toBe(0);
+      expect(decoded.entries.filter((entry) => entry.depth === 0)).toHaveLength(1);
+      const stagedFiles = (await readdir(stagedDirectory)).sort();
+      expect(stagedFiles).toEqual([
+        stagedHierarchyColumnsFilename("architecture"),
+        stagedHierarchyFilename("architecture"),
+        stagedPreviewManifestFilename,
+      ]);
+
+      // Gate 2: the compiled package does not know staging happened.
+      expect(plain.stagedPreview).toBeUndefined();
+      expect(staged.report.output.packageDigest).toBe(plain.report.output.packageDigest);
+      expect(staged.report.output.resources).toEqual(plain.report.output.resources);
+      for (const resource of ["scene.gltf", "scene.bin"]) {
+        const left = await readFile(join(fixture.root, "compiled-staged", resource));
+        const right = await readFile(join(fixture.root, "compiled-plain", resource));
+        expect(left.equals(right)).toBe(true);
+      }
+      expect(plainEvents.some((event) => stagedOf(event) !== undefined)).toBe(false);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["digest-mismatch", /sha256|digest/i],
+    ["wrong-source", /source/i],
+    ["wrong-discipline", /discipline/i],
+  ])("refuses a tree the adapter emitted that does not verify (%s)", async (mode, pattern) => {
+    const fixture = await stagedFixture();
+    try {
+      const stagedDirectory = join(fixture.root, "staged");
+      const events: ImportJobEvent[] = [];
+      await expect(
+        fixture.compile("compiled", {
+          stagedPreviewDirectory: stagedDirectory,
+          environment: { ...process.env, NARU_FAKE_PREVIEW: mode },
+          job: { onEvent: (event) => events.push(event) },
+        }),
+      ).rejects.toMatchObject({ name: "StagedPreviewError", code: "INVALID_STAGED_PREVIEW", message: pattern });
+      expect(await exists(stagedDirectory)).toBe(false);
+      expect(await exists(join(fixture.root, "compiled", "scene.gltf"))).toBe(false);
+      const last = events.at(-1);
+      expect(last?.state).toBe("failed");
+      if (last?.state !== "failed") throw new Error("unreachable");
+      expect(last.failure.code).toBe("INVALID_STAGED_PREVIEW");
+      expect(last.failure.message).not.toContain(fixture.root);
+      expect(last.failure.message).not.toContain(stagedDirectory);
+      expect(events.some((event) => stagedOf(event) !== undefined)).toBe(false);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses to publish into a staged directory that already holds files", async () => {
+    const fixture = await stagedFixture();
+    try {
+      const stagedDirectory = join(fixture.root, "staged");
+      await mkdir(stagedDirectory, { recursive: true });
+      await writeFile(join(stagedDirectory, "keep.txt"), "not ours", "utf8");
+      await expect(
+        fixture.compile("compiled", { stagedPreviewDirectory: stagedDirectory }),
+      ).rejects.toBeInstanceOf(StagedPreviewError);
+      expect(await readFile(join(stagedDirectory, "keep.txt"), "utf8")).toBe("not ours");
+      expect(await readFile(fixture.adapterCountPath, "utf8")).toBe("0");
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("never opens a staged directory when the package restores from the cache", async () => {
+    const fixture = await stagedFixture();
+    try {
+      const cacheDirectory = join(fixture.root, "cache");
+      const first = await fixture.compile("compiled-cold", { cacheDirectory });
+      expect(first.cache.status).toBe("miss");
+      const stagedDirectory = join(fixture.root, "staged");
+      const warm = await fixture.compile("compiled-warm", {
+        cacheDirectory,
+        stagedPreviewDirectory: stagedDirectory,
+      });
+      expect(warm.cache).toEqual({ status: "hit", key: first.cache.key });
+      expect(warm.stagedPreview).toBeUndefined();
+      expect(await exists(stagedDirectory)).toBe(false);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
   });
 });
