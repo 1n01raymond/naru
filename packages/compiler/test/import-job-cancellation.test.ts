@@ -1,6 +1,6 @@
 import { createServer } from "node:net";
 import { existsSync } from "node:fs";
-import { mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -450,6 +450,150 @@ describe("cancelling a federation import", () => {
     expect(events.at(-1)).toMatchObject({
       state: "cancelled",
       cancellation: { cancelledDuring: "extracting", removedTemporaryDirectories: 1 },
+    });
+    expect(
+      (await readdir(tmpdir())).filter(
+        (entry) => entry.startsWith("naru-ifc-") && !before.has(entry),
+      ),
+    ).toEqual([]);
+  }, 60_000);
+});
+
+/**
+ * A sleeping IFC adapter that first publishes a valid structure preview for its
+ * one document, the way the real adapter does under `--structure-preview`, and
+ * then starts its descendant and sleeps. It lets a test cancel a federation
+ * whose tree is already staged.
+ */
+async function writeStagingSleepingAdapter(
+  adapterPath: string,
+  descendantPath: string,
+  portPath: string,
+): Promise<void> {
+  await writeFile(
+    descendantPath,
+    `import { writeFileSync } from "node:fs";
+import { createServer } from "node:net";
+const server = createServer();
+server.listen(0, "127.0.0.1", () => {
+  writeFileSync(${JSON.stringify(portPath)}, String(server.address().port), "utf8");
+});
+`,
+    "utf8",
+  );
+  await writeFile(
+    adapterPath,
+    `import { spawn } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+${identityBlock
+  .replace("naru.occt-adapter-identity.1", "naru.ifc-adapter-identity.1")
+  .replace("test-occt-adapter", "IfcOpenShell")
+  .replace("FINGERPRINT", JSON.stringify("3".repeat(64)))}
+const args = process.argv.slice(2);
+const option = (name) => args[args.indexOf(name) + 1];
+const documentArgument = option("--document");
+const discipline = documentArgument.slice(0, documentArgument.indexOf("="));
+const sourcePath = documentArgument.slice(documentArgument.indexOf("=") + 1);
+const source = readFileSync(sourcePath);
+const previewDirectory = option("--structure-preview");
+mkdirSync(previewDirectory, { recursive: true });
+const preview = Buffer.from(JSON.stringify({
+  schemaVersion: "naru.ifc-structure-preview.1",
+  discipline,
+  uriHint: "arc.ifc",
+  documentId: "document:test",
+  sourceDigest: createHash("sha256").update(source).digest("hex"),
+  sourceBytes: source.byteLength,
+  schema: "IFC4",
+  nodes: [
+    { id: "a", type: "IfcProject", parent: null, name: "Project" },
+    { id: "b", type: "IfcSite", parent: 0, name: "Site" },
+  ],
+}), "utf8");
+const previewFilename = "structure-" + discipline + ".json";
+writeFileSync(previewDirectory + "/" + previewFilename, preview);
+writeFileSync(previewDirectory + "/index.json", JSON.stringify({
+  schemaVersion: "naru.ifc-structure-preview-index.1",
+  disciplines: [discipline],
+  emissionOrder: [discipline],
+  complete: true,
+  documents: [{
+    discipline,
+    path: previewFilename,
+    sha256: createHash("sha256").update(preview).digest("hex"),
+    byteLength: preview.byteLength,
+    nodeCount: 2,
+    rootCount: 1,
+  }],
+}));
+spawn(process.execPath, [${JSON.stringify(descendantPath)}], { stdio: "ignore" });
+await new Promise(() => {});
+`,
+    "utf8",
+  );
+}
+
+describe("cancelling a federation import after a tree was staged", () => {
+  it("removes the staged directory with the split, stops the adapter tree, and keeps the cache", async () => {
+    const root = await scratchDirectory();
+    const sourcePath = join(root, "architecture.ifc");
+    const adapterPath = join(root, "staging-ifc-adapter.mjs");
+    const portPath = join(root, "descendant-port");
+    const stagedDirectory = join(root, "staged");
+    const cacheDirectory = join(root, "cache");
+    await writeFile(sourcePath, ifcSource, "utf8");
+    await mkdir(cacheDirectory, { recursive: true });
+    await writeFile(join(cacheDirectory, "older-entry"), "verified earlier", "utf8");
+    await writeStagingSleepingAdapter(adapterPath, join(root, "descendant.mjs"), portPath);
+
+    const before = new Set(await readdir(tmpdir()));
+    const events: ImportJobEvent[] = [];
+    const controller = new AbortController();
+    const compile = compileIfcFederation({
+      documents: [{ discipline: "architecture", sourcePath, uriHint: "arc.ifc" }],
+      outputDirectory: join(root, "compiled"),
+      pythonExecutable: process.execPath,
+      adapterScriptPath: adapterPath,
+      cacheDirectory,
+      stagedPreviewDirectory: stagedDirectory,
+      job: { onEvent: (event) => events.push(event), signal: controller.signal },
+    });
+
+    const staged = await waitFor("the tree to be staged", async () =>
+      events.find((event) => "staged" in event && event.staged !== undefined),
+    );
+    if (!("staged" in staged) || staged.staged === undefined) throw new Error("unreachable");
+    expect(staged.staged).toMatchObject({
+      discipline: "architecture",
+      nodeCount: 2,
+      rootCount: 1,
+      stagedCount: 1,
+      totalCount: 1,
+    });
+    expect(existsSync(join(stagedDirectory, "hierarchy-architecture.json"))).toBe(true);
+    expect(existsSync(join(stagedDirectory, "hierarchy-architecture.bin"))).toBe(true);
+    const port = Number(
+      await waitFor("the descendant to listen", async () => {
+        if (!existsSync(portPath)) return undefined;
+        const text = (await readFile(portPath, "utf8")).trim();
+        return text.length > 0 ? text : undefined;
+      }),
+    );
+    expect(await portIsFree(port)).toBe(false);
+
+    controller.abort();
+    await expect(compile).rejects.toSatisfy(isImportJobCancellation);
+    await waitFor("the descendant to exit", async () =>
+      (await portIsFree(port)) ? true : undefined,
+    );
+
+    expect(existsSync(stagedDirectory)).toBe(false);
+    expect(existsSync(join(root, "compiled", "scene.gltf"))).toBe(false);
+    expect(await readFile(join(cacheDirectory, "older-entry"), "utf8")).toBe("verified earlier");
+    expect(events.at(-1)).toMatchObject({
+      state: "cancelled",
+      cancellation: { cancelledDuring: "extracting", removedTemporaryDirectories: 2 },
     });
     expect(
       (await readdir(tmpdir())).filter(

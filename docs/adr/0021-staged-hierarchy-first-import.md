@@ -210,9 +210,16 @@ are the cheaper contract.
 ## Validation
 
 The adapter half is implemented: `--structure-preview <directory>` publishes one
-document's tree before tessellating that document. Nothing downstream of the
-adapter is -- no staged package, no Studio, no viewer. Two records stand behind
-the design. The first prices an assembly tree without building the machinery:
+document's tree before tessellating that document. The compiler half is too:
+`--staged-preview <directory>` (`stagedPreviewDirectory` on
+`compileIfcFederation`) watches that emission, verifies each tree by length and
+digest before parsing it, re-encodes it as the `naru.package-hierarchy.1`
+sidecar pair, publishes the pair atomically under a `staged.json` manifest
+(`naru.staged-import-preview.1`), and reports it as a `staged` event on the
+import job stream, which bumped to `naru.import-job-event.2` for it
+([packages/compiler/src/staged-preview.ts](../../packages/compiler/src/staged-preview.ts)).
+Nothing downstream of the compiler is -- no Studio, no viewer. Two records
+stand behind the design. The first prices an assembly tree without building the machinery:
 [artifacts/import/structure-readiness](../../artifacts/import/structure-readiness/README.md),
 recorded by
 [scripts/record-structure-readiness-evidence.mjs](../../scripts/record-structure-readiness-evidence.mjs)
@@ -263,12 +270,26 @@ This ADR stays **Proposed**. Its gates, declared before the work:
    architecture document. The equality that matters is the one that makes a
    preview node the same node the finished package draws, so that is what the
    record pins; gate 0's count is recorded beside it rather than dropped.
-2. **Determinism.** A compile with staging enabled and one without produce the
-   same package digest on both federations, byte for byte. This is the gate the
-   two-orders design most plausibly breaks.
-3. **Cancellation.** An import cancelled during staging leaves no staged
-   directory, no partial package, and no live adapter process -- proved the way
-   ADR-0020's cancellation tests prove descendant death, not by inspection.
+2. **Met at unit scale.** A compile with staging enabled and one without produce
+   the same package digest, the same `output.resources`, and byte-identical
+   `scene.gltf` and `scene.bin`; the staged directory is not part of the job
+   identity or the cache key, and a cache hit never opens one
+   ([test](../../packages/compiler/test/ifc-federation.test.ts), "staged import
+   preview"). The adapter-level half was recorded on both real federations
+   (gate 1's 36 byte-identical comparisons per model); the package-level half
+   is a unit test rather than a fresh-process record, on the Phase 2 routing
+   decision that a gate which does not close an exit criterion is proved by
+   test. The same tests refuse a tree whose digest, source identity, or
+   discipline disagrees with the inspected source (`StagedPreviewError`,
+   `INVALID_STAGED_PREVIEW`, with the failure event carrying no path), and
+   refuse to stage into a non-empty directory.
+3. **Met.** An import cancelled after a tree was staged rejects with the
+   cancellation error, the staged directory and the temporary split are gone
+   (`removedTemporaryDirectories: 2`), no `scene.gltf` exists, the adapter's
+   descendant is dead -- proved by binding the port it held, the way ADR-0020's
+   tests do -- and a pre-existing cache entry is untouched
+   ([test](../../packages/compiler/test/import-job-cancellation.test.ts),
+   "cancelling a federation import after a tree was staged").
 4. **The product claim.** A browser record shows the Studio usable against a cold
    sixty5 import: a tree the user can expand and search while extraction
    continues, with the first tree inside 5-15 s measured end to end, transport

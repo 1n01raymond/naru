@@ -59,7 +59,7 @@ remove unpublished temporary output; it must never remove a previously
 validated cache entry.
 
 The compiler side of that promise is implemented and versioned. Both compilers
-accept an import job and report a `naru.import-job-event.1` stream through it:
+accept an import job and report a `naru.import-job-event.2` stream through it:
 nine states in one legal order (`queued`, `inspecting`, `extracting`,
 `compiling`, `verifying`, `publishing`, then one of `completed`,
 `cancelled`, `failed`), each event carrying a gapless sequence, monotonic
@@ -111,15 +111,27 @@ Hub's at 0.753 s, both inside the target; every document in every staged sample
 published its tree before its own extraction finished; and every per-document
 node count equals the occurrence count the same run's Scene IR carries. Both
 arms produce byte-identical adapter output, 36 comparisons per model with no
-excluded field — the adapter-level half of ADR-0021's determinism gate, whose
-package-level half is still open. Staging is not free at real-large scale: the
+excluded field — the adapter-level half of ADR-0021's determinism gate. Its
+package-level half is now unit-proved: `--staged-preview <directory>` on
+`naru compile-ifc` makes the compiler watch that emission, verify each tree by
+length and digest before parsing it, re-encode it as the
+`naru.package-hierarchy.1` sidecar pair, publish the pair atomically under a
+`staged.json` manifest, and report it as a `staged` event on the job stream;
+a compile with the directory and one without produce the same package digest,
+the same resources, and byte-identical `scene.gltf`/`scene.bin`, a cache hit
+never stages, a tampered or misidentified tree is refused with
+`INVALID_STAGED_PREVIEW`, and a cancel after staging removes the directory
+with the split while a pre-existing cache entry survives
+([tests](../packages/compiler/test/ifc-federation.test.ts),
+[cancellation](../packages/compiler/test/import-job-cancellation.test.ts)). Staging is not free at real-large scale: the
 sixty5 run costs 22.4 s (+7.75%) and 1.17 GB of peak working set (+24.8%), which
 the record attributes to the emission reorder — the largest document is
 inspected last, with the rest of the federation already accumulated — rather
 than to building trees, since writing every sixty5 tree takes 201.9 ms and
 staging one document alone costs nothing measurable. Digital Hub is unaffected.
-What remains is the staged package, the Studio background import, and coarse
-geometry preview, which stays explicitly unmeasured and carries its own gate.
+What remains is the Studio background import that reads a staged directory
+while the compile continues, and coarse geometry preview, which stays
+explicitly unmeasured and carries its own gate.
 
 ## 3. Cache identity and invalidation
 
@@ -318,8 +330,10 @@ profile under [ADR-0004](adr/0004-format-strategy.md).
    implemented behind `--structure-preview` and recorded
    ([ADR-0021](adr/0021-staged-hierarchy-first-import.md),
    [readiness](../artifacts/import/structure-readiness/README.md),
-   [first emission](../artifacts/import/structure-first-emission/README.md));
-   the staged package and the Studio background import remain.
+   [first emission](../artifacts/import/structure-first-emission/README.md)),
+   and the compiler's verified atomic staged publication behind
+   `--staged-preview` unit-proved for determinism and cancellation; the Studio
+   background import remains.
 7. **Shared cache:** authenticated lookup/publication, tenant isolation,
    provenance, quotas, eviction, and observability.
 

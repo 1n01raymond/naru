@@ -15,7 +15,10 @@ import { createHash } from "node:crypto";
 import { rm } from "node:fs/promises";
 import { isAbsolute, relative, resolve } from "node:path";
 
-export const importJobEventSchema = "naru.import-job-event.1";
+export const importJobEventSchema = "naru.import-job-event.2";
+
+/** Schema of the staged preview a job may announce while it is still extracting. */
+export const stagedImportPreviewSchema = "naru.staged-import-preview.1";
 
 /**
  * Lifecycle states in their only legal order. A job announces a state when it
@@ -128,6 +131,32 @@ export interface ImportJobFailure {
   readonly message: string;
 }
 
+/**
+ * One document's hierarchy, verified and published to the staged directory
+ * while the adapter is still extracting the federation. Identity, digests, and
+ * counts only: the location of the staged directory is the caller's, never the
+ * event's, so the payload stays path-free like every other field.
+ */
+export interface ImportJobStagedPreview {
+  readonly schemaVersion: typeof stagedImportPreviewSchema;
+  readonly discipline: string;
+  /** The source document this tree was read from, as `documents` names it. */
+  readonly sha256: string;
+  readonly byteLength: number;
+  readonly nodeCount: number;
+  readonly rootCount: number;
+  /** The `naru.package-hierarchy.1` pair a reader verifies before parsing. */
+  readonly hierarchy: {
+    readonly sha256: string;
+    readonly byteLength: number;
+    readonly columnsSha256: string;
+    readonly columnsByteLength: number;
+  };
+  /** Documents staged so far, including this one, out of the federation. */
+  readonly stagedCount: number;
+  readonly totalCount: number;
+}
+
 interface ImportJobEventBase {
   readonly schemaVersion: typeof importJobEventSchema;
   /** Stable across repeated runs of the same request. */
@@ -145,6 +174,12 @@ interface ImportJobEventBase {
 export type ImportJobEvent =
   | (ImportJobEventBase & {
       readonly state: Exclude<ImportJobState, ImportJobTerminalState>;
+      /**
+       * Present on the one kind of event that repeats its state: a staged
+       * preview announced without the job moving on. Sequence stays gapless and
+       * progress is unchanged, because staging is not a lifecycle step.
+       */
+      readonly staged?: ImportJobStagedPreview;
     })
   | (ImportJobEventBase & {
       readonly state: "completed";
@@ -359,6 +394,21 @@ export class ImportJobReporter {
     this.#emit({});
   }
 
+  /**
+   * Announces a staged preview without leaving the current state. This is the
+   * only event that repeats a state, and it may only do so while the job is
+   * still running: a settled job has nothing left to stage.
+   */
+  staged(preview: ImportJobStagedPreview): void {
+    if (this.#settled) {
+      throw new TypeError(
+        `Import job ${this.jobId} already reached ${this.#state} and cannot stage a preview.`,
+      );
+    }
+    this.throwIfCancelled();
+    this.#emit({ staged: preview });
+  }
+
   /** Announces success. Only legal after the result is durable and verified. */
   completed(result: ImportJobCompletion): void {
     this.#advanceTo("completed");
@@ -468,6 +518,7 @@ export class ImportJobReporter {
     readonly result?: ImportJobCompletion;
     readonly cancellation?: ImportJobCancellation;
     readonly failure?: ImportJobFailure;
+    readonly staged?: ImportJobStagedPreview;
   }): void {
     // Clamped so a non-monotonic clock cannot make elapsed time run backwards.
     const elapsedMs = Math.max(this.#elapsed, Math.round(this.#now() - this.#startedAt));

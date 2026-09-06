@@ -435,13 +435,16 @@ The runtime publishes structured, opt-in local statistics:
 - device loss/recovery events.
 
 The compiler publishes a separate, versioned stream for one import:
-`naru.import-job-event.1`. It reports lifecycle states in a fixed order with a
+`naru.import-job-event.2`. It reports lifecycle states in a fixed order with a
 gapless sequence, monotonic elapsed milliseconds, and progress counted in
 lifecycle steps rather than estimated from source size. Every field is scrubbed
 of filesystem paths, and sources appear as digest and byte length rather than
 name, so an event can cross a trust boundary the source document never should.
 `naru compile` and `naru compile-ifc` emit it as newline-delimited JSON under
-`--json-events` ([ADR-0020](adr/0020-cancellable-import-jobs.md)).
+`--json-events` ([ADR-0020](adr/0020-cancellable-import-jobs.md)). With
+`--staged-preview` an IFC import also reports each document's verified
+assembly tree as a `staged` event while extraction continues
+([ADR-0021](adr/0021-staged-hierarchy-first-import.md)).
 
 These stats power the built-in inspector and reproducible benchmarks. They are
 not sent anywhere by the core runtime.

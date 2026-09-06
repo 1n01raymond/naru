@@ -55,6 +55,7 @@ export {
   isImportJobCancellation,
   isImportJobTerminalState,
   redactPaths,
+  stagedImportPreviewSchema,
 } from "./import-job.js";
 export type {
   ImportJobCancellation,
@@ -67,6 +68,7 @@ export type {
   ImportJobPlan,
   ImportJobProgress,
   ImportJobRequest,
+  ImportJobStagedPreview,
   ImportJobState,
   ImportJobTerminalState,
 } from "./import-job.js";
@@ -76,6 +78,32 @@ export {
   planIfcIncrementalInvalidation,
   serializeIfcIncrementalDependencyIndex,
 } from "./ifc-incremental-dependencies.js";
+export {
+  encodeStagedHierarchy,
+  ifcStructurePreviewFilename,
+  ifcStructurePreviewIndexFilename,
+  ifcStructurePreviewIndexSchema,
+  ifcStructurePreviewSchema,
+  parseIfcStructurePreview,
+  parseIfcStructurePreviewDescriptor,
+  parseIfcStructurePreviewIndex,
+  StagedPreviewError,
+  stagedHierarchyColumnsFilename,
+  stagedHierarchyFilename,
+  stagedPreviewManifestFilename,
+  StagedPreviewWriter,
+  watchIfcStructurePreviews,
+} from "./staged-preview.js";
+export type {
+  IfcStructurePreview,
+  IfcStructurePreviewDescriptor,
+  IfcStructurePreviewNode,
+  StagedPreviewDocument,
+  StagedPreviewManifest,
+  StagedPreviewSource,
+  StagedPreviewWriterOptions,
+  WatchIfcStructurePreviewsOptions,
+} from "./staged-preview.js";
 export type {
   IfcIncrementalDependencyIndex,
   IfcIncrementalDocumentDependency,

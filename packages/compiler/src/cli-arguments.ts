@@ -31,6 +31,7 @@ IFC options:
   --elide-derived-identifiers    Omit node identities the loader reconstructs
   --omit-default-node-transforms Omit identity matrices; emit pure translations
   --retain-scene-ir              Keep the split intermediate pair under output
+  --staged-preview <directory>   Publish each document's tree there as soon as it parses
 
 General options:
   --spatial-index                Emit the optional occurrence demand BVH
@@ -72,6 +73,7 @@ export interface IfcCompileArguments {
   readonly omitDefaultNodeTransforms: boolean;
   readonly relocateHierarchyNodes: boolean;
   readonly retainSceneIr: boolean;
+  readonly stagedPreviewDirectory?: string;
   readonly jsonEvents: boolean;
 }
 
@@ -103,6 +105,7 @@ const ifcOptions = {
   "elide-derived-identifiers": { type: "boolean" },
   "omit-default-node-transforms": { type: "boolean" },
   "retain-scene-ir": { type: "boolean" },
+  "staged-preview": { type: "string" },
 } as const;
 
 /**
@@ -264,6 +267,7 @@ export function parseIfcCompileArguments(
 
   const pythonExecutable = requireValue(values.python, "python");
   const cacheDirectory = requireValue(values.cache, "cache");
+  const stagedPreviewDirectory = requireValue(values["staged-preview"], "staged-preview");
   const threads = integerOption(values.threads, "threads");
   const targetChunkKib = integerOption(values["target-chunk-kib"], "target-chunk-kib");
   const spatialIndex = values["spatial-index"] ?? false;
@@ -297,6 +301,7 @@ export function parseIfcCompileArguments(
     omitDefaultNodeTransforms: values["omit-default-node-transforms"] ?? false,
     relocateHierarchyNodes: values["relocate-hierarchy-nodes"] ?? false,
     retainSceneIr: values["retain-scene-ir"] ?? false,
+    ...(stagedPreviewDirectory ? { stagedPreviewDirectory } : {}),
     jsonEvents: values["json-events"] ?? false,
   };
 }

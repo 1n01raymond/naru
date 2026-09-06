@@ -1,11 +1,12 @@
 import { availableParallelism, tmpdir } from "node:os";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
-import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runAdapterProcess } from "./adapter-process.js";
+import { errorCode } from "./cache-primitives.js";
 import {
   createImportJobReporter,
   ImportJobCancelledError,
@@ -20,6 +21,12 @@ import { compileSceneToGltf } from "./gltf.js";
 import type { CompileStage } from "./gltf.js";
 import { hydrateIfcSceneSplit, ifcSceneSplitEncodingVersion } from "./ifc-scene.js";
 import { readIfcStructure } from "./ifc-structure-stream.js";
+import {
+  StagedPreviewError,
+  StagedPreviewWriter,
+  watchIfcStructurePreviews,
+} from "./staged-preview.js";
+import type { StagedPreviewManifest } from "./staged-preview.js";
 import type { IfcStructureRead } from "./ifc-structure-stream.js";
 import { inspectIfcFile } from "./ifc-source.js";
 import type { IfcSourceInspection } from "./ifc-source.js";
@@ -90,6 +97,18 @@ export interface IfcFederationCompileOptions {
   readonly environment?: NodeJS.ProcessEnv;
   /** Lifecycle events and cancellation for this compile. */
   readonly job?: ImportJobOptions;
+  /**
+   * Publish each document's assembly tree into this directory as soon as the
+   * adapter has parsed that document, before any tessellation finishes
+   * (ADR-0021). The directory must not exist or must be empty; it receives a
+   * relocated hierarchy sidecar pair per document plus `staged.json`, is kept
+   * with `complete: true` once the compile succeeds, and is removed when the
+   * job is cancelled or fails. It is never a compiled package and never a
+   * cache tier, and it takes no part in the job id, the cache key, or the
+   * package bytes: a compile with staging and one without produce the same
+   * package digest.
+   */
+  readonly stagedPreviewDirectory?: string;
 }
 
 export type IfcFederationStageName =
@@ -151,6 +170,8 @@ export interface IfcFederationCompilationResult {
   readonly cache: CompilationCacheResult;
   /** Only when `stageTiming` was requested. */
   readonly stages?: IfcFederationStageTiming;
+  /** Only when `stagedPreviewDirectory` was requested and the compile rebuilt. */
+  readonly stagedPreview?: StagedPreviewManifest;
 }
 
 const incrementalDependencyIndexFilename = "incremental-dependencies.json";
@@ -686,6 +707,7 @@ export async function compileIfcFederation(
       ...options.documents.map(({ sourcePath }) => sourcePath),
       options.outputDirectory,
       ...(options.cacheDirectory === undefined ? [] : [options.cacheDirectory]),
+      ...(options.stagedPreviewDirectory === undefined ? [] : [options.stagedPreviewDirectory]),
     ]);
   }
 }
@@ -778,6 +800,11 @@ async function runIfcFederationCompile(
   reporter.settlePlan("rebuild");
   const temporaryDirectory = await mkdtemp(join(tmpdir(), "naru-ifc-"));
   reporter.registerTemporaryDirectory(temporaryDirectory);
+  const stagedWriter =
+    options.stagedPreviewDirectory === undefined
+      ? undefined
+      : await openStagedPreview(options.stagedPreviewDirectory, reporter, sources);
+  const previewDirectory = join(temporaryDirectory, "structure-preview");
   const scenePath = join(temporaryDirectory, "scene-ir.json");
   const geometryPath = join(temporaryDirectory, "scene-ir-geometry.bin");
   const propertiesPath = join(temporaryDirectory, "scene-ir-properties.bin");
@@ -791,30 +818,37 @@ async function runIfcFederationCompile(
       `${source.discipline}=${source.uriHint}`,
     ]);
     reporter.enter("extracting");
+    const adapterArguments = [
+      adapterScriptPath,
+      ...sourceArguments,
+      "--scene",
+      scenePath,
+      "--geometry",
+      geometryPath,
+      "--properties",
+      propertiesPath,
+      "--report",
+      adapterReportPath,
+      ...(options.cacheDirectory
+        ? ["--document-cache", resolve(options.cacheDirectory, "ifc-documents")]
+        : []),
+      "--threads",
+      String(threads),
+      ...(ledger ? ["--stage-timing", stageTimingPath] : []),
+      ...(stagedWriter ? ["--structure-preview", previewDirectory] : []),
+    ];
     const adapterRun = await stage(ledger, "adapter", () =>
-      runAdapter(
-        pythonExecutable,
-        [
-          adapterScriptPath,
-          ...sourceArguments,
-          "--scene",
-          scenePath,
-          "--geometry",
-          geometryPath,
-          "--properties",
-          propertiesPath,
-          "--report",
-          adapterReportPath,
-          ...(options.cacheDirectory
-            ? ["--document-cache", resolve(options.cacheDirectory, "ifc-documents")]
-            : []),
-          "--threads",
-          String(threads),
-          ...(ledger ? ["--stage-timing", stageTimingPath] : []),
-        ],
-        environment,
-        signal,
-      ),
+      stagedWriter
+        ? runAdapterWithStagedPreviews({
+            run: (adapterSignal) =>
+              runAdapter(pythonExecutable, adapterArguments, environment, adapterSignal),
+            previewDirectory,
+            sources,
+            writer: stagedWriter,
+            reporter,
+            signal,
+          })
+        : runAdapter(pythonExecutable, adapterArguments, environment, signal),
     );
     if (ledger) ledger.adapter = await readAdapterTiming(stageTimingPath, adapterRun);
     reporter.enter("compiling");
@@ -1002,8 +1036,109 @@ async function runIfcFederationCompile(
       dependencyIndex,
       cache: cacheKey ? { status: "miss", key: cacheKey } : { status: "disabled" },
       ...(ledger ? { stages: ledger.finish() } : {}),
+      ...(stagedWriter ? { stagedPreview: stagedWriter.manifest() } : {}),
     };
+  } catch (error) {
+    // A staged directory only ever outlives a compile that completed: on any
+    // other exit it is removed, whether the reporter's cancellation path has
+    // already done so or not (issue #73 criterion 5).
+    if (stagedWriter) {
+      await rm(stagedWriter.directory, { recursive: true, force: true });
+    }
+    throw error;
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
+  }
+}
+
+/**
+ * Opens the staged preview directory for a rebuild. An existing directory is
+ * accepted only when it is empty: the compile registers it for removal on
+ * cancellation, and it never deletes bytes it did not write.
+ */
+async function openStagedPreview(
+  directory: string,
+  reporter: ImportJobReporter,
+  sources: readonly InspectedIfcFederationDocument[],
+): Promise<StagedPreviewWriter> {
+  const resolved = resolve(directory);
+  let existing: string[] = [];
+  try {
+    existing = await readdir(resolved);
+  } catch (error) {
+    if (errorCode(error) !== "ENOENT") throw error;
+  }
+  if (existing.length > 0) {
+    throw new StagedPreviewError(
+      "The staged preview directory must not exist or must be empty; refusing to publish into one that holds files.",
+    );
+  }
+  reporter.registerTemporaryDirectory(resolved);
+  return await StagedPreviewWriter.open({
+    directory: resolved,
+    jobId: reporter.jobId,
+    disciplines: sources.map((source) => source.discipline),
+  });
+}
+
+/**
+ * Runs the adapter while a watcher turns each tree it publishes into a
+ * verified staged sidecar pair and a `staged` job event. The watcher owns an
+ * abort controller for the adapter: a tree that fails verification, or a
+ * cancellation surfacing through `reporter.staged`, stops the adapter tree
+ * the same way the caller's signal would, and the watcher's error wins over
+ * the adapter's resulting exit error. The watcher reads the index once more
+ * after the adapter exits, so nothing published just before exit is lost,
+ * and `complete()` refuses an adapter that exited without every document.
+ */
+async function runAdapterWithStagedPreviews(request: {
+  readonly run: (signal: AbortSignal) => Promise<AdapterRun>;
+  readonly previewDirectory: string;
+  readonly sources: readonly InspectedIfcFederationDocument[];
+  readonly writer: StagedPreviewWriter;
+  readonly reporter: ImportJobReporter;
+  readonly signal: AbortSignal | undefined;
+}): Promise<AdapterRun> {
+  const { run, previewDirectory, sources, writer, reporter, signal } = request;
+  const controller = new AbortController();
+  const forward = (): void => {
+    controller.abort(signal?.reason);
+  };
+  if (signal?.aborted) forward();
+  else signal?.addEventListener("abort", forward, { once: true });
+  let watchError: Error | undefined;
+  try {
+    const adapter = run(controller.signal);
+    const watch = watchIfcStructurePreviews({
+      directory: previewDirectory,
+      sources: sources.map(({ discipline, sha256, byteLength }) => ({
+        discipline,
+        sha256,
+        byteLength,
+      })),
+      until: adapter.then(
+        () => undefined,
+        () => undefined,
+      ),
+      onPreview: async (preview) => {
+        reporter.staged(await writer.stage(preview));
+      },
+    }).catch((error: unknown) => {
+      watchError = error instanceof Error ? error : new Error(String(error));
+      controller.abort(error);
+    });
+    let adapterRun: AdapterRun;
+    try {
+      adapterRun = await adapter;
+    } catch (error) {
+      await watch;
+      throw watchError ?? error;
+    }
+    await watch;
+    if (watchError !== undefined) throw watchError;
+    await writer.complete();
+    return adapterRun;
+  } finally {
+    signal?.removeEventListener("abort", forward);
   }
 }
