@@ -18,21 +18,21 @@ import { supportedSpatialDemandIndexSchema } from "./spatial-index.js";
 const supportedProfile = "madi.experimental.gltf.1";
 const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
-type JsonRecord = Record<string, unknown>;
+export type JsonRecord = Record<string, unknown>;
 
-interface CompiledGltfBuffer {
+export interface CompiledGltfBuffer {
   readonly uri: string;
   readonly byteLength: number;
 }
 
-interface CompiledGltfBufferView {
+export interface CompiledGltfBufferView {
   readonly buffer: number;
   readonly byteOffset?: number;
   readonly byteLength: number;
   readonly byteStride?: number;
 }
 
-interface CompiledGltfAccessor {
+export interface CompiledGltfAccessor {
   readonly bufferView: number;
   readonly byteOffset?: number;
   readonly componentType: number;
@@ -41,7 +41,7 @@ interface CompiledGltfAccessor {
   readonly normalized?: boolean;
 }
 
-interface CompiledGltfPrimitive {
+export interface CompiledGltfPrimitive {
   readonly attributes: Readonly<Record<string, number>>;
   readonly indices?: number;
   readonly material?: number;
@@ -49,13 +49,13 @@ interface CompiledGltfPrimitive {
   readonly extras?: JsonRecord;
 }
 
-interface CompiledGltfMesh {
+export interface CompiledGltfMesh {
   readonly name?: string;
   readonly primitives: readonly CompiledGltfPrimitive[];
   readonly extras?: JsonRecord;
 }
 
-interface CompiledGltfNode {
+export interface CompiledGltfNode {
   readonly name?: string;
   readonly children?: readonly number[];
   readonly matrix?: readonly number[];
@@ -66,7 +66,7 @@ interface CompiledGltfNode {
   readonly extras?: JsonRecord;
 }
 
-interface CompiledGltfMaterial {
+export interface CompiledGltfMaterial {
   readonly pbrMetallicRoughness?: {
     readonly baseColorFactor?: readonly number[];
   };

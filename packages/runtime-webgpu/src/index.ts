@@ -89,8 +89,16 @@ export type {
   SpatialDemandQueryResult,
 } from "./spatial-index.js";
 export type {
+  CompiledGltfAccessor,
+  CompiledGltfBuffer,
+  CompiledGltfBufferView,
   CompiledGltfDocument,
   CompiledGltfErrorCode,
+  CompiledGltfMaterial,
+  CompiledGltfMesh,
+  CompiledGltfNode,
+  CompiledGltfPrimitive,
+  JsonRecord,
   CompiledBatchEvidence,
   DecodeCompiledGltfOptions,
   CompiledHierarchy,

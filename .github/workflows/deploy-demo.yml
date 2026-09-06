@@ -37,6 +37,10 @@ on:
       - "apps/demo-landing/**"
       - "packages/runtime-webgpu/**"
       - "packages/scene-ir/**"
+      - "packages/workspace/**"
+      - "packages/compiler/**"
+      - "typedoc.json"
+      - "docs/API_REFERENCE.md"
       - "artifacts/phase1/adafruit-pygamer/**"
       - "artifacts/ifc/digital-hub/build-report.json"
       - "scripts/check-public-demo.mjs"
@@ -150,10 +154,16 @@ jobs:
           VITE_NARU_DEFAULT_SCENE_URL: ${{ steps.delivery.outputs.document }}
         run: pnpm exec vite build --base=/naru/studio/
 
-      - name: Assemble the site (landing page + Studio + evidence media)
+      - name: Build the API reference
+        # TypeDoc over the four workspace packages; warnings fail the build
+        # (typedoc.json sets treatWarningsAsErrors), so an undocumented export
+        # never publishes silently.
+        run: pnpm run docs:api
+
+      - name: Assemble the site (landing page + Studio + API reference + evidence media)
         run: |
           set -euo pipefail
-          mkdir -p site/media site/studio/pygamer
+          mkdir -p site/media site/studio/pygamer site/api
           cp apps/demo-landing/index.html site/
           cp docs/media/naru-hero.svg docs/media/naru-mark-inverse.svg docs/media/naru-favicon.svg site/media/
           cp artifacts/browser-matrix/chrome-151-macos-selected.png site/media/step-picked.png
@@ -165,6 +175,7 @@ jobs:
           cp artifacts/precision/large-coordinates/chrome-sectioned-far.png site/media/precision-far.png
           cp artifacts/spatial-demand/chrome-151-macos-spatial-demand.png site/media/spatial-demand.png
           cp -R apps/webgpu-spike/dist/. site/studio/
+          cp -R output/api/. site/api/
           cp artifacts/phase1/adafruit-pygamer/scene.gltf site/studio/pygamer/
           cp artifacts/phase1/adafruit-pygamer/scene.bin site/studio/pygamer/
 
