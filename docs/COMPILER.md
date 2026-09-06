@@ -744,7 +744,9 @@ transport -- and the gates it must pass. Its first slice, artifacts verified
 from their stored bytes (`naru.ifc-document-artifact.2`, pinned by the
 compiler in [`ifc-federation.ts`](../packages/compiler/src/ifc-federation.ts)),
 is [recorded](../artifacts/cache/rebuild-stages/README.md) against a
-same-session clean rebuild on Digital Hub and sixty5; the structure scan and
+same-session clean rebuild on Digital Hub and sixty5, with byte-identical
+packages, a lower whole-process rebuild median, and lower peak memory on both.
+The structure scan and
 the federation re-merge it leaves are slices 2 and 3.
 
 [ADR-0018](adr/0018-content-addressed-compiled-payloads.md) was the reviewed
@@ -796,3 +798,20 @@ match one portable file-name pattern, `lstat` refuses a symlink instead of
 following it out of the store, publication stages in a `mkdtemp` sibling and
 renames into place, and Windows `EPERM` on a rename onto an existing directory
 is read as the same lost race as `EEXIST` and `ENOTEMPTY`.
+
+### 21.7 Import lifecycle and staged hierarchy
+
+Both CLI compile paths expose the cancellable `naru.import-job-event.2`
+lifecycle described in [the import contract](IMPORT_AND_CACHE.md).
+IFC `--staged-preview` publishes verified per-document hierarchy pairs during
+extraction; [ADR-0021](adr/0021-staged-hierarchy-first-import.md) distinguishes
+the adapter timing record from compiler determinism/cancellation tests and the
+end-to-end Studio record. A staged tree is temporary derived output, not a
+cache entry or a coarse geometry representation.
+
+The `naru.staged-import-preview.2` manifest adds a final-package handoff block
+that a Studio consumer follows
+([Studio guide](../apps/webgpu-spike/README.md#follow-a-staged-import)); the
+[cold-import record](../artifacts/import/staged-import-browser/README.md)
+measures that end to end on sixty5. The handoff cannot establish a coarse
+frame during extraction, so ADR-0021 is accepted as hierarchy-first only.

@@ -1,8 +1,8 @@
 # ADR-0021: Publish an import's assembly tree per document, before geometry
 
-Status: Proposed
+Status: Accepted
 
-Reviewed: 2026-09-04
+Accepted: 2026-09-06
 
 ## Context
 
@@ -125,15 +125,24 @@ staging adds cancellation-safe checkpoints, it does not add uncancellable work.
 A cancelled import removes its preview. A completed import supersedes it with the
 durable package; the preview is disposable by design and is never a cache tier.
 
-### Coarse geometry preview is scoped per document too, and is not yet measured
+### Coarse geometry preview stays after the package: this ADR claims hierarchy-first only
 
 Issue #73 asks for hierarchy *and* a coarse preview. This ADR commits to the
 hierarchy half on measured ground and states the other half honestly: the
 structure record measures no tessellation at all, and geometry is the bulk of the
-282.5 s sixty5 cold adapter. A whole-federation coarse frame inside 5-15 s is
-very unlikely; a per-document coarse frame may be reachable, and nothing here
-knows. It gets its own gate below, and if the measurement says no, the product
-claim narrows to hierarchy-first rather than the gate being loosened.
+282.5 s sixty5 cold adapter. The first draft of this ADR gave a per-document
+coarse frame its own gate and promised to narrow the claim if the measurement
+said no. The gate 4 record says no by construction rather than by a slow
+number: nothing in this design tessellates before the package exists, so no
+per-document coarse geometry exists to publish during import, and the earliest
+coarse frame is the compiled package's own, 422.8 s after the spawn on
+sixty5 against a 1.5 s first tree. The product claim is therefore
+hierarchy-first: a searchable, selectable tree seconds into a cold import,
+geometry when the package lands. The coarse target is restated, not relaxed --
+a coarse frame inside the 5-15 s band during a cold import needs a
+per-document coarse representation the adapter emits before tessellation, which
+is a separate design with its own ADR, and until one exists the Studio says
+`geometry pending` on every staged row rather than implying otherwise.
 
 ## Consequences
 
@@ -215,11 +224,17 @@ document's tree before tessellating that document. The compiler half is too:
 `compileIfcFederation`) watches that emission, verifies each tree by length and
 digest before parsing it, re-encodes it as the `naru.package-hierarchy.1`
 sidecar pair, publishes the pair atomically under a `staged.json` manifest
-(`naru.staged-import-preview.1`), and reports it as a `staged` event on the
+(`naru.staged-import-preview.2`), and reports it as a `staged` event on the
 import job stream, which bumped to `naru.import-job-event.2` for it
 ([packages/compiler/src/staged-preview.ts](../../packages/compiler/src/staged-preview.ts)).
-Nothing downstream of the compiler is -- no Studio, no viewer. Two records
-stand behind the design. The first prices an assembly tree without building the machinery:
+The Studio half is implemented as well: opened with `?staged=<manifest>` beside
+`?scene=`, it polls `staged.json`, verifies and reads each published pair as it
+appears, shows the trees as a searchable, selectable forest that says
+`geometry pending`, and hands off to the unchanged package loader once the
+manifest carries the finished package
+([apps/webgpu-spike/src/staged-import.ts](../../apps/webgpu-spike/src/staged-import.ts)).
+It does not supply per-document coarse geometry during extraction.
+Three records stand behind the design. The first prices an assembly tree without building the machinery:
 [artifacts/import/structure-readiness](../../artifacts/import/structure-readiness/README.md),
 recorded by
 [scripts/record-structure-readiness-evidence.mjs](../../scripts/record-structure-readiness-evidence.mjs)
@@ -242,12 +257,26 @@ and pinned by
 plus a `plain` arm without staging so the record says what staging costs as well
 as what it delivers.
 
-Both records measure the adapter side of a tree and nothing else. Neither
+Those two records measure the adapter side of a tree and nothing else. Neither
 measures transport to a viewer, property or classification association,
 geometry, a real parallel run, or a cold page cache. They carry those exclusions
 themselves rather than leaving them to be inferred.
 
-This ADR stays **Proposed**. Its gates, declared before the work:
+The third is the product claim measured end to end:
+[artifacts/import/staged-import-browser](../../artifacts/import/staged-import-browser/README.md),
+recorded by
+[scripts/record-staged-import-browser-evidence.mjs](../../scripts/record-staged-import-browser-evidence.mjs)
+and pinned by
+[scripts/validate-staged-import-browser-evidence.mjs](../../scripts/validate-staged-import-browser-evidence.mjs)
+(`pnpm staged:import:browser:check`, in the `check` chain). A headed Studio
+watches an empty staged directory, then a cold sixty5 `compile-ifc
+--staged-preview` is spawned on the same host, and every milestone is the
+page's own clock read from that spawn instant, so transport, verification, the
+poll interval, and DOM construction are all inside the number. It is one
+engine on one host, the compile and the browser share the machine's memory
+with everything else on it, and the record says so.
+
+This ADR is **Accepted** (2026-09-06). Its gates, declared before the work:
 
 0. **Met.** A committed record establishes how long an assembly tree takes on
    both federations, decomposed into parse, walk, and serialize, against issue
@@ -270,7 +299,7 @@ This ADR stays **Proposed**. Its gates, declared before the work:
    architecture document. The equality that matters is the one that makes a
    preview node the same node the finished package draws, so that is what the
    record pins; gate 0's count is recorded beside it rather than dropped.
-2. **Met at unit scale.** A compile with staging enabled and one without produce
+2. **Met, at unit scale and at scale.** A compile with staging enabled and one without produce
    the same package digest, the same `output.resources`, and byte-identical
    `scene.gltf` and `scene.bin`; the staged directory is not part of the job
    identity or the cache key, and a cache hit never opens one
@@ -279,7 +308,11 @@ This ADR stays **Proposed**. Its gates, declared before the work:
    (gate 1's 36 byte-identical comparisons per model); the package-level half
    is a unit test rather than a fresh-process record, on the Phase 2 routing
    decision that a gate which does not close an exit criterion is proved by
-   test. The same tests refuse a tree whose digest, source identity, or
+   test. At scale, the gate 4 record's cold staged sixty5 compile published
+   package `3206ea40835d...` -- the digest the committed cold samples in
+   [artifacts/cache/sixty5](../../artifacts/cache/sixty5/README.md) already
+   carry for the same host, so staging moved no package byte on the largest
+   model either. The same tests refuse a tree whose digest, source identity, or
    discipline disagrees with the inspected source (`StagedPreviewError`,
    `INVALID_STAGED_PREVIEW`, with the failure event carrying no path), and
    refuse to stage into a non-empty directory.
@@ -290,13 +323,30 @@ This ADR stays **Proposed**. Its gates, declared before the work:
    tests do -- and a pre-existing cache entry is untouched
    ([test](../../packages/compiler/test/import-job-cancellation.test.ts),
    "cancelling a federation import after a tree was staged").
-4. **The product claim.** A browser record shows the Studio usable against a cold
-   sixty5 import: a tree the user can expand and search while extraction
-   continues, with the first tree inside 5-15 s measured end to end, transport
-   included.
-5. **Coarse preview.** A per-document coarse frame measured on sixty5. If it
-   cannot reach the band, this ADR is amended to claim hierarchy-first only, and
-   the product target for coarse geometry is restated rather than relaxed.
+4. **Met.** The product claim: a browser record shows the Studio usable against
+   a cold sixty5 import, with the first tree inside 5-15 s measured end to end,
+   transport included
+   ([record](../../artifacts/import/staged-import-browser/README.md)). Headed
+   Chrome 151.0.7922.139 on Windows, page open before the compile spawned: the first
+   tree (`facade`, 1,076 nodes) is searchable and
+   selectable 1.5 s after spawn, faster than the band's lower edge and
+   so meeting the target; a search during import matched 353
+   rows at 1.7 s and a row selection at 1.8 s while the compile
+   was still running; the seventh tree landed at 271.5 s, the package
+   handoff at 417.8 s, the compiled package's first coarse frame at
+   422.8 s and its budget-limited ready state at 427.7 s, the compile
+   exited at 417.9 s, with 0 console issues. Three consecutive runs
+   agreed on every count; the committed run is the median first tree
+   (1,522/1,542/2,003). The Studio's tree has no expand/collapse, so "expand"
+   is exercised as search plus selection and the record says so. One engine,
+   one host, and the compile shared the machine's memory with the browser --
+   the record carries the free memory at start and a timing note.
+5. **Amended to hierarchy-first.** No per-document coarse frame exists to
+   measure: nothing tessellates before the package is written, so the earliest
+   coarse frame is the compiled package's own, 422.8 s after spawn in the
+   gate 4 record against a 1.5 s first tree. This ADR therefore claims
+   hierarchy-first only, as this gate prescribed for that outcome, and the
+   coarse-geometry target is restated above, not relaxed.
 
 Failing gate 2 or gate 4 rejects this ADR rather than loosening it, on the
 precedent ADR-0018 set: a design that misses the gate it declared is rejected by

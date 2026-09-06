@@ -35,6 +35,13 @@ import {
   selectLocalSceneFiles,
 } from "./scene-source.js";
 import type { GeometryBinarySource, SceneSource } from "./scene-source.js";
+import {
+  assertStagedPackageMatches,
+  parseStagedManifestUrl,
+  stagedHierarchyEntries,
+  watchStagedImport,
+} from "./staged-import.js";
+import type { StagedImportTree } from "./staged-import.js";
 import { formatPropertyValue, PropertySidecarStore } from "./property-sidecar.js";
 import { loadSpatialDemandIndex } from "./spatial-demand-source.js";
 import { OrthographicOrbitCamera } from "./view.js";
@@ -1827,15 +1834,176 @@ window.addEventListener(
   { once: true },
 );
 
-const requestedScene = new URL(window.location.href).searchParams.get("scene");
+/**
+ * Follows a `naru compile-ifc --staged-preview` run: the assembly tree fills in
+ * one document at a time while extraction continues, is searchable and
+ * selectable throughout, and the compiled package is opened the moment the
+ * manifest hands it off. Nothing here bypasses the package loader: the handoff
+ * only tells the Studio when `loadScene` may start.
+ */
+function followStagedImport(manifestUrl: URL, sceneUrl: URL): Promise<void> {
+  const hierarchyTitle = requireElement<HTMLElement>("#hierarchy-title");
+  const stageHierarchy = requireElement<HTMLElement>("#stage-hierarchy");
+  const root = document.documentElement;
+  const session = new AbortController();
+  cancelPendingSceneLoad = () => session.abort();
+  setSourceControlsBusy(true);
+  resetSceneUi();
+  sceneSourceKind.textContent = "IMPORT";
+  sceneSourceLabel.textContent = manifestUrl.href;
+  sceneSourceLabel.title = manifestUrl.href;
+  root.dataset.sceneSource = "staged";
+  root.dataset.stagedState = "waiting";
+  root.dataset.stagedCount = "0";
+  root.dataset.stagedNodes = "0";
+  root.dataset.stagedWatchStartedAt = performance.now().toFixed(1);
+  stageHierarchy.dataset.state = "staging";
+  hierarchyTitle.textContent = "Assembly · importing";
+  hierarchySearchResult.textContent = "Waiting for the first staged tree";
+  setText("#hierarchy-result", "waiting for the first staged tree");
+  status.textContent = `Waiting for the staged import at ${manifestUrl.href}…`;
+  status.dataset.state = "loading";
+  status.dataset.stage = "staged";
+
+  let treeScope: AbortController | undefined;
+  const rebuildTree = (trees: readonly StagedImportTree[], total: number): void => {
+    treeScope?.abort();
+    const scope = new AbortController();
+    treeScope = scope;
+    session.signal.addEventListener("abort", () => scope.abort(), { once: true, signal: scope.signal });
+    const entries = stagedHierarchyEntries(trees);
+    const view = new HierarchyListView(hierarchyList, entries, { signal: scope.signal });
+    const searchIndex = new HierarchySearchIndex(entries);
+    const applySearch = (): void => {
+      const result = searchIndex.search(hierarchySearchInput.value);
+      view.setFilter(result.visibleNodeIndices, new Set(result.matchingNodeIndices));
+      const matches = result.matchingNodeIndices.length;
+      hierarchySearchResult.textContent = result.query
+        ? `${matches} ${matches === 1 ? "match" : "matches"}`
+        : `${entries.length} nodes · ${trees.length}/${total} documents`;
+      hierarchyEmpty.hidden = result.visibleNodeIndices.length !== 0;
+      root.dataset.hierarchyMatches = String(matches);
+    };
+    hierarchySearchInput.addEventListener("input", applySearch, { signal: scope.signal });
+    applySearch();
+    const selectRow = (target: EventTarget | null): boolean => {
+      const item = target instanceof Element ? target.closest<HTMLElement>("li[data-node-index]") : null;
+      if (!item) return false;
+      const entry = entries[Number(item.dataset.nodeIndex)];
+      if (!entry) return false;
+      view.setSelected(entry.nodeIndex);
+      selection.textContent = `${entry.name} · ${entry.occurrenceId} · staged preview, geometry pending`;
+      root.dataset.stagedSelection = entry.occurrenceId;
+      return true;
+    };
+    hierarchyList.addEventListener("click", (event) => { selectRow(event.target); }, { signal: scope.signal });
+    hierarchyList.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        if (selectRow(event.target)) event.preventDefault();
+      },
+      { signal: scope.signal },
+    );
+    hierarchyTitle.textContent = `Assembly · importing ${trees.length}/${total}`;
+    setText("#hierarchy-result", `${entries.length} staged rows · ${trees.length}/${total} documents`);
+    root.dataset.stagedCount = String(trees.length);
+    root.dataset.stagedNodes = String(entries.length);
+    root.dataset.stagedDocuments = trees.map((tree) => tree.document.discipline).join(",");
+  };
+
+  return new Promise<void>((resolve) => {
+    const finish = (): void => {
+      setSourceControlsBusy(false);
+      resolve();
+    };
+    const { done } = watchStagedImport(
+      manifestUrl,
+      {
+        onManifest: (manifest) => {
+          root.dataset.stagedJobId = manifest.jobId;
+          root.dataset.stagedTotal = String(manifest.totalCount);
+          if (manifest.complete && root.dataset.stagedCompleteAt === undefined) {
+            root.dataset.stagedCompleteAt = performance.now().toFixed(1);
+          }
+        },
+        onTree: (tree, trees) => {
+          if (trees.length === 1) {
+            root.dataset.stagedFirstTreeAt = tree.readyAt.toFixed(1);
+            root.dataset.stagedFirstTreeDiscipline = tree.document.discipline;
+          }
+          root.dataset.stagedState = "staging";
+          rebuildTree(trees, Number(root.dataset.stagedTotal ?? trees.length));
+          status.textContent =
+            `Importing · ${trees.length}/${root.dataset.stagedTotal ?? "?"} trees staged · ` +
+            `${tree.document.discipline} ${tree.document.nodeCount} nodes · extraction continues…`;
+        },
+        onPackage: (handoff, manifest) => {
+          try {
+            assertStagedPackageMatches(sceneUrl, handoff);
+          } catch (error) {
+            status.textContent = error instanceof Error ? error.message : String(error);
+            status.dataset.state = "error";
+            root.dataset.stagedState = "error";
+            finish();
+            return;
+          }
+          root.dataset.stagedState = "package";
+          root.dataset.stagedPackageAt = performance.now().toFixed(1);
+          root.dataset.stagedPackageDigest = handoff.packageDigest;
+          treeScope?.abort();
+          hierarchyTitle.textContent = "Assembly";
+          status.textContent = `Staged import complete · ${manifest.totalCount} trees · opening ${handoff.documentUri}…`;
+          sceneUrlInput.value = sceneUrl.href;
+          setSourceControlsBusy(false);
+          void loadScene({ kind: "url", gltfUrl: sceneUrl }).then(() => {
+            resolve();
+          });
+        },
+        onError: (error) => {
+          status.textContent = `Staged import failed: ${error.message}`;
+          status.dataset.state = "error";
+          root.dataset.stagedState = "error";
+          stageHierarchy.dataset.state = "error";
+          finish();
+        },
+      },
+      { signal: session.signal },
+    );
+    void done.then(() => {
+      if (session.signal.aborted) finish();
+    });
+  });
+}
+
+const bootParams = new URL(window.location.href).searchParams;
+const requestedScene = bootParams.get("scene");
+const requestedStaged = bootParams.get("staged");
 let initialSceneUrl = defaultSceneUrl;
+let bootError: string | undefined;
 if (requestedScene) {
   try {
     initialSceneUrl = parseSceneUrl(requestedScene, window.location.href);
   } catch (error) {
-    status.textContent = error instanceof Error ? error.message : String(error);
-    status.dataset.state = "error";
+    bootError = error instanceof Error ? error.message : String(error);
   }
 }
+let stagedManifestUrl: URL | undefined;
+if (requestedStaged && bootError === undefined) {
+  try {
+    if (!requestedScene) throw new Error("A staged import needs ?scene= naming the package it hands off.");
+    stagedManifestUrl = parseStagedManifestUrl(requestedStaged, window.location.href);
+  } catch (error) {
+    bootError = error instanceof Error ? error.message : String(error);
+  }
+}
+if (bootError !== undefined) {
+  status.textContent = bootError;
+  status.dataset.state = "error";
+}
 sceneUrlInput.value = initialSceneUrl.href;
-await loadScene({ kind: "url", gltfUrl: initialSceneUrl });
+if (stagedManifestUrl) {
+  await followStagedImport(stagedManifestUrl, initialSceneUrl);
+} else {
+  await loadScene({ kind: "url", gltfUrl: initialSceneUrl });
+}

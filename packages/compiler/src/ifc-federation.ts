@@ -26,7 +26,7 @@ import {
   StagedPreviewWriter,
   watchIfcStructurePreviews,
 } from "./staged-preview.js";
-import type { StagedPreviewManifest } from "./staged-preview.js";
+import type { StagedPreviewManifest, StagedPreviewPackage } from "./staged-preview.js";
 import type { IfcStructureRead } from "./ifc-structure-stream.js";
 import { inspectIfcFile } from "./ifc-source.js";
 import type { IfcSourceInspection } from "./ifc-source.js";
@@ -542,6 +542,19 @@ class StageLedger {
   }
 }
 
+/** The package handoff a staged manifest carries: document, digest, and every resource. */
+function stagedPackageHandoff(report: CompilerBuildReport): StagedPreviewPackage {
+  return {
+    documentUri: "scene.gltf",
+    packageDigest: report.output.packageDigest,
+    resources: report.output.resources.map((resource) => ({
+      uri: resource.path,
+      byteLength: resource.bytes,
+      sha256: resource.sha256,
+    })),
+  };
+}
+
 async function stage<T>(
   ledger: StageLedger | undefined,
   name: IfcFederationStageName,
@@ -976,9 +989,14 @@ async function runIfcFederationCompile(
     // result, and a cancel observed midway is the one way to leave a partly
     // written package behind.
     reporter.enter("publishing");
-    await stage(ledger, "writePackage", () =>
-      writeCompiledPackage(compiled, outputDirectory, adapterReport),
-    );
+    await stage(ledger, "writePackage", async () => {
+      await writeCompiledPackage(compiled, outputDirectory, adapterReport);
+      // The handoff is the last write of the stage: a reader that finds it in
+      // `staged.json` finds every resource it names already on disk.
+      if (stagedWriter) {
+        await stagedWriter.publishPackage(stagedPackageHandoff(compiled.report));
+      }
+    });
     await stage(ledger, "writeDependencyIndex", () =>
       writeFile(
         resolve(outputDirectory, incrementalDependencyIndexFilename),

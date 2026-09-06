@@ -1,6 +1,7 @@
 # NARU compiler
 
-`@naru3d/compiler` is the first Phase 1 source-to-Web compiler slice. Its public
+`@naru3d/compiler` is the Phase 2 source-to-Web compiler, extending the
+completed Phase 1 slice. Its
 CLI accepts local STEP AP242/AP214 through the OCCT Python adapter and
 multi-document IFC2X3/IFC4/IFC4X3 federations through IfcOpenShell; its library
 boundary accepts a validated in-memory `EngineeringScene`. These paths emit:
@@ -358,16 +359,22 @@ runs to the end and the cancellation event reports
 `naru compile-ifc --staged-preview <directory>` (`stagedPreviewDirectory` on
 `compileIfcFederation`) asks the adapter for `--structure-preview` and watches
 that emission from the compiler
-([ADR-0021](../../docs/adr/0021-staged-hierarchy-first-import.md), Proposed).
+([ADR-0021](../../docs/adr/0021-staged-hierarchy-first-import.md), Accepted).
 Each document's tree is verified by byte length and SHA-256 before it is
 parsed, checked against the inspected source's discipline, digest, and size,
 re-encoded as the `naru.package-hierarchy.1` sidecar pair the runtime already
 decodes (`hierarchy-<discipline>.json` + `.bin`), and published atomically --
 temporary name, then rename -- under a `staged.json` manifest
-(`naru.staged-import-preview.1`) that records every file's length and digest,
-rewritten after each document with `complete` flipping at the end. The same
-event stream reports it: a second `extracting` event carrying `staged`
-(discipline, source digest and size, node and root counts, sidecar digests,
+(`naru.staged-import-preview.2`) that records every file's length and digest.
+The manifest is rewritten after each document; the last document's rewrite
+still says `complete: false` (counts equal, completion not yet claimed), and
+a separate rewrite flips `complete` once every tree is on disk. After
+`writeCompiledPackage` returns, one more rewrite appends a `package` block --
+the document URI, every resource with its byte length and SHA-256, and the
+package digest -- which is the handoff a viewer waits for: it names the
+package, it does not replace loading it. The same event stream reports
+staging: a second `extracting` event carrying `staged` (discipline, source
+digest and size, node and root counts, sidecar digests,
 `stagedCount`/`totalCount`), the only event that repeats a state.
 
 The directory must be empty or absent. It is never a package -- no

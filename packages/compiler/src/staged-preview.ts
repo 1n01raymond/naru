@@ -92,6 +92,27 @@ export interface StagedPreviewDocument {
   };
 }
 
+/** One compiled package resource the handoff names, relative to the package directory. */
+export interface StagedPreviewResource {
+  readonly uri: string;
+  readonly byteLength: number;
+  readonly sha256: string;
+}
+
+/**
+ * The handoff a completed compile appends once the package is on disk: the
+ * document a reader opens and every resource with its length and digest, so
+ * the manifest is the single document a background import follows from the
+ * first tree to the compiled package. Its absence means the package is not
+ * published yet; a reader must never guess from `complete` alone, which only
+ * says every tree was staged.
+ */
+export interface StagedPreviewPackage {
+  readonly documentUri: string;
+  readonly packageDigest: string;
+  readonly resources: readonly StagedPreviewResource[];
+}
+
 export interface StagedPreviewManifest {
   readonly schemaVersion: typeof stagedImportPreviewSchema;
   readonly jobId: string;
@@ -102,6 +123,8 @@ export interface StagedPreviewManifest {
   readonly stagedCount: number;
   readonly totalCount: number;
   readonly complete: boolean;
+  /** Present only after the compiled package was written; see {@link StagedPreviewPackage}. */
+  readonly package?: StagedPreviewPackage;
 }
 
 export function ifcStructurePreviewFilename(discipline: string): string {
@@ -409,6 +432,7 @@ export class StagedPreviewWriter {
   readonly #jobId: string;
   readonly #disciplines: readonly string[];
   readonly #documents: StagedPreviewDocument[] = [];
+  #package: StagedPreviewPackage | undefined;
 
   private constructor(options: StagedPreviewWriterOptions) {
     this.directory = options.directory;
@@ -494,6 +518,36 @@ export class StagedPreviewWriter {
     return this.manifest();
   }
 
+  /**
+   * Append the package handoff; refused before `complete()` and refused a
+   * handoff whose document is not among its own resources, so a reader that
+   * finds the block can open the document it names and verify every byte.
+   */
+  async publishPackage(handoff: StagedPreviewPackage): Promise<StagedPreviewManifest> {
+    if (this.#documents.length !== this.#disciplines.length) {
+      throw new StagedPreviewError("A staged package handoff needs every tree staged first.");
+    }
+    if (this.#package !== undefined) {
+      throw new StagedPreviewError("The staged package handoff was already published.");
+    }
+    if (!handoff.resources.some((resource) => resource.uri === handoff.documentUri)) {
+      throw new StagedPreviewError(
+        `The staged package handoff names ${handoff.documentUri} as its document but not among its resources.`,
+      );
+    }
+    this.#package = {
+      documentUri: handoff.documentUri,
+      packageDigest: handoff.packageDigest,
+      resources: handoff.resources.map((resource) => ({
+        uri: resource.uri,
+        byteLength: resource.byteLength,
+        sha256: resource.sha256,
+      })),
+    };
+    await this.#writeManifest(true);
+    return this.manifest();
+  }
+
   #manifest(complete: boolean): StagedPreviewManifest {
     return {
       schemaVersion: stagedImportPreviewSchema,
@@ -504,6 +558,7 @@ export class StagedPreviewWriter {
       stagedCount: this.#documents.length,
       totalCount: this.#disciplines.length,
       complete,
+      ...(this.#package ? { package: this.#package } : {}),
     };
   }
 
