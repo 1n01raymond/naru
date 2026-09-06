@@ -1,0 +1,33 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  "name": "NARU API",
+  "entryPointStrategy": "packages",
+  "entryPoints": [
+    "packages/scene-ir",
+    "packages/runtime-webgpu",
+    "packages/workspace",
+    "packages/compiler"
+  ],
+  "packageOptions": {
+    "entryPoints": ["src/index.ts"],
+    "excludeExternals": true
+  },
+  "out": "output/api",
+  "readme": "docs/API_REFERENCE.md",
+  "includeVersion": false,
+  "hideGenerator": true,
+  "excludePrivate": true,
+  "excludeInternal": true,
+  "treatWarningsAsErrors": true,
+  "validation": {
+    "notExported": true,
+    "invalidLink": true,
+    "notDocumented": false
+  },
+  "navigation": {
+    "includeCategories": true,
+    "includeGroups": false
+  },
+  "githubPages": true,
+  "cleanOutputDir": true
+}

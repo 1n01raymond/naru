@@ -35,6 +35,8 @@ Read in this order:
     merge rules, backports, tags, and enforcement gates.
 17. [Translations](TRANSLATIONS.md) — README languages, terminology, and
     maintenance workflow.
+18. [API reference](API_REFERENCE.md) — the TypeDoc-generated surface of the
+    four workspace packages, published with the demo site at `naru/api/`.
 
 ## Documentation rules
 

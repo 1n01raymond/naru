@@ -23,6 +23,15 @@ export type {
   RestoreCompiledCacheEntryOptions,
 } from "./compiled-cache.js";
 export type { CacheOptionValue, CacheToolInput } from "./cache-primitives.js";
+export { GltfBinaryBuilder } from "./binary.js";
+export { hierarchyStringColumns } from "./hierarchy-sidecar.js";
+export type {
+  HierarchySection,
+  HierarchySidecar,
+  HierarchySidecarEntry,
+  HierarchyStringColumn,
+  PackageHierarchyDocument,
+} from "./hierarchy-sidecar.js";
 export { appendCompiledPayload, buildCompiledPayload, compiledPayloadContentDigest } from "./compiled-payload.js";
 export type {
   CompiledPayload,
@@ -44,7 +53,7 @@ export type {
   SpatialVector3,
 } from "./spatial-demand.js";
 export { compileIfcFederation } from "./ifc-federation.js";
-export { isAdapterProcessCancellation } from "./adapter-process.js";
+export { AdapterProcessCancelledError, isAdapterProcessCancellation } from "./adapter-process.js";
 export {
   createImportJobId,
   ImportJobCancelledError,
@@ -62,6 +71,7 @@ export type {
   ImportJobCompletion,
   ImportJobDocument,
   ImportJobEvent,
+  ImportJobEventBase,
   ImportJobFailure,
   ImportJobListener,
   ImportJobOptions,

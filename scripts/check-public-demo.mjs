@@ -115,6 +115,7 @@ async function checkLanding(baseUrl, attempt) {
   const html = await response.text();
   assert(html.includes("<title>NARU"), `${landingUrl.href} is not the NARU landing page.`);
   assert(html.includes('href="studio/"'), `${landingUrl.href} does not link to the Studio.`);
+  assert(html.includes('href="api/"'), `${landingUrl.href} does not link to the API reference.`);
 
   const mediaPaths = [...html.matchAll(/(?:src|href)="(media\/[^"]+)"/gu)].map(
     (match) => match[1],
@@ -128,6 +129,37 @@ async function checkLanding(baseUrl, attempt) {
   }
 
   return mediaPaths.length;
+}
+
+async function checkApiReference(baseUrl, attempt) {
+  const indexUrl = cacheBusted(new URL("api/", baseUrl), attempt);
+  const response = await fetchChecked(indexUrl);
+  assert(response.status === 200, `${indexUrl.href} returned HTTP ${response.status}.`);
+  assert(
+    response.headers.get("content-type")?.startsWith("text/html"),
+    `${indexUrl.href} did not return HTML.`,
+  );
+
+  const html = await response.text();
+  assert(html.includes("<title>NARU API"), `${indexUrl.href} is not the NARU API reference.`);
+
+  const modulePaths = [...html.matchAll(/href="(modules\/[^"]+\.html)"/gu)].map(
+    (match) => match[1],
+  );
+  const expectedModules = ["scene-ir", "runtime-webgpu", "workspace", "compiler"];
+  for (const name of expectedModules) {
+    assert(
+      modulePaths.some((path) => path.includes(name)),
+      `${indexUrl.href} does not list the @naru3d/${name} package.`,
+    );
+  }
+
+  for (const modulePath of new Set(modulePaths)) {
+    const moduleUrl = cacheBusted(new URL(modulePath, new URL("api/", baseUrl)), attempt);
+    const moduleResponse = await fetchChecked(moduleUrl, { method: "HEAD" });
+    assert(moduleResponse.status === 200, `${moduleUrl.href} returned HTTP ${moduleResponse.status}.`);
+  }
+  return modulePaths.length;
 }
 
 async function checkStudioIndex(baseUrl, attempt) {
@@ -323,6 +355,7 @@ async function main() {
     try {
       const mediaCount = await checkLanding(options.url, attempt);
       const assetPaths = await checkStudioIndex(options.url, attempt);
+      const apiModuleCount = await checkApiReference(options.url, attempt);
       let delivery = "site artifact";
       let digitalHubRanges;
       if (options.packageOrigin === undefined) {
@@ -353,7 +386,7 @@ async function main() {
       );
       console.log(
         `Public demo smoke check passed: ${mediaCount} landing media references, ` +
-          `${assetPaths.length} app assets, ` +
+          `${assetPaths.length} app assets, ${apiModuleCount} API package pages, ` +
           `${digitalHubResources.length + pyGamerResources.length} package resources, ` +
           `${digitalHubRanges + pyGamerRanges} HTTP Range responses, ` +
           `default scene from ${delivery}.`,

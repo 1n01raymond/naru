@@ -110,6 +110,7 @@ NARU.</sub>
 | Embed the viewer in your app | [Runtime package](packages/runtime-webgpu/README.md) — the compiled-glTF loader and direct WebGPU renderer |
 | Compile your own STEP or IFC | [Compiler package](packages/compiler/README.md) and the [compiler proof](#current-compiler-proof) below |
 | Understand the architecture | [Design documents](docs/README.md) in reading order |
+| Look up a class or function | [API reference](https://1n01raymond.github.io/naru/api/), generated from the package declarations (`pnpm docs:api`) |
 | Contribute or challenge a decision | [CONTRIBUTING.md](CONTRIBUTING.md) and the [ADR index](docs/adr/README.md) |
 
 ## Engineering models deserve an open Web platform

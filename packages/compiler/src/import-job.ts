@@ -157,7 +157,7 @@ export interface ImportJobStagedPreview {
   readonly totalCount: number;
 }
 
-interface ImportJobEventBase {
+export interface ImportJobEventBase {
   readonly schemaVersion: typeof importJobEventSchema;
   /** Stable across repeated runs of the same request. */
   readonly jobId: string;
