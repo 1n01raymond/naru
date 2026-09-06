@@ -342,6 +342,25 @@ separate API and resource budget. DOM labels and GPU overlays can coexist.
 - pipeline readbacks to avoid blocking the render loop;
 - allow on-demand pass for click and optional lower-rate hover updates.
 
+### Surface-point picking
+
+`pickPoint(clientX, clientY)` extends object picking with the world-space
+surface point under the cursor, in metres. The pass renders the same batches
+through a second entry point that writes the object ID and the
+camera-relative fragment position into two colour attachments; the position
+attachment is `rgba32float`, created for the call and destroyed with its
+readback buffer, so `resourceStats()` and the recorded memory envelopes do not
+change. `decodeSurfacePoint` adds the float64 camera origin back on the CPU
+(ADR-0005: the GPU only ever sees camera-relative coordinates), returns `null`
+for a miss, and is unit-tested in
+[`layout.test.ts`](../packages/runtime-webgpu/test/layout.test.ts). The Studio
+builds its distance measurement on this call (`M`, two clicks); the
+measurement state machine and the length formatting are pure and tested in
+[`measurement.test.ts`](../apps/webgpu-spike/test/measurement.test.ts).
+Precision is that of the float32 camera-relative fragment, which the
+camera-relative record bounds; the point is a rasterized surface sample, not a
+snapped vertex or edge.
+
 ### Precise snapping
 
 Snapping is not the same as object picking. It may use:

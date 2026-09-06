@@ -115,6 +115,7 @@
               <button id="isolate-selection" type="button" disabled>Isolate <kbd>I</kbd></button>
               <button id="show-all" type="button" disabled>Show all <kbd>⇧H</kbd></button>
               <button id="toggle-section" type="button" aria-pressed="false">Section <kbd>C</kbd></button>
+              <button id="measure-distance" type="button" aria-pressed="false">Measure <kbd>M</kbd></button>
               <button id="fit-view" type="button">Fit <kbd>F</kbd></button>
             </div>
           </div>
@@ -135,9 +136,11 @@
           </div>
         </div>
         <canvas id="viewport"></canvas>
+        <svg id="measure-overlay" class="measure-overlay" aria-hidden="true"></svg>
         <div class="hud">
           <span id="status" data-state="loading">Loading compiled glTF hierarchy…</span>
           <span id="selection">Click an occurrence to resolve its source identity.</span>
+          <span id="measurement" hidden></span>
         </div>
       </section>
 

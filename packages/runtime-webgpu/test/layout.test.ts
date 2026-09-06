@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   attachmentPairByteLength,
   decodeObjectId,
+  decodeSurfacePoint,
   instanceStride,
   packInstanceData,
   packInstanceDataInto,
@@ -76,6 +77,20 @@ describe("WebGPU packed layouts", () => {
   it("decodes the picking color without signed overflow", () => {
     expect(decodeObjectId([1, 2, 3, 4])).toBe(0x0403_0201);
     expect(decodeObjectId([255, 255, 255, 255])).toBe(0xffff_ffff);
+  });
+
+  it("decodes a surface-point texel against the camera origin in float64", () => {
+    const origin = [10_000_000, -2_500_000.5, 0.25];
+    expect(decodeSurfacePoint([1.5, -0.25, 3, 1], origin)).toEqual([10_000_001.5, -2_500_000.75, 3.25]);
+    expect(decodeSurfacePoint([0, 0, 0, 1], origin)).toEqual(origin);
+  });
+
+  it("reports background where the surface-point marker is clear", () => {
+    expect(decodeSurfacePoint([0, 0, 0, 0], [0, 0, 0])).toBeNull();
+    expect(decodeSurfacePoint([4, 5, 6, 0.5], [0, 0, 0])).toBeNull();
+    expect(decodeSurfacePoint([Number.NaN, 0, 0, 1], [0, 0, 0])).toBeNull();
+    expect(() => decodeSurfacePoint([0, 0, 0], [0, 0, 0])).toThrow(RangeError);
+    expect(() => decodeSurfacePoint([0, 0, 0, 1], [0, 0])).toThrow(RangeError);
   });
 
   it("rejects duplicate occurrence IDs", () => {

@@ -229,3 +229,26 @@ export function decodeObjectId(pixel: ArrayLike<number>): number {
   const a = pixel[3] ?? 0;
   return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
 }
+
+/**
+ * Decodes one texel of the surface-point attachment the renderer writes during
+ * `pickPoint`: xyz hold the camera-relative f32 position, w is 1 where a
+ * surface fragment survived depth and section tests and 0 (the clear value)
+ * where only background was hit. The camera origin is added back in JavaScript
+ * numbers so the result carries ADR-0005 precision, not f32 precision.
+ */
+export function decodeSurfacePoint(
+  texel: ArrayLike<number>,
+  cameraOrigin: ArrayLike<number>,
+): readonly [number, number, number] | null {
+  if (texel.length < 4) throw new RangeError("A surface-point texel has four channels.");
+  if (cameraOrigin.length < 3) throw new RangeError("A camera origin has three components.");
+  if ((texel[3] ?? 0) !== 1) return null;
+  const point: [number, number, number] = [0, 0, 0];
+  for (let axis = 0; axis < 3; axis += 1) {
+    const value = (cameraOrigin[axis] ?? 0) + (texel[axis] ?? 0);
+    if (!Number.isFinite(value)) return null;
+    point[axis] = value;
+  }
+  return point;
+}

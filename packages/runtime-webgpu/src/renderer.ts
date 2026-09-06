@@ -2,6 +2,7 @@ import {
   alignedBufferByteLength,
   attachmentPairByteLength,
   decodeObjectId,
+  decodeSurfacePoint,
   instanceStride,
   packInstanceData,
   packInstanceDataInto,
@@ -117,6 +118,21 @@ fn fsPick(input: VertexOutput) -> @location(0) vec4<u32> {
   clipBySectionPlane(input.worldPosition);
   let id = input.objectId;
   return vec4<u32>(id & 255u, (id >> 8u) & 255u, (id >> 16u) & 255u, (id >> 24u) & 255u);
+}
+
+struct PickPointOutput {
+  @location(0) id: vec4<u32>,
+  @location(1) position: vec4<f32>,
+}
+
+@fragment
+fn fsPickPoint(input: VertexOutput) -> PickPointOutput {
+  clipBySectionPlane(input.worldPosition);
+  let id = input.objectId;
+  var output: PickPointOutput;
+  output.id = vec4<u32>(id & 255u, (id >> 8u) & 255u, (id >> 16u) & 255u, (id >> 24u) & 255u);
+  output.position = vec4<f32>(input.worldPosition, 1.0);
+  return output;
 }
 `;
 
@@ -302,6 +318,14 @@ export interface RendererResourceStats {
 }
 
 /** A world-space half-space that keeps points where dot(normal, position) <= offset. */
+/** Result of {@link Phase0Renderer.pickPoint}: the object hit and its world-space surface point in metres. */
+export interface SurfacePick {
+  /** Object identifier under the pointer, `0` over the background. */
+  readonly objectId: number;
+  /** World-space surface point in metres, `null` over the background. */
+  readonly point: readonly [number, number, number] | null;
+}
+
 export interface SectionPlane {
   readonly normal: readonly [number, number, number];
   readonly offset: number;
@@ -415,6 +439,8 @@ export class Phase0Renderer {
   private readonly fallbackSurfacePipeline: GPURenderPipeline;
   /** Pick pipeline for `"coarse"` batches, so picks agree with what is visible. */
   private readonly fallbackPickPipeline: GPURenderPipeline;
+  private readonly pointPipeline: GPURenderPipeline;
+  private readonly fallbackPointPipeline: GPURenderPipeline;
   readonly fallbackDepthOffset: number;
   private readonly pixelRatio?: number;
   private readonly lastViewProjection = new Float32Array(16);
@@ -508,7 +534,7 @@ export class Phase0Renderer {
     ];
     const surfacePipeline = (
       label: string,
-      entryPoint: "fsSurface" | "fsPick",
+      entryPoint: "fsSurface" | "fsPick" | "fsPickPoint",
       fallbackDepthOffset: number,
     ): GPURenderPipeline =>
       device.createRenderPipeline({
@@ -523,7 +549,12 @@ export class Phase0Renderer {
         fragment: {
           module: surfaceModule,
           entryPoint,
-          targets: [{ format: entryPoint === "fsPick" ? "rgba8uint" : this.format }],
+          targets:
+            entryPoint === "fsSurface"
+              ? [{ format: this.format }]
+              : entryPoint === "fsPick"
+                ? [{ format: "rgba8uint" }]
+                : [{ format: "rgba8uint" }, { format: "rgba32float" }],
         },
         primitive: { topology: "triangle-list", cullMode: "back" },
         depthStencil: {
@@ -534,10 +565,12 @@ export class Phase0Renderer {
       });
     this.surfacePipeline = surfacePipeline("NARU shaded surface pipeline", "fsSurface", 0);
     this.pickPipeline = surfacePipeline("NARU object ID pipeline", "fsPick", 0);
+    this.pointPipeline = surfacePipeline("NARU surface point pipeline", "fsPickPoint", 0);
     this.fallbackDepthOffset = resolveFallbackDepthOffset(options.fallbackDepthOffset);
     if (this.fallbackDepthOffset === 0) {
       this.fallbackSurfacePipeline = this.surfacePipeline;
       this.fallbackPickPipeline = this.pickPipeline;
+      this.fallbackPointPipeline = this.pointPipeline;
     } else {
       this.fallbackSurfacePipeline = surfacePipeline(
         "NARU fallback surface pipeline",
@@ -547,6 +580,11 @@ export class Phase0Renderer {
       this.fallbackPickPipeline = surfacePipeline(
         "NARU fallback object ID pipeline",
         "fsPick",
+        this.fallbackDepthOffset,
+      );
+      this.fallbackPointPipeline = surfacePipeline(
+        "NARU fallback surface point pipeline",
+        "fsPickPoint",
         this.fallbackDepthOffset,
       );
     }
@@ -878,7 +916,12 @@ export class Phase0Renderer {
     };
   }
 
-  async pick(clientX: number, clientY: number): Promise<number> {
+  /**
+   * Maps a client-space pointer position onto a texel of the render targets.
+   * Returns `null` while nothing has been rendered yet or the canvas has no
+   * layout size, so callers can answer "no object" without touching the GPU.
+   */
+  private pickTexel(clientX: number, clientY: number): { x: number; y: number } | null {
     if (
       !this.pickTexture ||
       !this.depthTexture ||
@@ -886,10 +929,10 @@ export class Phase0Renderer {
       this.targetWidth === 0 ||
       this.targetHeight === 0
     ) {
-      return 0;
+      return null;
     }
     const rect = this.canvas.getBoundingClientRect();
-    if (rect.width <= 0 || rect.height <= 0) return 0;
+    if (rect.width <= 0 || rect.height <= 0) return null;
     const x = Math.max(
       0,
       Math.min(this.targetWidth - 1, Math.floor(((clientX - rect.left) / rect.width) * this.targetWidth)),
@@ -898,6 +941,20 @@ export class Phase0Renderer {
       0,
       Math.min(this.targetHeight - 1, Math.floor(((clientY - rect.top) / rect.height) * this.targetHeight)),
     );
+    return { x, y };
+  }
+
+  private drawPickBatches(pass: GPURenderPassEncoder, fallback: GPURenderPipeline, normal: GPURenderPipeline): void {
+    for (const batch of this.batches) {
+      if (batch.instanceCount === 0) continue;
+      this.bindBatch(pass, batch.representation === "coarse" ? fallback : normal, batch);
+      pass.drawIndexed(batch.indexCount, batch.instanceCount);
+    }
+  }
+
+  async pick(clientX: number, clientY: number): Promise<number> {
+    const texel = this.pickTexel(clientX, clientY);
+    if (!texel || !this.pickTexture || !this.depthTexture) return 0;
     this.writeUniforms(this.lastViewProjection, this.lastCameraOrigin);
     const readback = this.device.createBuffer({
       label: "NARU pick readback",
@@ -922,18 +979,10 @@ export class Phase0Renderer {
         depthStoreOp: "discard",
       },
     });
-    for (const batch of this.batches) {
-      if (batch.instanceCount === 0) continue;
-      this.bindBatch(
-        pickPass,
-        batch.representation === "coarse" ? this.fallbackPickPipeline : this.pickPipeline,
-        batch,
-      );
-      pickPass.drawIndexed(batch.indexCount, batch.instanceCount);
-    }
+    this.drawPickBatches(pickPass, this.fallbackPickPipeline, this.pickPipeline);
     pickPass.end();
     encoder.copyTextureToBuffer(
-      { texture: this.pickTexture, origin: { x, y } },
+      { texture: this.pickTexture, origin: { x: texel.x, y: texel.y } },
       { buffer: readback, bytesPerRow: 256 },
       { width: 1, height: 1, depthOrArrayLayers: 1 },
     );
@@ -943,6 +992,80 @@ export class Phase0Renderer {
     readback.unmap();
     readback.destroy();
     return id;
+  }
+
+  /**
+   * Resolves the object under a client-space pointer position together with
+   * the world-space surface point it hit, or `point: null` over the
+   * background. The position is rendered camera-relative into a transient
+   * `rgba32float` attachment that lives only for this call, so the persistent
+   * attachment pair reported by `resourceStats()` does not change, and the
+   * float64 camera origin is added back on the CPU so the result keeps
+   * millimetre precision at any distance from the world origin.
+   */
+  async pickPoint(clientX: number, clientY: number): Promise<SurfacePick> {
+    const texel = this.pickTexel(clientX, clientY);
+    if (!texel || !this.pickTexture || !this.depthTexture) return { objectId: 0, point: null };
+    this.writeUniforms(this.lastViewProjection, this.lastCameraOrigin);
+    const positionTexture = this.device.createTexture({
+      label: "NARU transient surface point attachment",
+      size: { width: this.targetWidth, height: this.targetHeight },
+      format: "rgba32float",
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+    });
+    const readback = this.device.createBuffer({
+      label: "NARU surface point readback",
+      size: 512,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    try {
+      const encoder = this.device.createCommandEncoder({ label: "NARU on-demand surface point pick" });
+      const pass = encoder.beginRenderPass({
+        label: "NARU surface point pass",
+        colorAttachments: [
+          {
+            view: this.pickTexture.createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+            loadOp: "clear",
+            storeOp: "store",
+          },
+          {
+            view: positionTexture.createView(),
+            clearValue: { r: 0, g: 0, b: 0, a: 0 },
+            loadOp: "clear",
+            storeOp: "store",
+          },
+        ],
+        depthStencilAttachment: {
+          view: this.depthTexture.createView(),
+          depthClearValue: 1,
+          depthLoadOp: "clear",
+          depthStoreOp: "discard",
+        },
+      });
+      this.drawPickBatches(pass, this.fallbackPointPipeline, this.pointPipeline);
+      pass.end();
+      encoder.copyTextureToBuffer(
+        { texture: this.pickTexture, origin: { x: texel.x, y: texel.y } },
+        { buffer: readback, offset: 0, bytesPerRow: 256 },
+        { width: 1, height: 1, depthOrArrayLayers: 1 },
+      );
+      encoder.copyTextureToBuffer(
+        { texture: positionTexture, origin: { x: texel.x, y: texel.y } },
+        { buffer: readback, offset: 256, bytesPerRow: 256 },
+        { width: 1, height: 1, depthOrArrayLayers: 1 },
+      );
+      this.device.queue.submit([encoder.finish()]);
+      await readback.mapAsync(GPUMapMode.READ);
+      const range = readback.getMappedRange();
+      const objectId = decodeObjectId(new Uint8Array(range, 0, 4));
+      const point = decodeSurfacePoint(new Float32Array(range, 256, 4), this.lastCameraOrigin);
+      readback.unmap();
+      return { objectId, point };
+    } finally {
+      readback.destroy();
+      positionTexture.destroy();
+    }
   }
 
   destroy(): void {

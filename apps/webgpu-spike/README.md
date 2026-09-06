@@ -31,7 +31,13 @@ occurrences. These actions compact stable per-prototype visibility tables into
 existing instance buffers rather than rebuilding scene resources. Adafruit does
 not endorse NARU. Press `C` to enable one world-space section plane; choose its
 X/Y/Z axis, drag the normalized position, or flip the retained side. Surfaces,
-explicit edges, and GPU picking share the same clipping equation.
+explicit edges, and GPU picking share the same clipping equation. Press `M`
+(or the Measure button) and click two surface points to read their straight
+distance and the per-axis deltas in metres; a third click starts a new
+measurement and `Escape` clears it. The overlay is re-projected every frame,
+and the document element publishes `data-measure-state`,
+`data-measure-distance`, and `data-measure-delta` for tests. Measurements are
+not part of the saved workspace.
 
 The camera chooses a JavaScript-number origin for every frame and sends a
 camera-relative f32 projection plus that origin to the renderer. This keeps the
