@@ -458,6 +458,45 @@ canvas.is-navigating {
   cursor: grabbing;
 }
 
+canvas.is-measuring {
+  cursor: crosshair;
+}
+
+.measure-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.measure-overlay line {
+  stroke: #ffd166;
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+}
+
+.measure-overlay circle {
+  fill: rgb(6 20 28 / 85%);
+  stroke: #ffd166;
+  stroke-width: 2;
+}
+
+.measure-overlay text {
+  fill: #ffd166;
+  font: 12px/1 ui-monospace, "Cascadia Code", monospace;
+  paint-order: stroke;
+  stroke: rgb(6 20 28 / 92%);
+  stroke-width: 4;
+  text-anchor: middle;
+}
+
+#measurement {
+  color: #ffd166;
+}
+
 .hud {
   position: absolute;
   inset: auto 14px 14px;

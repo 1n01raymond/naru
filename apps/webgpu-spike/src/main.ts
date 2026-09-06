@@ -27,6 +27,7 @@ import {
 } from "./memory-ledger.js";
 import { HierarchySearchIndex } from "./hierarchy-search.js";
 import type { HierarchySearchResult } from "./hierarchy-search.js";
+import { DistanceMeasurement, formatMeasurement, projectToClient } from "./measurement.js";
 import { AxisSectionPlane } from "./section-plane.js";
 import type { SectionAxis } from "./section-plane.js";
 import {
@@ -236,6 +237,9 @@ const isolateSelectionButton = requireElement<HTMLButtonElement>("#isolate-selec
 const showAllButton = requireElement<HTMLButtonElement>("#show-all");
 const toggleSectionButton = requireElement<HTMLButtonElement>("#toggle-section");
 const sectionControls = requireElement<HTMLElement>("#section-controls");
+const measureButton = requireElement<HTMLButtonElement>("#measure-distance");
+const measureOverlay = requireElement<SVGSVGElement>("#measure-overlay");
+const measurementHud = requireElement<HTMLElement>("#measurement");
 const sectionPosition = requireElement<HTMLInputElement>("#section-position");
 const sectionPositionValue = requireElement<HTMLOutputElement>("#section-position-value");
 const sectionDirection = requireElement<HTMLElement>("#section-direction");
@@ -383,6 +387,13 @@ function resetSceneUi(): void {
   showAllButton.disabled = true;
   toggleSectionButton.setAttribute("aria-pressed", "false");
   sectionControls.hidden = true;
+  measureButton.setAttribute("aria-pressed", "false");
+  measureOverlay.replaceChildren();
+  measurementHud.hidden = true;
+  canvas.classList.remove("is-measuring");
+  delete document.documentElement.dataset.measureState;
+  delete document.documentElement.dataset.measureDistance;
+  delete document.documentElement.dataset.measureDelta;
   for (const selector of ["#triangle-count", "#edge-count", "#decode-time", "#gpu-adapter"]) {
     setText(selector, "—");
   }
@@ -528,6 +539,48 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     }
 
     const camera = new OrthographicOrbitCamera(scene.bounds);
+    const measurement = new DistanceMeasurement();
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const svgElement = (name: string, attributes: Record<string, string>): SVGElement => {
+      const element = document.createElementNS(svgNamespace, name);
+      for (const [key, value] of Object.entries(attributes)) element.setAttribute(key, value);
+      return element;
+    };
+    // Re-projects the measured points through the same frame the renderer just
+    // drew, so the markers stay glued to their surfaces while the camera moves.
+    const updateMeasurementOverlay = (frame: ReturnType<OrthographicOrbitCamera["frame"]>): void => {
+      const state = measurement.state();
+      if (state.kind !== "first" && state.kind !== "complete") {
+        if (measureOverlay.childElementCount > 0) measureOverlay.replaceChildren();
+        return;
+      }
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      measureOverlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      const start = projectToClient(frame.viewProjection, frame.origin, state.start, width, height);
+      const end =
+        state.kind === "complete"
+          ? projectToClient(frame.viewProjection, frame.origin, state.end, width, height)
+          : undefined;
+      const children: SVGElement[] = [];
+      if (start && end) {
+        children.push(
+          svgElement("line", { x1: String(start.x), y1: String(start.y), x2: String(end.x), y2: String(end.y) }),
+        );
+      }
+      for (const point of [start, end]) {
+        if (point) children.push(svgElement("circle", { cx: String(point.x), cy: String(point.y), r: "4" }));
+      }
+      if (start && end && state.kind === "complete") {
+        const label = svgElement("text", {
+          x: String((start.x + end.x) / 2),
+          y: String((start.y + end.y) / 2 - 8),
+        });
+        label.textContent = formatMeasurement(state).split(" · ")[0] ?? "";
+        children.push(label);
+      }
+      measureOverlay.replaceChildren(...children);
+    };
     let updateTargetView = (_frame: ReturnType<OrthographicOrbitCamera["frame"]>): void => {};
     let cameraChanged = false;
     const render = (): void => {
@@ -536,10 +589,33 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       const frame = camera.frame(aspect);
       document.documentElement.dataset.cameraOrigin = frame.origin.join(",");
       renderer.render(frame.viewProjection, { cameraOrigin: frame.origin });
+      updateMeasurementOverlay(frame);
       if (cameraChanged) {
         cameraChanged = false;
         updateTargetView(frame);
       }
+    };
+    const applyMeasurement = (): void => {
+      const state = measurement.state();
+      const active = measurement.active();
+      measureButton.setAttribute("aria-pressed", String(active));
+      canvas.classList.toggle("is-measuring", active);
+      const text = formatMeasurement(state);
+      measurementHud.textContent = text;
+      measurementHud.hidden = text === "";
+      document.documentElement.dataset.measureState = state.kind;
+      if (state.kind === "complete") {
+        document.documentElement.dataset.measureDistance = String(state.distance);
+        document.documentElement.dataset.measureDelta = state.delta.join(",");
+      } else {
+        delete document.documentElement.dataset.measureDistance;
+        delete document.documentElement.dataset.measureDelta;
+      }
+      scheduleRender();
+    };
+    const toggleMeasurement = (): void => {
+      measurement.toggle();
+      applyMeasurement();
     };
     const scheduleRender = (): void => {
       if (animationFrame === 0) animationFrame = requestAnimationFrame(render);
@@ -1251,6 +1327,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     isolateSelectionButton.addEventListener("click", isolateSelection, listenerOptions);
     showAllButton.addEventListener("click", showAll, listenerOptions);
     toggleSectionButton.addEventListener("click", toggleSection, listenerOptions);
+    measureButton.addEventListener("click", toggleMeasurement, listenerOptions);
     flipSectionButton.addEventListener(
       "click",
       () => {
@@ -1320,10 +1397,14 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         const key = event.key.toLowerCase();
         if (key === "f") fitView();
         else if (key === "c") toggleSection();
+        else if (key === "m") toggleMeasurement();
         else if (key === "h" && event.shiftKey) showAll();
         else if (key === "h") hideSelection();
         else if (key === "i") isolateSelection();
-        else if (key === "escape" && visibility.state().mode !== "all") showAll();
+        else if (key === "escape" && measurement.active()) {
+          measurement.clear();
+          applyMeasurement();
+        } else if (key === "escape" && visibility.state().mode !== "all") showAll();
         else return;
         event.preventDefault();
       },
@@ -1369,15 +1450,31 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       // `addEventListener` discards the return value, so an async handler would
       // turn a failed pick into an unhandled rejection that never reaches the
       // user. Surface it the way every other failure in this session does.
+      const reportPickFailure = (error: unknown): void => {
+        status.textContent = error instanceof Error ? error.message : String(error);
+        status.dataset.state = "error";
+      };
+      if (measurement.active()) {
+        renderer
+          .pickPoint(event.clientX, event.clientY)
+          .then(({ point }) => {
+            if (!point) {
+              measurementHud.textContent = `${formatMeasurement(measurement.state())} No surface under the cursor.`;
+              measurementHud.hidden = false;
+              return;
+            }
+            measurement.addPoint(point);
+            applyMeasurement();
+          })
+          .catch(reportPickFailure);
+        return;
+      }
       renderer
         .pick(event.clientX, event.clientY)
         .then((objectId) => {
           selectObject(objectId);
         })
-        .catch((error: unknown) => {
-          status.textContent = error instanceof Error ? error.message : String(error);
-          status.dataset.state = "error";
-        });
+        .catch(reportPickFailure);
     }, listenerOptions);
 
     if (sessionResources.targetScheduler) {

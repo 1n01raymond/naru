@@ -85,7 +85,10 @@ Direct WebGPU rendering and the Phase 1 compiled glTF runtime boundary.
 - `compiledSceneTransferables(scene)` lists owned typed-array buffers for a
   zero-copy Worker-to-main-thread transfer.
 - `NaruWebGpuRenderer` uploads those batches and renders surfaces, edges, and an
-  integer object-ID picking pass directly with WebGPU.
+  integer object-ID picking pass directly with WebGPU. `pickPoint(x, y)` adds
+  the world-space surface point under the cursor through a transient
+  `rgba32float` attachment; `decodeSurfacePoint` restores the float64 camera
+  origin on the CPU and returns `null` for a miss.
 
 `setSelection(objectId)` updates a small scene uniform so the selected
 occurrence's surfaces and explicit edges are highlighted without repacking

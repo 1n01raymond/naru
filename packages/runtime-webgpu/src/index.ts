@@ -4,6 +4,7 @@ export {
   attachmentPairByteLength,
   batchResidencyCost,
   decodeObjectId,
+  decodeSurfacePoint,
   instanceStride,
   packInstanceData,
   packInstanceDataInto,
@@ -133,4 +134,5 @@ export type {
   RendererResourceStats,
   SectionPlane,
   SetSceneOptions,
+  SurfacePick,
 } from "./renderer.js";
