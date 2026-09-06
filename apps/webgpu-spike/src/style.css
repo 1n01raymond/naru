@@ -256,6 +256,16 @@ h1 span {
   background: #56d4ff;
 }
 
+.pipeline article[data-state="staging"] {
+  border-color: #7a5a1c;
+  background: #1f1a0c;
+}
+
+.pipeline article[data-state="staging"] > span {
+  color: #071118;
+  background: #ffd27a;
+}
+
 .pipeline div {
   display: grid;
   min-width: 0;
@@ -470,6 +480,10 @@ canvas.is-navigating {
 
 [data-state="error"] {
   color: #ff9ba8;
+}
+
+[data-state="staging"] {
+  color: #ffd27a;
 }
 
 .metrics {

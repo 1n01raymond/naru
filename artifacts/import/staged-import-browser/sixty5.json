@@ -1,0 +1,956 @@
+{
+  "schemaVersion": "naru.staged-import-browser-evidence.1",
+  "mode": "headed-cold-import-staged-tree-then-package",
+  "recordedAt": "2026-09-06T12:27:47.909Z",
+  "model": "sixty5",
+  "host": {
+    "platform": "win32",
+    "architecture": "x64",
+    "node": "v22.14.0",
+    "cpuCount": 16,
+    "cpuModel": "AMD Ryzen 7 9800X3D 8-Core Processor           ",
+    "totalMemoryBytes": 33463021568,
+    "freeMemoryBytesAtStart": 14969061376
+  },
+  "commit": {
+    "head": "6c7b95b65f218943f0b4751731cf1792cf87311d",
+    "workingTreeClean": false
+  },
+  "browser": {
+    "id": "chrome",
+    "engine": "Blink",
+    "version": "151.0.7922.139",
+    "headless": false,
+    "viewport": {
+      "width": 1320,
+      "height": 1000
+    }
+  },
+  "fixture": {
+    "datasetId": "ifc-bench-sixty5",
+    "manifest": {
+      "path": "fixtures/external/manifest.json",
+      "sha256": "77d7d587d6b32938a371325e281a4584e10c2ff3118a59f300a9da097eb2f478"
+    },
+    "documents": [
+      {
+        "discipline": "architecture",
+        "uriHint": "projects/sixty5/arc.ifc",
+        "bytes": 342657851,
+        "sha256": "e91ddbbd672bbde946af14631de4c732f0cf8a7cfae5dbbf06fbeab03b5c46df"
+      },
+      {
+        "discipline": "electrical",
+        "uriHint": "projects/sixty5/electrical.ifc",
+        "bytes": 97058912,
+        "sha256": "adb8d5eda2c706a1fded2a00bd38d845e35f513e2f6ba048fc6228274dfb3986"
+      },
+      {
+        "discipline": "facade",
+        "uriHint": "projects/sixty5/facade.ifc",
+        "bytes": 6067026,
+        "sha256": "a9a1b20214da8ac1e1bea1f8670bef24f20a0d53a8ebaef4eb20b5a447640c79"
+      },
+      {
+        "discipline": "kitchen",
+        "uriHint": "projects/sixty5/kitchen.ifc",
+        "bytes": 49670229,
+        "sha256": "1905b992071729d1c780b18f6103e4d1d08307a4707d5f33a4413216f36776ac"
+      },
+      {
+        "discipline": "plumbing",
+        "uriHint": "projects/sixty5/plumbing.ifc",
+        "bytes": 222099255,
+        "sha256": "15382b06d0a63464b95ba451ce7d5fa981bf6c236ebe3f4f62bb9d2b9abfd821"
+      },
+      {
+        "discipline": "structure",
+        "uriHint": "projects/sixty5/str.ifc",
+        "bytes": 7422441,
+        "sha256": "79f294c643438ac7a494e4871857244c2de0eefa536eda5977af20640a301a22"
+      },
+      {
+        "discipline": "ventilation",
+        "uriHint": "projects/sixty5/ventilation.ifc",
+        "bytes": 114891068,
+        "sha256": "c78f6ad085961500f0890bbffda9e171c1342c5865ca152f64098dd4da644cca"
+      }
+    ]
+  },
+  "adapter": {
+    "fingerprint": "cb4c1d0f2c8bb2f7b8c1eef307e5d5eeb632b46fe0456efd7a972df73d18a867",
+    "name": "IfcOpenShell",
+    "schemaVersion": "naru.ifc-adapter-identity.1",
+    "toolchain": {
+      "architecture": "AMD64",
+      "ifcOpenShell": "0.8.5",
+      "numpy": "2.5.2",
+      "platform": "win32",
+      "python": "3.13.2"
+    },
+    "version": "0.8.5"
+  },
+  "compiler": {
+    "cli": "packages/compiler/dist/cli.js",
+    "command": "compile-ifc",
+    "threads": 6,
+    "compactJson": true,
+    "cache": "none (cold, no --cache)",
+    "stagedPreview": true,
+    "spawnedAt": "2026-09-06T12:27:50.021Z",
+    "exitCode": 0,
+    "elapsedMs": 417936.7
+  },
+  "servers": {
+    "studio": "http://127.0.0.1:4177",
+    "origin": "http://127.0.0.1:4178",
+    "studioUrl": "http://127.0.0.1:4177/?scene=http%3A%2F%2F127.0.0.1%3A4178%2Fpackage%2Fscene.gltf&staged=http%3A%2F%2F127.0.0.1%3A4178%2Fstaged%2Fstaged.json",
+    "sceneUrl": "http://127.0.0.1:4178/package/scene.gltf",
+    "stagedUrl": "http://127.0.0.1:4178/staged/staged.json"
+  },
+  "productTarget": {
+    "source": "ADR-0021 gate 4 (issue #73 acceptance criterion 8)",
+    "lowerSeconds": 5,
+    "upperSeconds": 15,
+    "measures": "compile spawn to the first staged tree usable in the Studio, transport included",
+    "firstTreeMs": 1542.3,
+    "withinBand": false,
+    "meetsTarget": true
+  },
+  "protocol": {
+    "clock": "Every *Ms figure is the Studio page's performance.now() minus its value read immediately before the compile process was spawned; spawn latency, adapter parse, staged publish, the poll interval, transport, digest verification, and DOM construction are all inside it.",
+    "pollMs": 500,
+    "watchStartedBeforeSpawnMs": -1525.4,
+    "manifestPollsBeforeSpawn": 3,
+    "hierarchyInteraction": "The Studio hierarchy list is a flat, depth-indented, virtualized list with no expand/collapse; gate 4's 'expand and search' is exercised as search plus row selection.",
+    "manifestNotFound": "Polling staged.json before the compile publishes it answers 404; Chrome logs each as a console error that no application code can suppress, so those messages (manifest URL only, before its first 200) are counted in network.manifestPolls.notFoundConsoleMessages, reconciled against the 404 responses, and excluded from consoleIssues.",
+    "coarsePreview": "No per-document coarse geometry exists during import; coarseFrameMs is the first coarse frame of the compiled package after the handoff, measured end to end from the same spawn instant."
+  },
+  "milestones": {
+    "firstTreeMs": 1542.3,
+    "lastTreeMs": 271503.6,
+    "stagedCompleteMs": 368107.7,
+    "packageHandoffMs": 417766.1,
+    "hierarchyReadyMs": 420040.1,
+    "coarseFrameMs": 422835,
+    "readyMs": 427743.4,
+    "compileExitMs": 417936.7
+  },
+  "firstTree": {
+    "discipline": "facade",
+    "nodeCount": 1077,
+    "stagedCount": 1,
+    "totalCount": 7,
+    "ms": 1542.3,
+    "status": "Importing · 1/7 trees staged · facade 1076 nodes · extraction continues…",
+    "hierarchyTitle": "Assembly · importing 1/7",
+    "hierarchyResult": "1077 staged rows · 1/7 documents",
+    "compileRunning": true
+  },
+  "documents": [
+    {
+      "rank": 0,
+      "discipline": "facade",
+      "uriHint": "projects/sixty5/facade.ifc",
+      "documentId": "document:ifc:facade-a9a1b20214da",
+      "schema": "IFC2X3",
+      "sourceDigest": "a9a1b20214da8ac1e1bea1f8670bef24f20a0d53a8ebaef4eb20b5a447640c79",
+      "sourceBytes": 6067026,
+      "nodeCount": 1076,
+      "rootCount": 1,
+      "hierarchy": {
+        "uri": "hierarchy-facade.json",
+        "byteLength": 1629,
+        "sha256": "970ba3fcf5020f07e39ccbb09ba30b72ef2aa1d7ee1b3d63a8525f7ed3376dde",
+        "columnsUri": "hierarchy-facade.bin",
+        "columnsByteLength": 131672,
+        "columnsSha256": "baa656740a28571e6c086ec3a185f79263c0f7e860bc4b469f8edec553e2ae46"
+      },
+      "arrivalMs": 1548.1,
+      "adapterStagedElapsedMs": 1267
+    },
+    {
+      "rank": 1,
+      "discipline": "structure",
+      "uriHint": "projects/sixty5/str.ifc",
+      "documentId": "document:ifc:structure-79f294c64343",
+      "schema": "IFC2X3",
+      "sourceDigest": "79f294c643438ac7a494e4871857244c2de0eefa536eda5977af20640a301a22",
+      "sourceBytes": 7422441,
+      "nodeCount": 2688,
+      "rootCount": 1285,
+      "hierarchy": {
+        "uri": "hierarchy-structure.json",
+        "byteLength": 2016,
+        "sha256": "c94d483dc6617b567b5d6e2a88540c10229086be081b5b6020ae6568d1363985",
+        "columnsUri": "hierarchy-structure.bin",
+        "columnsByteLength": 402384,
+        "columnsSha256": "1ca6487ef78349d5051f1663faa49ea4e51df6623a575c41440f14906b242a5d"
+      },
+      "arrivalMs": 3091.6,
+      "adapterStagedElapsedMs": 2847
+    },
+    {
+      "rank": 2,
+      "discipline": "kitchen",
+      "uriHint": "projects/sixty5/kitchen.ifc",
+      "documentId": "document:ifc:kitchen-1905b9920717",
+      "schema": "IFC2X3",
+      "sourceDigest": "1905b992071729d1c780b18f6103e4d1d08307a4707d5f33a4413216f36776ac",
+      "sourceBytes": 49670229,
+      "nodeCount": 3118,
+      "rootCount": 1,
+      "hierarchy": {
+        "uri": "hierarchy-kitchen.json",
+        "byteLength": 1677,
+        "sha256": "f8a387427337cf85509878bdca0c2674d85e6efbd38c764fef58eb37d28a3e37",
+        "columnsUri": "hierarchy-kitchen.bin",
+        "columnsByteLength": 381624,
+        "columnsSha256": "aa390e4c7f605ad05c3cd424233eebd2b13ef2c2632626e7e62b37a09b5bade5"
+      },
+      "arrivalMs": 13228.4,
+      "adapterStagedElapsedMs": 12765
+    },
+    {
+      "rank": 3,
+      "discipline": "electrical",
+      "uriHint": "projects/sixty5/electrical.ifc",
+      "documentId": "document:ifc:electrical-adb8d5eda2c7",
+      "schema": "IFC2X3",
+      "sourceDigest": "adb8d5eda2c706a1fded2a00bd38d845e35f513e2f6ba048fc6228274dfb3986",
+      "sourceBytes": 97058912,
+      "nodeCount": 56979,
+      "rootCount": 37083,
+      "hierarchy": {
+        "uri": "hierarchy-electrical.json",
+        "byteLength": 1996,
+        "sha256": "434b4ca143d33b0ddec6d00b981f22a66616a66b8a320be5f52d1d4b580ed1b2",
+        "columnsUri": "hierarchy-electrical.bin",
+        "columnsByteLength": 7958240,
+        "columnsSha256": "0a5d75485508df650223a6a8987cd3712ddc19dbe7a98854afca1c8f899f2473"
+      },
+      "arrivalMs": 38285,
+      "adapterStagedElapsedMs": 37565
+    },
+    {
+      "rank": 4,
+      "discipline": "ventilation",
+      "uriHint": "projects/sixty5/ventilation.ifc",
+      "documentId": "document:ifc:ventilation-c78f6ad08596",
+      "schema": "IFC2X3",
+      "sourceDigest": "c78f6ad085961500f0890bbffda9e171c1342c5865ca152f64098dd4da644cca",
+      "sourceBytes": 114891068,
+      "nodeCount": 37490,
+      "rootCount": 25435,
+      "hierarchy": {
+        "uri": "hierarchy-ventilation.json",
+        "byteLength": 1978,
+        "sha256": "229a8cfba3f199ca8d357a964e4651e14e7f527a8d9ebffb4ef43863fb595888",
+        "columnsUri": "hierarchy-ventilation.bin",
+        "columnsByteLength": 5530016,
+        "columnsSha256": "e9378865eaa81f9d7b74d2577e5af0b2d783bd36dbf87446c2976a0339da6fa8"
+      },
+      "arrivalMs": 96240.6,
+      "adapterStagedElapsedMs": 95799
+    },
+    {
+      "rank": 5,
+      "discipline": "plumbing",
+      "uriHint": "projects/sixty5/plumbing.ifc",
+      "documentId": "document:ifc:plumbing-15382b06d0a6",
+      "schema": "IFC2X3",
+      "sourceDigest": "15382b06d0a63464b95ba451ce7d5fa981bf6c236ebe3f4f62bb9d2b9abfd821",
+      "sourceBytes": 222099255,
+      "nodeCount": 70183,
+      "rootCount": 47459,
+      "hierarchy": {
+        "uri": "hierarchy-plumbing.json",
+        "byteLength": 1993,
+        "sha256": "4634f7d027bf5429cbdce478bb409fb96190065b43f693a5f8f80780c6e4dcf3",
+        "columnsUri": "hierarchy-plumbing.bin",
+        "columnsByteLength": 10101888,
+        "columnsSha256": "2267c0ef9910d47f4e0922cda20291ded9cafe3d1ccd1200e1a53959d02c7c62"
+      },
+      "arrivalMs": 165503.4,
+      "adapterStagedElapsedMs": 164341
+    },
+    {
+      "rank": 6,
+      "discipline": "architecture",
+      "uriHint": "projects/sixty5/arc.ifc",
+      "documentId": "document:ifc:architecture-e91ddbbd672b",
+      "schema": "IFC2X3",
+      "sourceDigest": "e91ddbbd672bbde946af14631de4c732f0cf8a7cfae5dbbf06fbeab03b5c46df",
+      "sourceBytes": 342657851,
+      "nodeCount": 16785,
+      "rootCount": 252,
+      "hierarchy": {
+        "uri": "hierarchy-architecture.json",
+        "byteLength": 2446,
+        "sha256": "e61b26ee184e6389e1f30b290d48263dace56accac694078ed3fb9abaa4fe0bb",
+        "columnsUri": "hierarchy-architecture.bin",
+        "columnsByteLength": 2205936,
+        "columnsSha256": "3763ce6138468f760aa3ea0d83f87cddc781d63c7ff1a59b6ecafb1dc5a60d15"
+      },
+      "arrivalMs": 271503.6,
+      "adapterStagedElapsedMs": 270541
+    }
+  ],
+  "interactions": {
+    "searchDuringImport": {
+      "label": "first-tree",
+      "query": "Wall",
+      "matches": 353,
+      "resultText": "353 matches",
+      "stagedCount": 1,
+      "totalCount": 7,
+      "ms": 1709,
+      "compileRunning": true
+    },
+    "selectionDuringImport": {
+      "occurrenceId": "staged:facade",
+      "rowLabel": null,
+      "selectionText": "facade · facade.ifc · staged:facade · staged preview, geometry pending",
+      "stagedCount": 1,
+      "ms": 1793.4,
+      "compileRunning": true
+    },
+    "searchAfterLastTree": {
+      "label": "all-trees",
+      "query": "Wall",
+      "matches": 16546,
+      "resultText": "16546 matches",
+      "stagedCount": 7,
+      "totalCount": 7,
+      "ms": 368168.3,
+      "compileRunning": true
+    }
+  },
+  "jobEvents": [
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 0,
+      "elapsedMs": 0,
+      "state": "queued",
+      "progress": {
+        "completed": 0,
+        "total": null
+      },
+      "staged": null,
+      "recorderMs": 93
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 1,
+      "elapsedMs": 1,
+      "state": "inspecting",
+      "progress": {
+        "completed": 1,
+        "total": null
+      },
+      "staged": null,
+      "recorderMs": 93.1
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 2,
+      "elapsedMs": 458,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": null,
+      "recorderMs": 550
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 3,
+      "elapsedMs": 1267,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "facade",
+        "sha256": "a9a1b20214da8ac1e1bea1f8670bef24f20a0d53a8ebaef4eb20b5a447640c79",
+        "byteLength": 6067026,
+        "nodeCount": 1076,
+        "rootCount": 1,
+        "hierarchy": {
+          "sha256": "970ba3fcf5020f07e39ccbb09ba30b72ef2aa1d7ee1b3d63a8525f7ed3376dde",
+          "byteLength": 1629,
+          "columnsSha256": "baa656740a28571e6c086ec3a185f79263c0f7e860bc4b469f8edec553e2ae46",
+          "columnsByteLength": 131672
+        },
+        "stagedCount": 1,
+        "totalCount": 7
+      },
+      "recorderMs": 1358.5
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 4,
+      "elapsedMs": 2847,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "structure",
+        "sha256": "79f294c643438ac7a494e4871857244c2de0eefa536eda5977af20640a301a22",
+        "byteLength": 7422441,
+        "nodeCount": 2688,
+        "rootCount": 1285,
+        "hierarchy": {
+          "sha256": "c94d483dc6617b567b5d6e2a88540c10229086be081b5b6020ae6568d1363985",
+          "byteLength": 2016,
+          "columnsSha256": "1ca6487ef78349d5051f1663faa49ea4e51df6623a575c41440f14906b242a5d",
+          "columnsByteLength": 402384
+        },
+        "stagedCount": 2,
+        "totalCount": 7
+      },
+      "recorderMs": 2939.2
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 5,
+      "elapsedMs": 12765,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "kitchen",
+        "sha256": "1905b992071729d1c780b18f6103e4d1d08307a4707d5f33a4413216f36776ac",
+        "byteLength": 49670229,
+        "nodeCount": 3118,
+        "rootCount": 1,
+        "hierarchy": {
+          "sha256": "f8a387427337cf85509878bdca0c2674d85e6efbd38c764fef58eb37d28a3e37",
+          "byteLength": 1677,
+          "columnsSha256": "aa390e4c7f605ad05c3cd424233eebd2b13ef2c2632626e7e62b37a09b5bade5",
+          "columnsByteLength": 381624
+        },
+        "stagedCount": 3,
+        "totalCount": 7
+      },
+      "recorderMs": 12857
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 6,
+      "elapsedMs": 37565,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "electrical",
+        "sha256": "adb8d5eda2c706a1fded2a00bd38d845e35f513e2f6ba048fc6228274dfb3986",
+        "byteLength": 97058912,
+        "nodeCount": 56979,
+        "rootCount": 37083,
+        "hierarchy": {
+          "sha256": "434b4ca143d33b0ddec6d00b981f22a66616a66b8a320be5f52d1d4b580ed1b2",
+          "byteLength": 1996,
+          "columnsSha256": "0a5d75485508df650223a6a8987cd3712ddc19dbe7a98854afca1c8f899f2473",
+          "columnsByteLength": 7958240
+        },
+        "stagedCount": 4,
+        "totalCount": 7
+      },
+      "recorderMs": 37657.1
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 7,
+      "elapsedMs": 95799,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "ventilation",
+        "sha256": "c78f6ad085961500f0890bbffda9e171c1342c5865ca152f64098dd4da644cca",
+        "byteLength": 114891068,
+        "nodeCount": 37490,
+        "rootCount": 25435,
+        "hierarchy": {
+          "sha256": "229a8cfba3f199ca8d357a964e4651e14e7f527a8d9ebffb4ef43863fb595888",
+          "byteLength": 1978,
+          "columnsSha256": "e9378865eaa81f9d7b74d2577e5af0b2d783bd36dbf87446c2976a0339da6fa8",
+          "columnsByteLength": 5530016
+        },
+        "stagedCount": 5,
+        "totalCount": 7
+      },
+      "recorderMs": 95891.4
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 8,
+      "elapsedMs": 164341,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "plumbing",
+        "sha256": "15382b06d0a63464b95ba451ce7d5fa981bf6c236ebe3f4f62bb9d2b9abfd821",
+        "byteLength": 222099255,
+        "nodeCount": 70183,
+        "rootCount": 47459,
+        "hierarchy": {
+          "sha256": "4634f7d027bf5429cbdce478bb409fb96190065b43f693a5f8f80780c6e4dcf3",
+          "byteLength": 1993,
+          "columnsSha256": "2267c0ef9910d47f4e0922cda20291ded9cafe3d1ccd1200e1a53959d02c7c62",
+          "columnsByteLength": 10101888
+        },
+        "stagedCount": 6,
+        "totalCount": 7
+      },
+      "recorderMs": 164433.4
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 9,
+      "elapsedMs": 270541,
+      "state": "extracting",
+      "progress": {
+        "completed": 2,
+        "total": 6
+      },
+      "staged": {
+        "schemaVersion": "naru.staged-import-preview.2",
+        "discipline": "architecture",
+        "sha256": "e91ddbbd672bbde946af14631de4c732f0cf8a7cfae5dbbf06fbeab03b5c46df",
+        "byteLength": 342657851,
+        "nodeCount": 16785,
+        "rootCount": 252,
+        "hierarchy": {
+          "sha256": "e61b26ee184e6389e1f30b290d48263dace56accac694078ed3fb9abaa4fe0bb",
+          "byteLength": 2446,
+          "columnsSha256": "3763ce6138468f760aa3ea0d83f87cddc781d63c7ff1a59b6ecafb1dc5a60d15",
+          "columnsByteLength": 2205936
+        },
+        "stagedCount": 7,
+        "totalCount": 7
+      },
+      "recorderMs": 270632.7
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 10,
+      "elapsedMs": 367837,
+      "state": "compiling",
+      "progress": {
+        "completed": 3,
+        "total": 6
+      },
+      "staged": null,
+      "recorderMs": 367928.9
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 11,
+      "elapsedMs": 412722,
+      "state": "verifying",
+      "progress": {
+        "completed": 4,
+        "total": 6
+      },
+      "staged": null,
+      "recorderMs": 412814.3
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 12,
+      "elapsedMs": 414016,
+      "state": "publishing",
+      "progress": {
+        "completed": 5,
+        "total": 6
+      },
+      "staged": null,
+      "recorderMs": 414108.4
+    },
+    {
+      "schemaVersion": "naru.import-job-event.2",
+      "jobId": "297bc20ab1914197",
+      "sequence": 13,
+      "elapsedMs": 417387,
+      "state": "completed",
+      "progress": {
+        "completed": 6,
+        "total": 6
+      },
+      "staged": null,
+      "recorderMs": 417479
+    }
+  ],
+  "stagedManifest": {
+    "schemaVersion": "naru.staged-import-preview.2",
+    "jobId": "297bc20ab1914197",
+    "stagedCount": 7,
+    "totalCount": 7,
+    "complete": true,
+    "package": {
+      "documentUri": "scene.gltf",
+      "packageDigest": "3206ea40835d8ca70a0a82208e397a8dcdcd66351b29b4df0e8102ff910e6454",
+      "resources": [
+        {
+          "uri": "scene.gltf",
+          "byteLength": 357999930,
+          "sha256": "e8aae670655445cb3d351ea89bb37af18c3f955fb9fc9ccc9a9a9dfa63cf95ac",
+          "mediaType": "model/gltf+json"
+        },
+        {
+          "uri": "scene.bin",
+          "byteLength": 169752328,
+          "sha256": "8860f0f545e6d5ca1f8d225a339fca107389fbdba4069b930850625e7c0f60d1",
+          "mediaType": "application/octet-stream"
+        },
+        {
+          "uri": "coarse.bin",
+          "byteLength": 38700720,
+          "sha256": "258e085d4f3d0b380bb89c3596b2e3bfc4a43177afe9fc7e92d6e1046db9031b",
+          "mediaType": "application/octet-stream"
+        },
+        {
+          "uri": "properties.json",
+          "byteLength": 17705010,
+          "sha256": "dc3394714b73d322dcfe6bad7ce780dbdd18cb547e5eaf45a26c9e66de932312",
+          "mediaType": "application/json"
+        },
+        {
+          "uri": "properties.bin",
+          "byteLength": 31179862,
+          "sha256": "dad8d98909c738df930569c4b907c29e64cda2b65d84917936c1c4d86d3dd8c4",
+          "mediaType": "application/octet-stream"
+        }
+      ]
+    }
+  },
+  "buildReport": {
+    "schemaVersion": "madi.phase1.compiler-report.1",
+    "packageDigest": "3206ea40835d8ca70a0a82208e397a8dcdcd66351b29b4df0e8102ff910e6454",
+    "resourceCount": 5
+  },
+  "network": {
+    "manifestPolls": {
+      "path": "/staged/staged.json",
+      "responses": 827,
+      "statuses": {
+        "200": 822,
+        "404": 5
+      },
+      "rangeRequests": 0,
+      "contentRangeResponses": 0,
+      "contentType": "application/json",
+      "accessControlAllowOrigin": "http://127.0.0.1:4177",
+      "notFoundConsoleMessages": 5
+    },
+    "hierarchyFetches": [
+      {
+        "path": "/staged/hierarchy-facade.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-facade.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-structure.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-structure.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-kitchen.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-kitchen.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-electrical.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-electrical.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-ventilation.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-ventilation.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-plumbing.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-plumbing.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-architecture.json",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      },
+      {
+        "path": "/staged/hierarchy-architecture.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177"
+      }
+    ],
+    "packageFetches": [
+      {
+        "path": "/package/scene.gltf",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "model/gltf+json",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177",
+        "loading": "eager"
+      },
+      {
+        "path": "/package/scene.bin",
+        "responses": 88,
+        "statuses": {
+          "206": 88
+        },
+        "rangeRequests": 88,
+        "contentRangeResponses": 88,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177",
+        "loading": "eager"
+      },
+      {
+        "path": "/package/coarse.bin",
+        "responses": 1,
+        "statuses": {
+          "200": 1
+        },
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": "application/octet-stream",
+        "accessControlAllowOrigin": "http://127.0.0.1:4177",
+        "loading": "eager"
+      },
+      {
+        "path": "/package/properties.json",
+        "responses": 0,
+        "statuses": {},
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": null,
+        "accessControlAllowOrigin": null,
+        "loading": "lazy-on-pick"
+      },
+      {
+        "path": "/package/properties.bin",
+        "responses": 0,
+        "statuses": {},
+        "rangeRequests": 0,
+        "contentRangeResponses": 0,
+        "contentType": null,
+        "accessControlAllowOrigin": null,
+        "loading": "lazy-on-pick"
+      }
+    ],
+    "serverSide": {
+      "requests": 931,
+      "manifestPollsBeforeSpawn": 3,
+      "manifestPollsTotal": 827,
+      "rangeRequests": 88,
+      "statuses": {
+        "200": 838,
+        "206": 88,
+        "404": 5
+      }
+    }
+  },
+  "stateAtReady": {
+    "sceneSource": "url",
+    "stagedState": "package",
+    "stagedPackageDigest": "3206ea40835d8ca70a0a82208e397a8dcdcd66351b29b4df0e8102ff910e6454",
+    "hierarchyReady": "true",
+    "coarseReady": "true",
+    "targetReady": "limited",
+    "targetChunksTotal": 324,
+    "targetChunksReady": 88,
+    "targetSchedulerRequests": 88,
+    "targetSchedulerSkips": 236,
+    "residentDecodedBytes": 66978816,
+    "residentGpuBytes": 66986560,
+    "residencyBudgetBytes": 67108864,
+    "residencyBudgetReached": "true",
+    "visibleOccurrences": 78173,
+    "status": "Residency budget reached · 15996 surface batches retained · 78173 renderable occurrences",
+    "sceneSourceKind": "URL",
+    "sceneSourceLabel": "http://127.0.0.1:4178/package/scene.gltf",
+    "prototypeCount": "42435",
+    "occurrenceCount": "78173",
+    "triangleCount": "1,356,402",
+    "edgeCount": "1,005,371",
+    "gpuAdapter": "nvidia"
+  },
+  "screenshots": {
+    "stagedTree": {
+      "file": "staged-tree.png",
+      "bytes": 240952,
+      "sha256": "8805013b1b946c4c71166faf8326730b10b161334107703377727e842c7fb3fe"
+    },
+    "stagedSearch": {
+      "file": "staged-search.png",
+      "bytes": 84787,
+      "sha256": "53d717411980604512ede92b602c656a05034006d30b6296e67f8e7b7f3e3e75"
+    },
+    "coarse": {
+      "file": "coarse.png",
+      "bytes": 116345,
+      "sha256": "d4d976912858980a1cf1257146114d27f28f9f655b73fcf066611088f0267c30"
+    },
+    "ready": {
+      "file": "ready.png",
+      "bytes": 120002,
+      "sha256": "7c8ece4e213841fe128f23dc5e730ccd4ed3e4baa73524281c19044c57ee6426"
+    }
+  },
+  "consoleIssues": [],
+  "timingNote": "Single host, single engine; the compile (about 5 GB peak) and the browser share this machine, so every milestone after the first tree is inflated by memory pressure when free memory is low. freeMemoryBytesAtStart says how low it was.",
+  "elapsedSeconds": 431
+}

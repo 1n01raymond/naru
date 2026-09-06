@@ -92,7 +92,7 @@ time before its complete tree exists, and threads cannot rescue it — the
 estimated six-thread makespan, 15,030.3 ms, is exactly the time of the single
 largest document. One document's tree, by contrast, is ready in 278.5 ms.
 
-[ADR-0021](adr/0021-staged-hierarchy-first-import.md) (Proposed) therefore makes
+[ADR-0021](adr/0021-staged-hierarchy-first-import.md) (Accepted) therefore makes
 the unit of early publication one document rather than the federation: the
 adapter emits a document's structure before tessellating anything, smallest
 source first, and each tree is published as a `naru.package-hierarchy.1` pair
@@ -129,9 +129,18 @@ the record attributes to the emission reorder — the largest document is
 inspected last, with the rest of the federation already accumulated — rather
 than to building trees, since writing every sixty5 tree takes 201.9 ms and
 staging one document alone costs nothing measurable. Digital Hub is unaffected.
-What remains is the Studio background import that reads a staged directory
-while the compile continues, and coarse geometry preview, which stays
-explicitly unmeasured and carries its own gate.
+The Studio reads a staged directory while the compile continues: opened with
+`?staged=<manifest>` beside `?scene=`, it polls `staged.json`, verifies and
+shows each tree as it lands, and hands off to the unchanged package loader
+once the manifest carries the finished package
+([Studio guide](../apps/webgpu-spike/README.md#follow-a-staged-import)). The
+[browser record](../artifacts/import/staged-import-browser/README.md)
+measures that end to end against a cold sixty5 import: first tree 1.5 s
+after spawn, package handoff 417.8 s, coarse frame 422.8 s. The
+Studio follows an externally launched CLI import; native job start, cancel, and
+retry through a host remain open. Coarse geometry during import is not
+claimed: nothing tessellates before the package exists, so ADR-0021 is amended
+to hierarchy-first.
 
 ## 3. Cache identity and invalidation
 
@@ -201,9 +210,9 @@ require a second dependency index before they are safe:
 4. federation reconciliation -> cross-document invalidation set.
 
 The index must have determinism and deletion/rename tests before it can drive
-reuse. Until independently reusable adapter and payload artifacts are added, a
-changed discipline still causes a full federation miss. This is slower but
-correct.
+reuse. A changed discipline misses the whole-package cache; verified
+per-document artifacts can already avoid extracting unchanged documents, while
+federation-wide package reconstruction still runs.
 
 The first index contract is now implemented as
 `incremental-dependencies.json` (`naru.ifc-incremental-dependency-index.1`,
@@ -312,14 +321,16 @@ profile under [ADR-0004](adr/0004-format-strategy.md).
    and STEP/IFC whole-package integration implemented; pinned real-fixture
    cold/warm and corruption evidence recorded
    ([record](../artifacts/cache/README.md)).
-2. **Columnar hierarchy sidecar:** compare size, parse, hierarchy-ready time,
-   peak memory, and compatibility against compact glTF JSON.
+2. **Columnar hierarchy sidecar:** opt-in relocation has offline and paired
+   browser evidence under accepted [ADR-0017](adr/0017-relocated-hierarchy-sidecar.md);
+   changing the default still requires coordinated schema-profile and evidence updates.
 3. **Incremental IFC compilation:** discipline dependency index plus changed,
    deleted, renamed, and reconciliation tests implemented; verified independent
    adapter document reuse and clean adapter-merge equivalence implemented;
    complete-package equivalence under a changed discipline is recorded for the
-   content-addressed payload tier, which was then rejected on cost; a reuse
-   unit that is cheaper to restore than to rebuild remains.
+   content-addressed payload tier, which was then rejected on cost. ADR-0019
+   slice 1 now records a cheaper changed-discipline rebuild with lower peak
+   memory against a same-session clean arm; slices 2–3 remain.
 4. **Standards export:** retain glTF; evaluate GLB, GPU instancing, and mesh
    compression without making the cache an interchange claim.
 5. **Cancellable, observable import jobs:** versioned lifecycle events and a
@@ -332,8 +343,11 @@ profile under [ADR-0004](adr/0004-format-strategy.md).
    [readiness](../artifacts/import/structure-readiness/README.md),
    [first emission](../artifacts/import/structure-first-emission/README.md)),
    and the compiler's verified atomic staged publication behind
-   `--staged-preview` unit-proved for determinism and cancellation; the Studio
-   background import remains.
+   `--staged-preview` unit-proved for determinism and cancellation, and the
+   Studio background import
+   [recorded](../artifacts/import/staged-import-browser/README.md) end to end
+   against a cold sixty5 import (ADR-0021 accepted, hierarchy-first); host job
+   control and coarse preview during extraction remain open.
 7. **Shared cache:** authenticated lookup/publication, tenant isolation,
    provenance, quotas, eviction, and observability.
 

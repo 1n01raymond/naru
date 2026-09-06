@@ -18,7 +18,7 @@ import { isAbsolute, relative, resolve } from "node:path";
 export const importJobEventSchema = "naru.import-job-event.2";
 
 /** Schema of the staged preview a job may announce while it is still extracting. */
-export const stagedImportPreviewSchema = "naru.staged-import-preview.1";
+export const stagedImportPreviewSchema = "naru.staged-import-preview.2";
 
 /**
  * Lifecycle states in their only legal order. A job announces a state when it

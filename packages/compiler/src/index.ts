@@ -100,6 +100,8 @@ export type {
   IfcStructurePreviewNode,
   StagedPreviewDocument,
   StagedPreviewManifest,
+  StagedPreviewPackage,
+  StagedPreviewResource,
   StagedPreviewSource,
   StagedPreviewWriterOptions,
   WatchIfcStructurePreviewsOptions,

@@ -1,6 +1,6 @@
 # NARU compiled-scene browser proof
 
-This Vite app is the current Phase 1 runtime evidence, despite the historical
+This Vite app is the Phase 2 Studio and retains Phase 1 runtime evidence, despite the historical
 `webgpu-spike` directory name. It deliberately does not fetch the Phase 0 Scene
 IR JSON.
 
@@ -263,6 +263,37 @@ For progressive packages, local `File.slice()` provides the same target chunk
 boundary without network requests. **Cancel** aborts the active hierarchy or
 geometry load, terminates its Worker, and prevents later target ranges from
 starting.
+
+## Follow a staged import
+
+The Studio can follow a CLI import that was launched separately; the browser
+does not launch the native compiler or cancel its process tree.
+
+`studio/?staged=<url>/staged.json&scene=<url>/scene.gltf` follows a
+`naru compile-ifc --staged-preview` run while it is still extracting
+([ADR-0021](../../docs/adr/0021-staged-hierarchy-first-import.md)). The
+Studio polls the `naru.staged-import-preview.2` manifest, and each time a
+document's tree appears it fetches that `hierarchy-<discipline>.json` +
+`.bin` pair, verifies both against the manifest's byte lengths and SHA-256
+digests, and rebuilds the hierarchy list as a forest: one synthetic root row
+per document followed by its tree. Search and row selection work on that
+forest throughout (the selection reads `staged preview, geometry pending`);
+no geometry is drawn, because a staged directory is never a package. The
+status line reports `Importing · n/total trees staged`. When the manifest's
+`package` block arrives the Studio checks that it hands off the very document
+`?scene=` named and then calls the unchanged package loader -- the handoff
+tells the Studio when to load, it never bypasses verification. Both URLs go
+through the same transport policy as any remote package: HTTP(S), no
+credentials, no query or fragment on the manifest, and the manifest URL must
+end in `/staged.json`. A manifest that disagrees with itself, a tree whose
+digest does not match, or a handoff for a different document stops the
+session with `Staged import failed: …`; nothing is retried or guessed. The
+[cold-import record](../../artifacts/import/staged-import-browser/README.md) measures this end to end against sixty5
+(ADR-0021 gate 4, accepted as hierarchy-first): the first staged tree is
+searchable 1.5 s after the compiler spawns, the seventh at 271.5 s, and the
+handoff reaches the compiled package's first coarse frame at 422.8 s.
+Re-record with `pnpm staged:import:browser:evidence`; validate with
+`pnpm staged:import:browser:check`.
 
 ## Save and reopen a workspace
 

@@ -744,7 +744,7 @@ describe("staged import preview", () => {
       );
       expect(events.map((event) => event.sequence)).toEqual(events.map((_, index) => index));
       expect(stagedPreview).toMatchObject({
-        schemaVersion: "naru.staged-import-preview.1",
+        schemaVersion: "naru.staged-import-preview.2",
         discipline: "architecture",
         sha256: fixture.sourceSha256,
         byteLength: fixture.sourceBytes,
@@ -756,10 +756,21 @@ describe("staged import preview", () => {
       expect(JSON.stringify(announcement)).not.toContain(fixture.root);
       expect(JSON.stringify(announcement)).not.toContain("architecture.ifc");
 
-      // The staged directory: manifest, one verified sidecar pair, nothing package-shaped.
+      // The staged directory: manifest, one verified sidecar pair, and the
+      // package handoff the compile appended after writing the package.
       const manifest = staged.stagedPreview;
       if (manifest === undefined) throw new Error("expected a staged preview manifest");
       expect(manifest.complete).toBe(true);
+      expect(manifest.package).toEqual({
+        documentUri: "scene.gltf",
+        packageDigest: staged.report.output.packageDigest,
+        resources: staged.report.output.resources.map((resource) => ({
+          uri: resource.path,
+          byteLength: resource.bytes,
+          sha256: resource.sha256,
+        })),
+      });
+      expect(manifest.package?.packageDigest).toBe(plain.report.output.packageDigest);
       expect(manifest.jobId).toBe(events[0]?.jobId);
       expect(manifest.disciplines).toEqual(["architecture"]);
       expect(manifest.stagedCount).toBe(1);
