@@ -2,7 +2,7 @@ import { createServer } from "node:net";
 import { existsSync } from "node:fs";
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -68,11 +68,23 @@ ${identityBlock.replace("FINGERPRINT", JSON.stringify("2".repeat(64)))}
 const descendant = spawn(process.execPath, [${JSON.stringify(descendantPath)}], {
   stdio: "ignore",
 });
+writeFileSync(${JSON.stringify(readyPath)} + ".args", JSON.stringify(process.argv.slice(2)), "utf8");
 writeFileSync(${JSON.stringify(readyPath)}, String(descendant.pid), "utf8");
 await new Promise(() => {});
 `,
     "utf8",
   );
+}
+
+/**
+ * The split directory a federation compile handed its adapter, taken from the
+ * `--scene` argument the fake adapter recorded.
+ */
+async function splitDirectoryFromArguments(argumentsPath: string): Promise<string> {
+  const args = JSON.parse(await readFile(argumentsPath, "utf8")) as string[];
+  const scenePath = args[args.indexOf("--scene") + 1];
+  if (scenePath === undefined) throw new Error("the adapter received no --scene argument");
+  return dirname(scenePath);
 }
 
 /** An adapter that compiles instantly, for the runs that must succeed. */
@@ -227,7 +239,6 @@ describe("cancelling a running import", () => {
       join(root, "descendant-port"),
     );
 
-    const before = new Set(await readdir(tmpdir()));
     const events: ImportJobEvent[] = [];
     const controller = new AbortController();
     const compile = compileStepFile({
@@ -243,10 +254,7 @@ describe("cancelling a running import", () => {
     controller.abort();
     await expect(compile).rejects.toSatisfy(isImportJobCancellation);
 
-    const survivors = (await readdir(tmpdir())).filter(
-      (entry) => entry.startsWith("naru-step-") && !before.has(entry),
-    );
-    expect(survivors).toEqual([]);
+    expect(existsSync(await splitDirectoryFromArguments(readyPath + ".args"))).toBe(false);
     expect(terminalEvent(events, "cancelled").cancellation.removedTemporaryDirectories).toBe(1);
   }, 60_000);
 
@@ -422,7 +430,6 @@ describe("cancelling a federation import", () => {
     await writeFile(sourcePath, ifcSource, "utf8");
     await writeSleepingAdapter(adapterPath, join(root, "descendant.mjs"), readyPath, portPath);
 
-    const before = new Set(await readdir(tmpdir()));
     const events: ImportJobEvent[] = [];
     const controller = new AbortController();
     const compile = compileIfcFederation({
@@ -451,11 +458,10 @@ describe("cancelling a federation import", () => {
       state: "cancelled",
       cancellation: { cancelledDuring: "extracting", removedTemporaryDirectories: 1 },
     });
-    expect(
-      (await readdir(tmpdir())).filter(
-        (entry) => entry.startsWith("naru-ifc-") && !before.has(entry),
-      ),
-    ).toEqual([]);
+    // The split directory is read back from the adapter's own arguments: other
+    // test files compile federations in parallel workers, so the shared system
+    // temp directory is never scanned for it.
+    expect(existsSync(await splitDirectoryFromArguments(readyPath + ".args"))).toBe(false);
   }, 60_000);
 });
 
@@ -527,6 +533,7 @@ writeFileSync(previewDirectory + "/index.json", JSON.stringify({
     rootCount: 1,
   }],
 }));
+writeFileSync(${JSON.stringify(portPath)} + ".args", JSON.stringify(process.argv.slice(2)), "utf8");
 spawn(process.execPath, [${JSON.stringify(descendantPath)}], { stdio: "ignore" });
 await new Promise(() => {});
 `,
@@ -547,7 +554,6 @@ describe("cancelling a federation import after a tree was staged", () => {
     await writeFile(join(cacheDirectory, "older-entry"), "verified earlier", "utf8");
     await writeStagingSleepingAdapter(adapterPath, join(root, "descendant.mjs"), portPath);
 
-    const before = new Set(await readdir(tmpdir()));
     const events: ImportJobEvent[] = [];
     const controller = new AbortController();
     const compile = compileIfcFederation({
@@ -595,10 +601,6 @@ describe("cancelling a federation import after a tree was staged", () => {
       state: "cancelled",
       cancellation: { cancelledDuring: "extracting", removedTemporaryDirectories: 2 },
     });
-    expect(
-      (await readdir(tmpdir())).filter(
-        (entry) => entry.startsWith("naru-ifc-") && !before.has(entry),
-      ),
-    ).toEqual([]);
+    expect(existsSync(await splitDirectoryFromArguments(portPath + ".args"))).toBe(false);
   }, 60_000);
 });
