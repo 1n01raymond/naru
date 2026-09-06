@@ -2,6 +2,7 @@ import { batchResidencyCost } from "@naru3d/runtime-webgpu";
 import type {
   CompiledBatchEvidence,
   DecodedCompiledScene,
+  GeometryRepresentation,
   GpuPrototypeBatch,
   ResidencyCost,
 } from "@naru3d/runtime-webgpu";
@@ -11,6 +12,12 @@ export const defaultProgressiveResidencyBudget = 64 * 1024 * 1024;
 export interface ResidentBatch {
   readonly key: string;
   readonly batch: GpuPrototypeBatch;
+  /**
+   * The representation the batch was decoded from. Coarse fallbacks are
+   * prototype bounding boxes and are drawn through the renderer's fallback
+   * pipelines so resident target detail wins any shared plane.
+   */
+  readonly representation: GeometryRepresentation;
   readonly evidence: Omit<CompiledBatchEvidence, "batchIndex">;
 }
 
@@ -144,7 +151,12 @@ function entriesFromScene(scene: DecodedCompiledScene): readonly ResidentBatch[]
     const batch = scene.gpuScene.batches[identity.batchIndex];
     if (!batch) throw new Error("Compiled geometry batch identity is incomplete.");
     const { batchIndex: _, ...evidence } = identity;
-    return { key: residentBatchKey(evidence), batch, evidence };
+    return {
+      key: residentBatchKey(evidence),
+      batch,
+      representation: scene.summary.representation,
+      evidence,
+    };
   });
 }
 

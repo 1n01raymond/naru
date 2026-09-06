@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type {
   CompiledBatchEvidence,
   DecodedCompiledScene,
+  GeometryRepresentation,
   GpuPrototypeBatch,
   ResidencyCost,
 } from "@naru3d/runtime-webgpu";
@@ -46,6 +47,7 @@ function materialGroups(
 function decoded(
   batches: readonly GpuPrototypeBatch[],
   targetMeshIndexes: readonly number[],
+  representation: GeometryRepresentation = "target",
 ): DecodedCompiledScene {
   const primitivesPerMesh = new Map<number, number>();
   const batchEvidence: CompiledBatchEvidence[] = batches.map((_, batchIndex) => {
@@ -85,7 +87,7 @@ function decoded(
       triangles: batches.reduce((total, value) => total + value.surfaceIndices.length / 3, 0),
       edgeSegments: 0,
       binaryBytes: 0,
-      representation: "target",
+      representation,
     },
   };
 }
@@ -119,6 +121,21 @@ describe("progressive residency", () => {
     expect(rejected.admitted).toBe(false);
     expect(rejected.entries.map(({ key }) => key)).toEqual(["0:0", "1:0"]);
     expect(rejected.triangles).toBe(21);
+  });
+
+  it("tags each resident entry with the representation its scene decoded", () => {
+    const coarse = decoded([batch(1), batch(2)], [0, 1], "coarse");
+    const residency = new ProgressiveResidency(coarse, { decodedBytes: 800, gpuBytes: 800 });
+    expect(residency.current().entries.map(({ representation }) => representation)).toEqual([
+      "coarse",
+      "coarse",
+    ]);
+
+    const promoted = residency.promote(decoded([batch(1, 20)], [0]), { priority: 0 });
+    expect(promoted.entries.map(({ key, representation }) => `${key}:${representation}`)).toEqual([
+      "0:0:target",
+      "1:0:coarse",
+    ]);
   });
 
   it("refuses a chunk larger than the whole budget before it is fetched", () => {

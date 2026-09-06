@@ -84,6 +84,7 @@ authorize reuse of old glTF byte ranges by themselves.
 | Demand ordering | **Recorded** as opt-in: [projected-area ordering](../artifacts/spatial-demand/sixty5-demand-priority/README.md) wins one pose and loses another | Define and record a view-independent screen-space-error or blended cost before changing the default |
 | Shape-preserving LOD | **Pending** | Define geometric/screen error, identity and edge behavior, compiler representation, and reference-image gates |
 | Persistent browser cache and cache-aware eviction | **Pending** | Define storage quota, digest verification, version invalidation, and interaction with memory residency |
+| Coarse-proxy depth ordering | **Implemented**: coarse fallbacks draw one depth quantum behind resident target detail ([renderer](../packages/runtime-webgpu/src/renderer.ts), [test](../packages/runtime-webgpu/test/renderer.test.ts)); the before/after was probed in headed Chrome on Digital Hub under a 4 MiB budget, not recorded | Fold a coincident-plane check into the next budget-limited browser record instead of a separate record |
 | Broader selection residency | **Pending** | Multi-selection pinning must have a bounded policy and retain coarse visibility under pressure |
 
 The fixed 64 MiB measurements apply to progressive target geometry admitted by

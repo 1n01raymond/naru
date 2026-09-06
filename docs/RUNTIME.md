@@ -302,6 +302,13 @@ The benchmark suite records CPU command encode time and draw count separately.
 
 - engineering-friendly physically based or simple shaded materials;
 - reversed depth where supported/beneficial;
+- coarse fallback proxies drawn behind resident target detail: a batch tagged
+  `representation: "coarse"` goes through a second pipeline pair whose vertex
+  stage adds `fallbackDepthOffset` (default 1/65536 of clip depth, about one
+  16-bit quantum) so a prototype AABB face coplanar with a resident surface
+  loses the depth test instead of fighting it; `0` disables the offset and the
+  resolver rejects anything outside `[0, 1)`
+  ([test](../packages/runtime-webgpu/test/renderer.test.ts));
 - camera-relative transforms;
 - clip distances/discard policy consistent with section passes;
 - object/feature IDs available to optional attachments.
@@ -522,7 +529,12 @@ compiler's `prototype-aabb-v1` tier, it collapses prototype AABBs into one
 canonical box batch with contiguous occurrence transforms and target-mesh
 indexes. Target prototype ranges are fetched and decoded one at a time;
 promoted targets mask their matching coarse instances, and eviction reveals
-those instances again while preserving node-derived object IDs. Selecting an
+those instances again while preserving node-derived object IDs. Coarse
+instances that stay visible because their own target is not resident are
+drawn one depth quantum behind every resident target surface, so a proxy box
+face lying in the plane of a neighbour's loaded wall or slab no longer
+speckles through it while the budget holds
+([test](../apps/webgpu-spike/test/progressive-residency.test.ts)). Selecting an
 unresolved occurrence can pin its requested target and demote colder target
 groups within the same decoded/GPU budgets. Scene replacement or explicit
 user cancellation aborts the active range, terminates the session Worker, and

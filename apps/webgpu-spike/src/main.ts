@@ -3,6 +3,7 @@ import {
   NaruWebGpuError,
   NaruWebGpuRenderer,
   PackageTransport,
+  resolveFallbackDepthOffset,
 } from "@naru3d/runtime-webgpu";
 import type {
   CompiledHierarchy,
@@ -104,6 +105,16 @@ function residencyBudgetFromLocation(): number {
     throw new RangeError("residencyMiB must be between 4 and 1024.");
   }
   return Math.round(mebibytes * 1024 * 1024);
+}
+
+/**
+ * Clip-space depth pushed onto coarse fallback proxies so resident target
+ * detail wins a shared plane. `?fallbackDepthOffset=0` disables it for an A/B
+ * comparison; the default is the renderer's.
+ */
+function fallbackDepthOffsetFromLocation(): number {
+  const value = new URL(window.location.href).searchParams.get("fallbackDepthOffset");
+  return resolveFallbackDepthOffset(value === null ? undefined : Number(value));
 }
 
 /**
@@ -319,6 +330,7 @@ function resetSceneUi(): void {
   delete document.documentElement.dataset.targetSchedulerChunk;
   delete document.documentElement.dataset.targetSchedulerPriority;
   delete document.documentElement.dataset.targetSchedulerDemandPriority;
+  delete document.documentElement.dataset.fallbackDepthOffset;
   delete document.documentElement.dataset.targetSchedulerCancelledChunk;
   delete document.documentElement.dataset.targetSchedulerOrder;
   delete document.documentElement.dataset.targetSchedulerDemand;
@@ -446,7 +458,9 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         status.textContent = `WebGPU device lost: ${message}`;
         status.dataset.state = "error";
       },
+      fallbackDepthOffset: fallbackDepthOffsetFromLocation(),
     });
+    document.documentElement.dataset.fallbackDepthOffset = String(renderer.fallbackDepthOffset);
     const adapterInfo = renderer.adapter.info;
     setText(
       "#gpu-adapter",
@@ -495,7 +509,11 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         : undefined;
     if (progressiveResidency) {
       renderer.reconcileBatches(
-        progressiveResidency.current().entries.map(({ key, batch }) => ({ key, batch })),
+        progressiveResidency.current().entries.map(({ key, batch, representation }) => ({
+          key,
+          batch,
+          representation,
+        })),
         { sharedObjectIdsAcrossBatches: true },
       );
     } else {
@@ -799,7 +817,11 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         },
       };
       renderer.reconcileBatches(
-        promotion.entries.map(({ key, batch }) => ({ key, batch })),
+        promotion.entries.map(({ key, batch, representation }) => ({
+          key,
+          batch,
+          representation,
+        })),
         { sharedObjectIdsAcrossBatches: true },
       );
       const visibilityUpdate = occurrenceVisibilityResidencyUpdate(
