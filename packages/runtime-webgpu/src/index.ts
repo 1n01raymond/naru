@@ -106,9 +106,11 @@ export type {
   SceneBounds,
 } from "./compiled-gltf.js";
 export {
+  defaultFallbackDepthOffset,
   NaruWebGpuError,
   normalizeSectionPlane,
   rebaseSectionPlane,
+  resolveFallbackDepthOffset,
   Phase0Renderer,
   Phase0Renderer as NaruWebGpuRenderer,
 } from "./renderer.js";

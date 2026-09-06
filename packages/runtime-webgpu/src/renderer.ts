@@ -10,8 +10,37 @@ import {
   validatePrototypeBatch,
 } from "./layout.js";
 import type { GpuOccurrenceInstance, GpuPrototypeBatch, GpuScene } from "./layout.js";
+import type { GeometryRepresentation } from "./compiled-gltf.js";
+
+/**
+ * Default clip-space depth offset applied to fallback batches: 2^-16 of the
+ * depth range. With the Studio's orthographic projection the depth range is
+ * the padded scene extent, so this is about 1.8 mm on a 116 m scene and 256
+ * quanta of a 24-bit depth buffer -- far above the float32 disagreement
+ * between a prototype AABB face and the target surface it encloses, and far
+ * below anything a bounding-box proxy is expected to resolve.
+ */
+export const defaultFallbackDepthOffset = 1 / 65536;
+
+/**
+ * Validate the fallback depth offset option. The offset is a fraction of
+ * clip-space depth: zero disables the fallback pipelines, and one would push
+ * every proxy behind the far plane.
+ */
+export function resolveFallbackDepthOffset(value: number | undefined): number {
+  if (value === undefined) return defaultFallbackDepthOffset;
+  if (!Number.isFinite(value) || value < 0 || value >= 1) {
+    throw new RangeError("fallbackDepthOffset must be a finite number in [0, 1).");
+  }
+  return value;
+}
 
 const surfaceShader = /* wgsl */ `
+// Clip-space depth pushed onto fallback (coarse proxy) batches so that target
+// detail sharing a plane with a proxy wins the depth test deterministically.
+// Pipeline-overridable; the default pipeline pair leaves it at zero.
+override fallbackDepthOffset: f32 = 0.0;
+
 struct SceneUniforms {
   viewProjection: mat4x4<f32>,
   cameraOriginHigh: vec4<f32>,
@@ -59,6 +88,7 @@ fn vsMain(input: VertexInput) -> VertexOutput {
   let worldPosition = linear * input.position + relativeTranslation;
   var output: VertexOutput;
   output.position = scene.viewProjection * vec4<f32>(worldPosition, 1.0);
+  output.position.z += fallbackDepthOffset * output.position.w;
   output.normal = normalize(linear * input.normal);
   output.objectId = input.objectId;
   output.baseColor = input.baseColor;
@@ -193,6 +223,16 @@ export interface Phase0RendererOptions {
    * render() on such a device raises a typed error.
    */
   readonly requestTimestampQueries?: boolean;
+  /**
+   * Clip-space depth added to every batch reconciled as `representation:
+   * "coarse"`, as a fraction of the depth range. Coarse proxies are prototype
+   * bounding boxes, so their faces coincide with the target surfaces of other
+   * objects (slab tops, floor layers, window plates) and z-fight them until
+   * that detail arrives; pushing proxies back by a fixed offset lets resident
+   * detail win the depth test. Zero disables the fallback pipelines. Defaults
+   * to `defaultFallbackDepthOffset`.
+   */
+  readonly fallbackDepthOffset?: number;
 }
 
 export interface SetSceneOptions {
@@ -204,6 +244,12 @@ export interface GpuSceneBatchEntry {
   /** Stable application-owned identity used to retain an uploaded batch. */
   readonly key: string;
   readonly batch: GpuPrototypeBatch;
+  /**
+   * Which representation the batch carries. `"coarse"` batches draw through
+   * the fallback pipelines (see `Phase0RendererOptions.fallbackDepthOffset`).
+   * Defaults to `"target"`.
+   */
+  readonly representation?: GeometryRepresentation;
 }
 
 export interface ReconcileSceneOptions extends SetSceneOptions {
@@ -314,6 +360,7 @@ interface GpuBatchResources {
   readonly key: string;
   readonly source: GpuPrototypeBatch;
   readonly includeEdges: boolean;
+  readonly representation: GeometryRepresentation;
   readonly surfaceVertexPool: Float32Array;
   readonly surfaceVertex: GPUBuffer;
   readonly surfaceIndex: GPUBuffer;
@@ -364,6 +411,11 @@ export class Phase0Renderer {
   private readonly surfacePipeline: GPURenderPipeline;
   private readonly edgePipeline: GPURenderPipeline;
   private readonly pickPipeline: GPURenderPipeline;
+  /** Surface pipeline for `"coarse"` batches; the surface pipeline itself when the offset is zero. */
+  private readonly fallbackSurfacePipeline: GPURenderPipeline;
+  /** Pick pipeline for `"coarse"` batches, so picks agree with what is visible. */
+  private readonly fallbackPickPipeline: GPURenderPipeline;
+  readonly fallbackDepthOffset: number;
   private readonly pixelRatio?: number;
   private readonly lastViewProjection = new Float32Array(16);
   private readonly lastCameraOrigin = new Float64Array(3);
@@ -454,38 +506,50 @@ export class Phase0Renderer {
       },
       instanceBufferLayout,
     ];
-    this.surfacePipeline = device.createRenderPipeline({
-      label: "NARU shaded surface pipeline",
-      layout: pipelineLayout,
-      vertex: { module: surfaceModule, entryPoint: "vsMain", buffers: surfaceBuffers },
-      fragment: {
-        module: surfaceModule,
-        entryPoint: "fsSurface",
-        targets: [{ format: this.format }],
-      },
-      primitive: { topology: "triangle-list", cullMode: "back" },
-      depthStencil: {
-        format: "depth24plus",
-        depthWriteEnabled: true,
-        depthCompare: "less",
-      },
-    });
-    this.pickPipeline = device.createRenderPipeline({
-      label: "NARU object ID pipeline",
-      layout: pipelineLayout,
-      vertex: { module: surfaceModule, entryPoint: "vsMain", buffers: surfaceBuffers },
-      fragment: {
-        module: surfaceModule,
-        entryPoint: "fsPick",
-        targets: [{ format: "rgba8uint" }],
-      },
-      primitive: { topology: "triangle-list", cullMode: "back" },
-      depthStencil: {
-        format: "depth24plus",
-        depthWriteEnabled: true,
-        depthCompare: "less",
-      },
-    });
+    const surfacePipeline = (
+      label: string,
+      entryPoint: "fsSurface" | "fsPick",
+      fallbackDepthOffset: number,
+    ): GPURenderPipeline =>
+      device.createRenderPipeline({
+        label,
+        layout: pipelineLayout,
+        vertex: {
+          module: surfaceModule,
+          entryPoint: "vsMain",
+          buffers: surfaceBuffers,
+          constants: { fallbackDepthOffset },
+        },
+        fragment: {
+          module: surfaceModule,
+          entryPoint,
+          targets: [{ format: entryPoint === "fsPick" ? "rgba8uint" : this.format }],
+        },
+        primitive: { topology: "triangle-list", cullMode: "back" },
+        depthStencil: {
+          format: "depth24plus",
+          depthWriteEnabled: true,
+          depthCompare: "less",
+        },
+      });
+    this.surfacePipeline = surfacePipeline("NARU shaded surface pipeline", "fsSurface", 0);
+    this.pickPipeline = surfacePipeline("NARU object ID pipeline", "fsPick", 0);
+    this.fallbackDepthOffset = resolveFallbackDepthOffset(options.fallbackDepthOffset);
+    if (this.fallbackDepthOffset === 0) {
+      this.fallbackSurfacePipeline = this.surfacePipeline;
+      this.fallbackPickPipeline = this.pickPipeline;
+    } else {
+      this.fallbackSurfacePipeline = surfacePipeline(
+        "NARU fallback surface pipeline",
+        "fsSurface",
+        this.fallbackDepthOffset,
+      );
+      this.fallbackPickPipeline = surfacePipeline(
+        "NARU fallback object ID pipeline",
+        "fsPick",
+        this.fallbackDepthOffset,
+      );
+    }
     this.edgePipeline = device.createRenderPipeline({
       label: "NARU explicit edge pipeline",
       layout: pipelineLayout,
@@ -529,6 +593,7 @@ export class Phase0Renderer {
     ) {
       throw new RangeError("pixelRatio must be a positive finite number.");
     }
+    resolveFallbackDepthOffset(options.fallbackDepthOffset);
     if (!navigator.gpu) {
       throw new NaruWebGpuError(
         "WEBGPU_UNAVAILABLE",
@@ -568,7 +633,7 @@ export class Phase0Renderer {
     const includeEdges = options.includeEdges ?? true;
     this.destroyBatches();
     this.batches = scene.batches.map((batch, index) =>
-      this.createBatchResources(`scene:${String(index)}`, batch, includeEdges),
+      this.createBatchResources(`scene:${String(index)}`, batch, includeEdges, "target"),
     );
   }
 
@@ -597,14 +662,15 @@ export class Phase0Renderer {
     }
     const includeEdges = options.includeEdges ?? true;
     const remaining = new Map(this.batches.map((resource) => [resource.key, resource]));
-    const planned = entries.map(({ key, batch }) => {
+    const planned = entries.map(({ key, batch, representation = "target" }) => {
       const current = remaining.get(key);
       remaining.delete(key);
       const reuse =
         current !== undefined &&
         current.source === batch &&
-        current.includeEdges === includeEdges;
-      return { key, batch, current, reuse };
+        current.includeEdges === includeEdges &&
+        current.representation === representation;
+      return { key, batch, representation, current, reuse };
     });
     for (const { batch, reuse } of planned) {
       if (!reuse) validatePrototypeBatch(batch);
@@ -622,12 +688,12 @@ export class Phase0Renderer {
       for (const { batch, reuse } of planned) if (reuse) claim(batch);
       for (const { batch, reuse } of planned) if (!reuse) claim(batch);
     }
-    const next = planned.map(({ key, batch, current, reuse }) => {
+    const next = planned.map(({ key, batch, representation, current, reuse }) => {
       if (reuse && current) return current;
       // Acquire before releasing: a replacement that reads the same vertex
       // pool keeps its refcount above zero, so the buffer is never destroyed
       // and re-uploaded for geometry that never left the resident set.
-      const resources = this.createBatchResources(key, batch, includeEdges);
+      const resources = this.createBatchResources(key, batch, includeEdges, representation);
       if (current) this.destroyBatch(current);
       return resources;
     });
@@ -756,7 +822,11 @@ export class Phase0Renderer {
     });
     for (const batch of this.batches) {
       if (batch.instanceCount === 0) continue;
-      this.bindBatch(surfacePass, this.surfacePipeline, batch);
+      this.bindBatch(
+        surfacePass,
+        batch.representation === "coarse" ? this.fallbackSurfacePipeline : this.surfacePipeline,
+        batch,
+      );
       surfacePass.drawIndexed(batch.indexCount, batch.instanceCount);
     }
     if (options.edges ?? true) {
@@ -854,7 +924,11 @@ export class Phase0Renderer {
     });
     for (const batch of this.batches) {
       if (batch.instanceCount === 0) continue;
-      this.bindBatch(pickPass, this.pickPipeline, batch);
+      this.bindBatch(
+        pickPass,
+        batch.representation === "coarse" ? this.fallbackPickPipeline : this.pickPipeline,
+        batch,
+      );
       pickPass.drawIndexed(batch.indexCount, batch.instanceCount);
     }
     pickPass.end();
@@ -951,6 +1025,7 @@ export class Phase0Renderer {
     key: string,
     batch: GpuPrototypeBatch,
     includeEdges: boolean,
+    representation: GeometryRepresentation,
   ): GpuBatchResources {
     const uploadedEdges = includeEdges ? batch.edgeVertices : new Float32Array();
     const instanceData = packInstanceData(batch.instances);
@@ -960,6 +1035,7 @@ export class Phase0Renderer {
       key,
       source: batch,
       includeEdges,
+      representation,
       surfaceVertexPool: batch.surfaceVertices,
       surfaceVertex: surfaceVertexPool.buffer,
       surfaceIndex: createBuffer(

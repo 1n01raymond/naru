@@ -190,7 +190,12 @@ promotion reuses the hierarchy's node lookup and does not rescan DOM visibility
 markers because residency changes no user visibility intent. Add
 `?residencyMiB=5` to force a small budget during local exploration; the same
 knob at 8 MiB is the recorded forced-low profile, where hierarchy, coarse
-rendering, navigation, selection, and eviction all still complete. Orbit,
+rendering, navigation, selection, and eviction all still complete. Under any
+budget the coarse proxies that remain visible are drawn one depth quantum
+behind resident target detail (`?fallbackDepthOffset=` overrides the
+renderer's `1/65536`, `0` disables it, and `data-fallback-depth-offset`
+reports the value in force), which removes the speckle a proxy box face
+produced where it shared a plane with a loaded neighbour. Orbit,
 pan, zoom, fit, and resize rank visible retained-coarse chunk bounds by distance
 from the view center. If the hottest nonresident chunk
 changes, the scheduler aborts the obsolete HTTP Range and Worker decode before

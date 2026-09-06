@@ -131,7 +131,12 @@ project-owned 0.25 mm / 10,000 km headed Chrome/Firefox record is checked by
 The current experimental decoder accepts a target-only package or a progressive
 package with separate target and coarse external buffers. The progressive slice
 uses `extras.madi.coarseMesh` and preserves node-derived object IDs while the
-renderer replaces prototype AABBs with target meshes. When target chunk metadata
+renderer replaces prototype AABBs with target meshes. A batch handed to
+`reconcileBatches` with `representation: "coarse"` is drawn and picked through
+a fallback pipeline pair that offsets clip depth by the renderer's
+`fallbackDepthOffset` (default `1 / 65536`; `resolveFallbackDepthOffset`
+validates the option and `0` disables it), so a proxy face coplanar with a
+resident target surface cannot z-fight it. When target chunk metadata
 is present, `targetChunkId` decodes only one declared byte range and its mesh
 occurrences. The session Worker prepares document transforms and chunk
 membership once, then reuses that state across coarse and target decodes. Each
