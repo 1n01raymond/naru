@@ -1,6 +1,6 @@
 {
   "schemaVersion": "naru.workspace-reopen-evidence.1",
-  "capturedAt": "2026-09-04T17:48:00.649Z",
+  "capturedAt": "2026-09-07T08:19:19.856Z",
   "mode": "headed-workspace-round-trip",
   "browser": {
     "id": "chrome",
@@ -90,8 +90,8 @@
       "label": "save",
       "question": "Does the Studio save a manifest that describes the session a person set up?",
       "milestones": {
-        "hierarchyReadyMs": 517,
-        "readyMs": 763
+        "hierarchyReadyMs": 369,
+        "readyMs": 592
       },
       "baseline": {
         "fileName": "http-127.0.0.1-4176-scene.gltf.naru-workspace.json",
@@ -213,13 +213,13 @@
       "screenshots": {
         "baseline": {
           "path": "save-baseline.png",
-          "bytes": 249615,
-          "sha256": "af7d11bdf17ff320e960a1c1a7d3c86346ba80a660c6cc7b13415d4b2438be93"
+          "bytes": 254255,
+          "sha256": "52966946ea03452f66851f68c7866ce44f9945d16ab5b0ccca44fd05cd64d36d"
         },
         "customized": {
           "path": "save-customized.png",
-          "bytes": 229229,
-          "sha256": "f96abe9b4c2db2f00d8b11da72b8996145af586fc2366954bb5dcd090487ccda"
+          "bytes": 214919,
+          "sha256": "f9f9250c8a684540cf0ce97903806a4ee83bc24936c44440f93be4f863246f93"
         }
       }
     },
@@ -227,8 +227,8 @@
       "label": "unchanged",
       "question": "Does the same workspace reopen against an unchanged package?",
       "milestones": {
-        "hierarchyReadyMs": 453,
-        "readyMs": 687
+        "hierarchyReadyMs": 336,
+        "readyMs": 541
       },
       "beforeSourceInspection": {
         "state": "unverifiable",
@@ -297,16 +297,16 @@
       "manifestIsByteIdentical": true,
       "screenshot": {
         "path": "reopen-unchanged.png",
-        "bytes": 294099,
-        "sha256": "de537008a371c559c3cd493a24697e5037a30c8b7380872849e1afa911c82c4e"
+        "bytes": 285035,
+        "sha256": "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d"
       }
     },
     "changedSource": {
       "label": "changed-source",
       "question": "Does the same workspace report a source that moved under it?",
       "milestones": {
-        "hierarchyReadyMs": 439,
-        "readyMs": 690
+        "hierarchyReadyMs": 335,
+        "readyMs": 545
       },
       "edit": {
         "label": "arc.ifc",
@@ -362,16 +362,16 @@
       },
       "screenshot": {
         "path": "reopen-changed-source.png",
-        "bytes": 295293,
-        "sha256": "55cc158240da002dd0ac7ab0ecaf06580d47c2a27337e407615f4eca2281a051"
+        "bytes": 286216,
+        "sha256": "a2236c6e1254c3a65da2f1171e03279154432be4651512032ee95781d8150514"
       }
     },
     "reload": {
       "label": "reload",
       "question": "Does a reopen that must load the package first restore the same view?",
       "milestones": {
-        "hierarchyReadyMs": 418,
-        "readyMs": 658
+        "hierarchyReadyMs": 340,
+        "readyMs": 545
       },
       "bootSceneUrl": "http://127.0.0.1:4176/scene.gltf?reopen=1",
       "manifestReferenceHref": "http://127.0.0.1:4176/scene.gltf",
@@ -421,11 +421,11 @@
       "manifestIsByteIdentical": true,
       "screenshot": {
         "path": "reopen-after-reload.png",
-        "bytes": 294099,
-        "sha256": "de537008a371c559c3cd493a24697e5037a30c8b7380872849e1afa911c82c4e"
+        "bytes": 285035,
+        "sha256": "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d"
       }
     }
   },
   "consoleIssues": [],
-  "elapsedSeconds": 11.2
+  "elapsedSeconds": 8.9
 }

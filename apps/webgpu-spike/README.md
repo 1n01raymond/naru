@@ -23,8 +23,12 @@ Run it with `pnpm dev`. Use `pnpm browser:matrix` for the reproducible headed
 Chrome and Firefox visual/picking check. The default scene is the canonical
 MIT-licensed Adafruit PyGamer electronics assembly: 34 shared meshes, 85 part
 occurrences, 162,838 triangles, 13,897 explicit CAD edge segments, and direct
-joystick-to-source picking. Drag to orbit, Shift-drag or middle-drag to pan,
-use the wheel to zoom, and press `F` to fit the current view. Selecting from the
+joystick-to-source picking. The default view is the isometric look from above:
+the eye sits 45° off the Z axis and 35.26° above the horizon, world +Y points up
+the screen, and the surface nearest the eye wins the depth test
+([test](test/view.test.ts)). Drag to orbit (dragging down raises the eye),
+Shift-drag or middle-drag to pan, use the wheel to zoom, and press `F` to fit
+the current view. Selecting from the
 viewport or hierarchy highlights the same occurrence and preserves its source
 identity. `H` hides the selection, `I` isolates it, and `Shift+H` restores all
 occurrences. These actions compact stable per-prototype visibility tables into
