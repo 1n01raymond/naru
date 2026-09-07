@@ -4,6 +4,31 @@ import { OrthographicOrbitCamera, createCompiledSceneCamera } from "../src/view.
 
 const bounds = { min: [-0.048, 0, -0.028], max: [0.048, 0.022, 0.028] } as const;
 
+type Point = readonly [number, number, number];
+
+/** Applies the orthographic view projection (w stays 1) to a world point. */
+function project(matrix: Float32Array, point: Point): Point {
+  const m = (index: number): number => matrix[index] ?? 0;
+  return [
+    m(0) * point[0] + m(4) * point[1] + m(8) * point[2] + m(12),
+    m(1) * point[0] + m(5) * point[1] + m(9) * point[2] + m(13),
+    m(2) * point[0] + m(6) * point[1] + m(10) * point[2] + m(14),
+  ];
+}
+
+function axis(matrix: Float32Array, column: number): Point {
+  const m = (index: number): number => matrix[index] ?? 0;
+  return [m(column), m(column + 4), m(column + 8)];
+}
+
+function cross(a: Point, b: Point): Point {
+  return [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+}
+
+function dot(a: Point, b: Point): number {
+  return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
 describe("compiled scene camera", () => {
   it("fits finite Y-up metre bounds", () => {
     const camera = createCompiledSceneCamera(bounds, 16 / 9);
@@ -79,5 +104,45 @@ describe("compiled scene camera", () => {
     expect(Array.from(farFrame.viewProjection)).toEqual(Array.from(nearFrame.viewProjection));
     expect(farFrame.origin.map((value, axis) => value - (nearFrame.origin[axis] ?? 0)))
       .toEqual(offset);
+  });
+});
+
+describe("default view orientation", () => {
+  const building = { min: [-10, 0, -10], max: [10, 12, 10] } as const;
+
+  it("looks down from above: the higher of two stacked points is nearer the eye", () => {
+    const matrix = createCompiledSceneCamera(building, 1);
+    const roof = project(matrix, [0, 12, 0]);
+    const floor = project(matrix, [0, 0, 0]);
+
+    expect(roof[1]).toBeGreaterThan(floor[1]);
+    expect(roof[2]).toBeLessThan(floor[2]);
+    for (const clip of [roof, floor]) {
+      expect(clip[2]).toBeGreaterThan(0);
+      expect(clip[2]).toBeLessThan(1);
+    }
+  });
+
+  it("projects an unmirrored right-handed frame", () => {
+    const matrix = createCompiledSceneCamera(building, 1);
+    const right = axis(matrix, 0);
+    const up = axis(matrix, 1);
+    const depth = axis(matrix, 2);
+
+    expect(dot(cross(right, up), depth)).toBeLessThan(0);
+    expect(right[1]).toBe(0);
+    expect(up[1]).toBeGreaterThan(0);
+    expect(depth[1]).toBeLessThan(0);
+  });
+
+  it("drags the eye higher when the pointer moves down", () => {
+    const camera = new OrthographicOrbitCamera(building);
+    const before = axis(camera.viewProjection(1), 2);
+    camera.orbit(0, 100);
+    const after = axis(camera.viewProjection(1), 2);
+    const elevation = (depth: Point): number => -depth[1] / Math.hypot(...depth);
+
+    expect(elevation(after)).toBeGreaterThan(elevation(before));
+    expect(elevation(before)).toBeCloseTo(1 / Math.sqrt(3), 6);
   });
 });

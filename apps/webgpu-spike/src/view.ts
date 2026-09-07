@@ -16,6 +16,8 @@ export interface OrbitCameraState {
   readonly zoom: number;
 }
 
+// The eye sits 45 degrees off the Z axis and asin(1 / sqrt 3) = 35.26 degrees
+// above the horizon: the classic isometric view, looking down at the model.
 const defaultYaw = -Math.PI / 4;
 const defaultPitch = Math.asin(1 / Math.sqrt(3));
 const minimumScale = 0.000_001;
@@ -61,25 +63,44 @@ function clamp(value: number, minimum: number, maximum: number): number {
 }
 
 interface CameraBasis {
+  /** Screen right, horizontal in world space. */
   readonly right: Vector3;
+  /** Screen up; carries a positive world +Y component. */
   readonly up: Vector3;
+  /** The viewing direction: clip depth grows along it, away from the eye. */
   readonly depth: Vector3;
 }
 
+/**
+ * Builds the view frame for an orbit orientation.
+ *
+ * `towardEye` points from the framed target to the viewer: a positive pitch
+ * lifts the eye above the horizon, so the default view looks down onto the
+ * model. `right` stays horizontal and `up = towardEye x right` keeps world +Y
+ * pointing up the screen. `depth` is the direction the viewer looks along, the
+ * negation of `towardEye`, so clip depth grows away from the eye and
+ * `right x up` points back at the viewer: a right-handed, unmirrored frame in
+ * which the surface nearest the eye wins the depth test.
+ */
 function cameraBasis(yaw: number, pitch: number): CameraBasis {
   const cosinePitch = Math.cos(pitch);
-  const depth: Vector3 = [
+  const towardEye: Vector3 = [
     Math.sin(yaw) * cosinePitch,
     Math.sin(pitch),
     Math.cos(yaw) * cosinePitch,
   ];
-  const horizontalLength = Math.hypot(depth[0], depth[2]);
-  const right: Vector3 = [depth[2] / horizontalLength, 0, -depth[0] / horizontalLength];
-  const up: Vector3 = [
-    depth[1] * right[2],
-    depth[2] * right[0] - depth[0] * right[2],
-    -depth[1] * right[0],
+  const horizontalLength = Math.hypot(towardEye[0], towardEye[2]);
+  const right: Vector3 = [
+    towardEye[2] / horizontalLength,
+    0,
+    -towardEye[0] / horizontalLength,
   ];
+  const up: Vector3 = [
+    towardEye[1] * right[2],
+    towardEye[2] * right[0] - towardEye[0] * right[2],
+    -towardEye[1] * right[0],
+  ];
+  const depth: Vector3 = [-towardEye[0], -towardEye[1], -towardEye[2]];
   return { right, up, depth };
 }
 
@@ -160,7 +181,7 @@ export class OrthographicOrbitCamera {
     this.zoom = clamp(zoom, 0.05, 100);
   }
 
-  /** Restores an isometric view and frames the complete scene. */
+  /** Restores the default view (eye above, looking down at the model) and frames the complete scene. */
   reset(): void {
     this.yaw = defaultYaw;
     this.pitch = defaultPitch;

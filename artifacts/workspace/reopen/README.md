@@ -85,10 +85,10 @@ of the Studio's two reopen paths — the package is loaded first and the
 workspace restored onto it, instead of restored in place. Same result:
 `unverifiable` → `verified`, same byte-identical re-save, and
 `reopen-after-reload.png` is **byte-identical to `reopen-unchanged.png`**
-(`de537008a371…`). Two code paths, one picture.
+(`0bdfe32150d1…`). Two code paths, one picture.
 
-The run took 11.2 s end to end with **0 console issues**; milestones are
-517/763 ms (save), 453/687 (unchanged), 439/690 (changed source), 418/658
+The run took 8.9 s end to end with **0 console issues**; milestones are
+369/592 ms (save), 336/541 (unchanged), 335/545 (changed source), 340/545
 (reload) for hierarchy and ready.
 
 ## What this does not show
@@ -116,8 +116,12 @@ The run took 11.2 s end to end with **0 console issues**; milestones are
   `save-customized`, `reopen-unchanged`, `reopen-changed-source`,
   `reopen-after-reload` — are byte-stable across runs and are pinned.
 
-Everything else reproduced field for field across four consecutive runs; only
-`capturedAt` and that one screenshot moved. The committed sample is run 4.
+Everything else reproduced field for field across four consecutive runs on
+2026-09-05; only `capturedAt` and that one screenshot moved. The committed
+sample was re-taken once on 2026-09-07 after the Studio camera fix (the default
+view had been mirrored and seen from below): every count, state, and digest
+reproduced the 2026-09-05 record, and only the timings and the pictures moved.
+The four pinned captures were re-pinned to the new pictures deliberately.
 
 ## Files
 

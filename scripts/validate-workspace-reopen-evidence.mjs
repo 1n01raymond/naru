@@ -316,22 +316,25 @@ assert(
   "The reload arm restored in place, so it proves nothing the unchanged arm does not.",
 );
 
+// Re-pinned 2026-09-07 with the record re-taken after the Studio camera fix
+// (the default view used to be mirrored and seen from below). Every count and
+// digest in the JSON reproduced; only the pictures changed.
 const CAPTURES = {
   "arms.save.screenshots.customized": [
     save.screenshots.customized,
-    "f96abe9b4c2db2f00d8b11da72b8996145af586fc2366954bb5dcd090487ccda",
+    "f9f9250c8a684540cf0ce97903806a4ee83bc24936c44440f93be4f863246f93",
   ],
   "arms.unchanged.screenshot": [
     unchanged.screenshot,
-    "de537008a371c559c3cd493a24697e5037a30c8b7380872849e1afa911c82c4e",
+    "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d",
   ],
   "arms.changedSource.screenshot": [
     changed.screenshot,
-    "55cc158240da002dd0ac7ab0ecaf06580d47c2a27337e407615f4eca2281a051",
+    "a2236c6e1254c3a65da2f1171e03279154432be4651512032ee95781d8150514",
   ],
   "arms.reload.screenshot": [
     reload.screenshot,
-    "de537008a371c559c3cd493a24697e5037a30c8b7380872849e1afa911c82c4e",
+    "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d",
   ],
 };
 for (const [name, [capture, digest]] of Object.entries(CAPTURES)) {
