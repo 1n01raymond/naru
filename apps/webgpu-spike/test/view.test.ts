@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { OrthographicOrbitCamera, createCompiledSceneCamera } from "../src/view.js";
+import { OrthographicOrbitCamera, createCompiledSceneCamera, orbitCameraBasis } from "../src/view.js";
 
 const bounds = { min: [-0.048, 0, -0.028], max: [0.048, 0.022, 0.028] } as const;
 
@@ -144,5 +144,31 @@ describe("default view orientation", () => {
 
     expect(elevation(after)).toBeGreaterThan(elevation(before));
     expect(elevation(before)).toBeCloseTo(1 / Math.sqrt(3), 6);
+  });
+});
+
+describe("orbit camera poles", () => {
+  const bounds = { min: [-1, -1, -1] as const, max: [1, 1, 1] as const };
+
+  it("keeps the frame continuous through the top view", () => {
+    const nearPole = orbitCameraBasis(0.3, Math.PI / 2 - 1e-7);
+    const pole = orbitCameraBasis(0.3, Math.PI / 2);
+    for (const axis of ["right", "up", "depth"] as const) {
+      nearPole[axis].forEach((value, index) => expect(pole[axis][index]).toBeCloseTo(value, 5));
+    }
+    expect(pole.right).toEqual([Math.cos(0.3), 0, -Math.sin(0.3)]);
+    expect(pole.up.every(Number.isFinite)).toBe(true);
+  });
+
+  it("orbits up to, and restores no further than, the poles", () => {
+    const camera = new OrthographicOrbitCamera(bounds);
+    camera.orbit(0, 10_000);
+    expect(camera.state().pitch).toBe(Math.PI / 2);
+    camera.orbit(0, -20_000);
+    expect(camera.state().pitch).toBe(-Math.PI / 2);
+    camera.restore({ yaw: 0, pitch: 9, panRight: 0, panUp: 0, zoom: 1 });
+    expect(camera.state().pitch).toBe(Math.PI / 2);
+    camera.setOrientation(1, Number.NaN);
+    expect(camera.state()).toMatchObject({ yaw: 0, pitch: Math.PI / 2 });
   });
 });

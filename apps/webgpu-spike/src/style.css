@@ -516,6 +516,53 @@ canvas.is-measuring {
   color: #ffd166;
 }
 
+.view-cube {
+  position: absolute;
+  z-index: 2;
+  top: 40px;
+  left: 14px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 92px;
+  color: #536b77;
+  font: 700 10px/1.4 ui-monospace, "Cascadia Code", monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.view-cube svg {
+  width: 84px;
+  height: 84px;
+  overflow: visible;
+}
+
+.view-cube polygon {
+  cursor: pointer;
+  stroke: #28424f;
+  stroke-width: 0.06;
+  stroke-linejoin: round;
+  transition: fill 120ms ease;
+}
+
+.view-cube polygon:hover {
+  fill: #ffd166;
+}
+
+.view-cube text {
+  pointer-events: none;
+  fill: #28424f;
+  font: 700 1px/1 ui-monospace, "Cascadia Code", monospace;
+  letter-spacing: 0.02em;
+  text-anchor: middle;
+  dominant-baseline: central;
+}
+
+.view-cube output {
+  pointer-events: none;
+}
+
 .hud {
   position: absolute;
   inset: auto 14px 14px;
