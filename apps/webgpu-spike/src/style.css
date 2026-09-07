@@ -346,6 +346,25 @@ h1 span {
   gap: 5px;
 }
 
+.viewport-tools select {
+  max-width: 180px;
+  padding: 6px 7px;
+  border: 1px solid #b6c5cc;
+  border-radius: 7px;
+  color: #354f5b;
+  background: rgb(255 255 255 / 82%);
+  font: 700 10px/1.2 ui-monospace, "Cascadia Code", monospace;
+  cursor: pointer;
+}
+
+.viewport-tools select:hover,
+.viewport-tools select:focus-visible {
+  border-color: #168cb6;
+  outline: none;
+  color: #075a78;
+  background: #fff;
+}
+
 .viewport-tools button {
   padding: 7px 9px;
   border: 1px solid #b6c5cc;

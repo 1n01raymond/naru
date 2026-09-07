@@ -45,6 +45,7 @@ import {
 import type { StagedImportTree } from "./staged-import.js";
 import { formatPropertyValue, PropertySidecarStore } from "./property-sidecar.js";
 import { loadSpatialDemandIndex } from "./spatial-demand-source.js";
+import { collectBuildingStoreys, frameBuildingStoreys, objectBoundsByObjectId } from "./storeys.js";
 import { OrthographicOrbitCamera } from "./view.js";
 import { hiddenHierarchyNodeIndices, OccurrenceVisibility } from "./visibility.js";
 import type { ResidencyVisibilityUpdate } from "./visibility.js";
@@ -235,6 +236,7 @@ const visibilityStatus = requireElement<HTMLElement>("#visibility-status");
 const hideSelectionButton = requireElement<HTMLButtonElement>("#hide-selection");
 const isolateSelectionButton = requireElement<HTMLButtonElement>("#isolate-selection");
 const showAllButton = requireElement<HTMLButtonElement>("#show-all");
+const storeySelect = requireElement<HTMLSelectElement>("#storey-select");
 const toggleSectionButton = requireElement<HTMLButtonElement>("#toggle-section");
 const sectionControls = requireElement<HTMLElement>("#section-controls");
 const measureButton = requireElement<HTMLButtonElement>("#measure-distance");
@@ -385,6 +387,12 @@ function resetSceneUi(): void {
   hideSelectionButton.disabled = true;
   isolateSelectionButton.disabled = true;
   showAllButton.disabled = true;
+  storeySelect.replaceChildren(storeySelect.options[0] ?? new Option("All storeys", ""));
+  storeySelect.value = "";
+  storeySelect.hidden = true;
+  delete document.documentElement.dataset.storey;
+  delete document.documentElement.dataset.storeyObjects;
+  delete document.documentElement.dataset.storeyCount;
   toggleSectionButton.setAttribute("aria-pressed", "false");
   sectionControls.hidden = true;
   measureButton.setAttribute("aria-pressed", "false");
@@ -857,6 +865,46 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       updateVisibilityControls();
       scheduleRender();
     };
+
+    // Building storeys come from the IFC hierarchy (one non-geometric
+    // IfcBuildingStorey node per discipline document, merged by name) and are
+    // framed from the coarse batch, so the selector is usable before any
+    // target chunk arrives. A storey is a viewing scope: it narrows what is
+    // drawn on top of hide/isolate and never enters the saved workspace.
+    const storeys = frameBuildingStoreys(
+      collectBuildingStoreys(hierarchy.entries, scene.objectEvidence),
+      objectBoundsByObjectId(initial.scene.gpuScene),
+    );
+    const storeyByKey = new Map(storeys.map((storey) => [storey.key, storey]));
+    for (const storey of storeys) {
+      storeySelect.append(
+        new Option(`${storey.name} · ${storey.objectIds.length} objects`, storey.key),
+      );
+    }
+    storeySelect.hidden = storeys.length === 0;
+    document.documentElement.dataset.storeyCount = String(storeys.length);
+    const applyStorey = (key: string): void => {
+      const storey = storeyByKey.get(key);
+      storeySelect.value = storey ? storey.key : "";
+      visibility.setScope(storey ? new Set(storey.objectIds) : undefined);
+      camera.frameBounds(storey?.bounds);
+      if (storey) {
+        document.documentElement.dataset.storey = storey.key;
+        document.documentElement.dataset.storeyObjects = String(storey.objectIds.length);
+      } else {
+        delete document.documentElement.dataset.storey;
+        delete document.documentElement.dataset.storeyObjects;
+      }
+      applyVisibility();
+      scheduleCameraRender();
+    };
+    storeySelect.addEventListener(
+      "change",
+      () => {
+        applyStorey(storeySelect.value);
+      },
+      listenerOptions,
+    );
 
     const coarseScene = initial.scene;
     let decodedTargetBytes = 0;
@@ -1533,6 +1581,9 @@ async function loadScene(source: SceneSource): Promise<boolean> {
           const objectId = objectIdByOccurrence.get(occurrenceId);
           return objectId !== undefined && visibility.knows(objectId) ? objectId : undefined;
         });
+        // A storey scope is a viewing aid, not workspace state: lift it so
+        // the restored camera and hidden set land on the whole scene.
+        applyStorey("");
         camera.restore(view.camera);
         section.restore(view.section);
         visibility.restore({ hiddenObjectIds: restored.hiddenObjectIds });

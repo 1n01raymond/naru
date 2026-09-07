@@ -20,6 +20,24 @@ const defaultYaw = -Math.PI / 4;
 const defaultPitch = Math.asin(1 / Math.sqrt(3));
 const minimumScale = 0.000_001;
 
+function assertOrderedFiniteBounds(bounds: SceneBounds): void {
+  const values = [...bounds.min, ...bounds.max];
+  if (
+    values.some((value) => !Number.isFinite(value)) ||
+    bounds.min.some((value, axis) => value > (bounds.max[axis] ?? -Infinity))
+  ) {
+    throw new TypeError("Scene bounds must contain ordered finite values.");
+  }
+}
+
+function boundsCenter(bounds: SceneBounds): Vector3 {
+  return [
+    (bounds.min[0] + bounds.max[0]) / 2,
+    (bounds.min[1] + bounds.max[1]) / 2,
+    (bounds.min[2] + bounds.max[2]) / 2,
+  ];
+}
+
 function boundsCorners(bounds: SceneBounds): Vector3[] {
   const corners: Vector3[] = [];
   for (const x of [bounds.min[0], bounds.max[0]]) {
@@ -72,8 +90,9 @@ function cameraBasis(yaw: number, pitch: number): CameraBasis {
  * can later be reused by a framework-neutral viewer shell.
  */
 export class OrthographicOrbitCamera {
-  private readonly corners: readonly Vector3[];
-  private readonly center: Vector3;
+  private readonly sceneBounds: SceneBounds;
+  private corners: readonly Vector3[];
+  private center: Vector3;
   private yaw = defaultYaw;
   private pitch = defaultPitch;
   private panRight = 0;
@@ -83,19 +102,24 @@ export class OrthographicOrbitCamera {
   private fittedHalfHeight = 1;
 
   constructor(bounds: SceneBounds) {
-    const values = [...bounds.min, ...bounds.max];
-    if (
-      values.some((value) => !Number.isFinite(value)) ||
-      bounds.min.some((value, axis) => value > (bounds.max[axis] ?? -Infinity))
-    ) {
-      throw new TypeError("Scene bounds must contain ordered finite values.");
-    }
+    assertOrderedFiniteBounds(bounds);
+    this.sceneBounds = { min: [...bounds.min], max: [...bounds.max] };
     this.corners = boundsCorners(bounds);
-    this.center = [
-      (bounds.min[0] + bounds.max[0]) / 2,
-      (bounds.min[1] + bounds.max[1]) / 2,
-      (bounds.min[2] + bounds.max[2]) / 2,
-    ];
+    this.center = boundsCenter(bounds);
+    this.fit();
+  }
+
+  /**
+   * Replaces the framed extents (a storey's bounds, for example) and fits the
+   * view to them while keeping the view direction. `undefined` returns to the
+   * constructed scene bounds. Framing is view state: `state()` still carries
+   * navigation only, so a saved workspace reopens against the scene extents.
+   */
+  frameBounds(bounds: SceneBounds | undefined): void {
+    const framed = bounds ?? this.sceneBounds;
+    assertOrderedFiniteBounds(framed);
+    this.corners = boundsCorners(framed);
+    this.center = boundsCenter(framed);
     this.fit();
   }
 
@@ -113,9 +137,10 @@ export class OrthographicOrbitCamera {
   /**
    * Reapplies persisted navigation without refitting.
    *
-   * Fitted extents are derived from the bounds this camera was constructed
-   * with, so a reopened package frames itself at the same scale a fresh one
-   * does. Orbiting never refits either, which makes the round trip exact for
+   * Fitted extents are derived from the bounds this camera is currently
+   * framing (the constructed scene bounds unless `frameBounds` replaced them;
+   * a storey frame is not persisted), so a reopened package frames itself at
+   * the same scale a fresh one does. Orbiting never refits either, which makes the round trip exact for
    * the ordinary path. A view that was fitted at a non-default orientation and
    * then orbited restores its direction, pan, and zoom but reframes at the
    * constructed scale, because the manifest carries navigation, not extents.

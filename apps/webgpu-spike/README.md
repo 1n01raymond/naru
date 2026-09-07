@@ -39,6 +39,20 @@ and the document element publishes `data-measure-state`,
 `data-measure-distance`, and `data-measure-delta` for tests. Measurements are
 not part of the saved workspace.
 
+IFC packages also expose a storey selector in the viewport toolbar. The
+Studio collects every non-geometric `IfcBuildingStorey` node from the
+hierarchy, merges storeys that several discipline documents declare under the
+same name, orders them by elevation, and frames each one from the coarse
+batch's instance bounds, so the selector works before any target chunk
+arrives ([storeys](src/storeys.ts), [tests](test/storeys.test.ts)). Choosing
+a storey scopes rendering to its occurrences on top of hide and isolate and
+re-frames the camera to its bounds; "All storeys" lifts the scope and returns
+to the scene bounds. The scope is a viewing aid, not workspace state: saving a
+workspace records only the explicit hidden set, and reopening one clears the
+storey first. The document element publishes `data-storey`,
+`data-storey-objects`, and `data-storey-count`; STEP packages have no
+storeys and hide the selector.
+
 The camera chooses a JavaScript-number origin for every frame and sends a
 camera-relative f32 projection plus that origin to the renderer. This keeps the
 same review controls and section equation stable for site-scale transforms; the
