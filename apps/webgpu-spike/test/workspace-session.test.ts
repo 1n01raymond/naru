@@ -91,6 +91,7 @@ function capture(overrides: Partial<Parameters<typeof captureWorkspace>[0]> = {}
     sources,
     camera,
     section,
+    annotations: [],
     hiddenObjectIds: [3, 1],
     selectedObjectId: 2,
     occurrenceIdOf,
@@ -183,6 +184,7 @@ describe("resolveRestoredObjects", () => {
         selectedOccurrenceId: "architecture:wall-b",
         droppedSelection: false,
         resolvedAgainstHierarchy: true,
+        annotations: [],
       },
       objectIdOf,
     );
@@ -202,6 +204,7 @@ describe("resolveRestoredObjects", () => {
         selectedOccurrenceId: "structure:beam-gone",
         droppedSelection: false,
         resolvedAgainstHierarchy: true,
+        annotations: [],
       },
       objectIdOf,
     );
@@ -225,6 +228,7 @@ describe("resolveRestoredObjects", () => {
         selectedOccurrenceId: null,
         droppedSelection: true,
         resolvedAgainstHierarchy: true,
+        annotations: [],
       },
       objectIdOf,
     );
@@ -359,7 +363,7 @@ describe("portability", () => {
     `"view":{"camera":{"yaw":0.75,"pitch":-0.25,"panRight":12.5,"panUp":-3,"zoom":2.5},` +
     `"section":{"enabled":true,"axis":"y","direction":-1,"fraction":0.375},` +
     `"hiddenOccurrenceIds":["architecture:wall-a"],` +
-    `"selectedOccurrenceId":"architecture:wall-b"}}` +
+    `"selectedOccurrenceId":"architecture:wall-b","annotations":[]}}` +
     "\n";
 
   it("re-serializes a manifest written elsewhere to identical bytes", () => {

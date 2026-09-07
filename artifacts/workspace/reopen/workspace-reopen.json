@@ -1,6 +1,6 @@
 {
   "schemaVersion": "naru.workspace-reopen-evidence.1",
-  "capturedAt": "2026-09-07T09:06:41.031Z",
+  "capturedAt": "2026-09-07T16:51:25.817Z",
   "mode": "headed-workspace-round-trip",
   "browser": {
     "id": "chrome",
@@ -90,13 +90,13 @@
       "label": "save",
       "question": "Does the Studio save a manifest that describes the session a person set up?",
       "milestones": {
-        "hierarchyReadyMs": 435,
-        "readyMs": 663
+        "hierarchyReadyMs": 434,
+        "readyMs": 685
       },
       "baseline": {
         "fileName": "http-127.0.0.1-4176-scene.gltf.naru-workspace.json",
-        "byteLength": 1663,
-        "sha256": "986dad7cbe08d3db871b7760d381f7f23ee1d5feab2c786194e9be0d4ae69cd4",
+        "byteLength": 1680,
+        "sha256": "e055ba03a9298297e5a4df35096511ee41b7dfb68842fbc07cfd42137e7a4c8e",
         "statusText": "Saved 0 hidden occurrence(s) and 4 source(s) for http://127.0.0.1:4176/scene.gltf.",
         "hiddenOccurrenceIds": 0,
         "selectedOccurrenceId": null,
@@ -124,11 +124,11 @@
       },
       "customized": {
         "fileName": "http-127.0.0.1-4176-scene.gltf.naru-workspace.json",
-        "byteLength": 1871,
-        "sha256": "5949870b198007e704f13237e0c8fa41899fcac8044449373ad729ed01f4d8c1",
+        "byteLength": 1888,
+        "sha256": "a283c8fa12ee03c2d2e737faf3c648de0c1a8611ae68a496b703cec0ea61bd3a",
         "statusText": "Saved 3 hidden occurrence(s) and 4 source(s) for http://127.0.0.1:4176/scene.gltf.",
         "label": "http://127.0.0.1:4176/scene.gltf",
-        "schemaVersion": "naru.workspace.1",
+        "schemaVersion": "naru.workspace.2",
         "packageReference": {
           "kind": "url",
           "href": "http://127.0.0.1:4176/scene.gltf"
@@ -206,20 +206,21 @@
             "occurrence:ifc:architecture-19d7d02d53c2:14942",
             "occurrence:ifc:architecture-19d7d02d53c2:15047"
           ],
-          "selectedOccurrenceId": "occurrence:ifc:architecture-19d7d02d53c2:15155"
+          "selectedOccurrenceId": "occurrence:ifc:architecture-19d7d02d53c2:15155",
+          "annotations": []
         }
       },
       "savedFlag": "true",
       "screenshots": {
         "baseline": {
           "path": "save-baseline.png",
-          "bytes": 258423,
-          "sha256": "aaa87ec60095d31338f01ba5a22518a614ca785515af76d090648ea9b46e718d"
+          "bytes": 258863,
+          "sha256": "1e73edd6c1f3fd14e3670c8ce33dacf159008b73fbc9934cc662a793f3e49abd"
         },
         "customized": {
           "path": "save-customized.png",
-          "bytes": 217125,
-          "sha256": "cdb1740a78351c3d23a292f5a17e887bd0387883fa97cff9499f34d7bd06f359"
+          "bytes": 217504,
+          "sha256": "d493bb18af66dab6d21406c2d650bad44f7687588e3cee63d24e64def688be40"
         }
       }
     },
@@ -227,8 +228,8 @@
       "label": "unchanged",
       "question": "Does the same workspace reopen against an unchanged package?",
       "milestones": {
-        "hierarchyReadyMs": 343,
-        "readyMs": 556
+        "hierarchyReadyMs": 362,
+        "readyMs": 583
       },
       "beforeSourceInspection": {
         "state": "unverifiable",
@@ -290,23 +291,23 @@
       ],
       "resaved": {
         "fileName": "http-127.0.0.1-4176-scene.gltf.naru-workspace.json",
-        "byteLength": 1871,
-        "sha256": "5949870b198007e704f13237e0c8fa41899fcac8044449373ad729ed01f4d8c1",
+        "byteLength": 1888,
+        "sha256": "a283c8fa12ee03c2d2e737faf3c648de0c1a8611ae68a496b703cec0ea61bd3a",
         "statusText": "Saved 3 hidden occurrence(s) and 4 source(s) for http://127.0.0.1:4176/scene.gltf."
       },
       "manifestIsByteIdentical": true,
       "screenshot": {
         "path": "reopen-unchanged.png",
-        "bytes": 287231,
-        "sha256": "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0"
+        "bytes": 287619,
+        "sha256": "9710fdb8877e28271278b7297316180dbfe41a273c7226262eb1f301fcfaaf15"
       }
     },
     "changedSource": {
       "label": "changed-source",
       "question": "Does the same workspace report a source that moved under it?",
       "milestones": {
-        "hierarchyReadyMs": 350,
-        "readyMs": 586
+        "hierarchyReadyMs": 339,
+        "readyMs": 552
       },
       "edit": {
         "label": "arc.ifc",
@@ -362,16 +363,16 @@
       },
       "screenshot": {
         "path": "reopen-changed-source.png",
-        "bytes": 288423,
-        "sha256": "ed51d78b112d057fef70783a9112b63d0334875a61543d002e8135192c64e50b"
+        "bytes": 288811,
+        "sha256": "0c9246ea94af9cc16500e36b7a65f3395aa70c586d6fb57160dbaeb21ec2a95e"
       }
     },
     "reload": {
       "label": "reload",
       "question": "Does a reopen that must load the package first restore the same view?",
       "milestones": {
-        "hierarchyReadyMs": 335,
-        "readyMs": 542
+        "hierarchyReadyMs": 339,
+        "readyMs": 576
       },
       "bootSceneUrl": "http://127.0.0.1:4176/scene.gltf?reopen=1",
       "manifestReferenceHref": "http://127.0.0.1:4176/scene.gltf",
@@ -414,18 +415,18 @@
       },
       "resaved": {
         "fileName": "http-127.0.0.1-4176-scene.gltf.naru-workspace.json",
-        "byteLength": 1871,
-        "sha256": "5949870b198007e704f13237e0c8fa41899fcac8044449373ad729ed01f4d8c1",
+        "byteLength": 1888,
+        "sha256": "a283c8fa12ee03c2d2e737faf3c648de0c1a8611ae68a496b703cec0ea61bd3a",
         "statusText": "Saved 3 hidden occurrence(s) and 4 source(s) for http://127.0.0.1:4176/scene.gltf."
       },
       "manifestIsByteIdentical": true,
       "screenshot": {
         "path": "reopen-after-reload.png",
-        "bytes": 287231,
-        "sha256": "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0"
+        "bytes": 287619,
+        "sha256": "9710fdb8877e28271278b7297316180dbfe41a273c7226262eb1f301fcfaaf15"
       }
     }
   },
   "consoleIssues": [],
-  "elapsedSeconds": 9.1
+  "elapsedSeconds": 9.4
 }

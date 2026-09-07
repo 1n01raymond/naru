@@ -119,6 +119,7 @@
               <button id="show-all" type="button" disabled>Show all <kbd>⇧H</kbd></button>
               <button id="toggle-section" type="button" aria-pressed="false">Section <kbd>C</kbd></button>
               <button id="measure-distance" type="button" aria-pressed="false">Measure <kbd>M</kbd></button>
+              <button id="annotate" type="button" aria-pressed="false">Note <kbd>N</kbd></button>
               <button id="fit-view" type="button">Fit <kbd>F</kbd></button>
             </div>
           </div>
@@ -140,6 +141,16 @@
         </div>
         <canvas id="viewport"></canvas>
         <svg id="measure-overlay" class="measure-overlay" aria-hidden="true"></svg>
+        <svg id="annotation-overlay" class="annotation-overlay" aria-label="Annotations"></svg>
+        <input
+          id="annotation-input"
+          class="annotation-input"
+          type="text"
+          maxlength="1024"
+          placeholder="Note text - Enter saves, Esc cancels"
+          aria-label="Annotation text"
+          hidden
+        />
         <div id="view-cube" class="view-cube" role="group" aria-label="View orientation">
           <svg viewBox="-1.9 -1.9 3.8 3.8" aria-hidden="true"></svg>
           <output id="view-orientation" title="Click a face to look at it squarely">Isometric</output>
@@ -148,6 +159,7 @@
           <span id="status" data-state="loading">Loading compiled glTF hierarchy…</span>
           <span id="selection">Click an occurrence to resolve its source identity.</span>
           <span id="measurement" hidden></span>
+          <span id="annotation-status" hidden></span>
         </div>
       </section>
 

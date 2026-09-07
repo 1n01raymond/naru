@@ -4,6 +4,7 @@ export {
   normalizeWorkspace,
   parseWorkspace,
   serializeWorkspace,
+  previousWorkspaceSchemaVersion,
   workspaceSchemaVersion,
 } from "./document.js";
 export type {
@@ -18,6 +19,7 @@ export type {
   WorkspaceSection,
   WorkspaceSectionAxis,
   WorkspaceSource,
+  WorkspaceAnnotation,
   WorkspaceView,
 } from "./document.js";
 export { evaluateWorkspaceReopen } from "./reopen.js";

@@ -43,7 +43,8 @@ option: it records what was verified, what was not, and why.
 Persist a versioned, non-authoritative workspace manifest, and decide a reopen
 from it with a pure function over observed evidence.
 
-1. **Schema ownership.** `naru.workspace.1` is owned by a new runtime-free
+1. **Schema ownership.** `naru.workspace.1` (now `naru.workspace.2`, see the
+   amendment below) is owned by a new runtime-free
    package, `@naru3d/workspace`. It depends on no renderer, no compiler, and no
    host API, so the same parser runs in the Studio, in Node, and in an
    embedder. The identifier is new, so it takes the `naru.` prefix
@@ -101,6 +102,17 @@ from it with a pure function over observed evidence.
    bound work; patterns decide validity; a wrong shape is refused rather than
    repaired.
 
+## Amendment 2026-09-08: `naru.workspace.2`
+
+The view gained `annotations`, an ordered list of `{ position, text }` notes
+anchored to world-space surface points (at most 10,000 notes of at most 1,024
+characters each, `LIMIT_EXCEEDED` past either bound). The schema id moved to
+`naru.workspace.2`; the parser still accepts `naru.workspace.1` and reads it
+as an empty annotation list, but the serializer only ever writes `.2`. The
+[round-trip record](../../artifacts/workspace/reopen/README.md) was re-taken
+under the new schema and reproduced every count and state; both manifests grew
+by exactly the 17 bytes of the empty list.
+
 ## Consequences
 
 ### Positive
@@ -138,7 +150,7 @@ from it with a pure function over observed evidence.
 - `occurrenceId` stability is inherited, not enforced here. If an adapter
   changes how it derives occurrence identity, saved selections and hidden sets
   degrade to dropped ids -- reported, but dropped.
-- Isolation is not a field. `naru.workspace.1` stores the hidden set, so a
+- Isolation is not a field. The manifest stores the hidden set, so a
   workspace saved while one occurrence is isolated persists only the explicit
   hidden set and reopens with everything else visible. The Studio says so at the
   moment of saving rather than restoring a different view silently; carrying

@@ -17,6 +17,7 @@
 import {
   workspaceSchemaVersion,
   type ObservedSource,
+  type WorkspaceAnnotation,
   type WorkspaceCamera,
   type WorkspaceDocument,
   type WorkspaceObservation,
@@ -38,6 +39,7 @@ export interface WorkspaceCaptureInput {
   readonly hiddenObjectIds: readonly number[];
   /** Zero means nothing is selected, the value the Studio itself uses. */
   readonly selectedObjectId: number;
+  readonly annotations: readonly WorkspaceAnnotation[];
   readonly occurrenceIdOf: (objectId: number) => string | undefined;
 }
 
@@ -88,6 +90,7 @@ export function captureWorkspace(input: WorkspaceCaptureInput): WorkspaceCapture
         section: input.section,
         hiddenOccurrenceIds: hidden,
         selectedOccurrenceId: selectedOccurrenceId ?? null,
+        annotations: input.annotations,
       },
     },
     unnamedHiddenObjectIds,

@@ -48,7 +48,14 @@ distance and the per-axis deltas in metres; a third click starts a new
 measurement and `Escape` clears it. The overlay is re-projected every frame,
 and the document element publishes `data-measure-state`,
 `data-measure-distance`, and `data-measure-delta` for tests. Measurements are
-not part of the saved workspace.
+not part of the saved workspace. Press `N` (or the Note button) and click one
+surface point to anchor a text note there; type the text and press `Enter`
+(`Escape` cancels). Notes are labels re-projected every frame, a click on a
+label selects it, `Delete` removes the selected note, and a click on the
+canvas deselects. The document element publishes `data-annotation-state`,
+`data-annotation-count`, and `data-annotation-selected`. Notes are saved in
+the workspace manifest ([annotations](src/annotations.ts),
+[tests](test/annotations.test.ts)).
 
 IFC packages also expose a storey selector in the viewport toolbar. The
 Studio collects every non-geometric `IfcBuildingStorey` node from the
@@ -328,7 +335,7 @@ Re-record with `pnpm staged:import:browser:evidence`; validate with
 
 ## Save and reopen a workspace
 
-The workspace bar saves the current session as a `naru.workspace.1` manifest and
+The workspace bar saves the current session as a `naru.workspace.2` manifest and
 reopens one ([ADR-0022](../../docs/adr/0022-workspace-manifest.md),
 [`@naru3d/workspace`](../../packages/workspace/README.md)). A workspace is a
 pointer plus intent: the package it was saved against, the sources that import
@@ -361,7 +368,7 @@ lie. Once hashed, a moved source reopens as `changed-source` with
 because the source is authoritative
 ([ADR-0002](../../docs/adr/0002-source-and-cache.md)).
 
-Isolation has no field in `naru.workspace.1`. Saving while an occurrence is
+Isolation has no field in `naru.workspace.2`. Saving while an occurrence is
 isolated persists only the explicit hidden set, and the status says so at the
 moment of saving instead of restoring a different view later.
 

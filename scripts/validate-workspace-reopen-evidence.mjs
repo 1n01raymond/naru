@@ -92,12 +92,15 @@ for (const source of record.federation.sources) {
 }
 
 const save = record.arms.save;
-const BASELINE_DIGEST = "986dad7cbe08d3db871b7760d381f7f23ee1d5feab2c786194e9be0d4ae69cd4";
-const CUSTOMIZED_DIGEST = "5949870b198007e704f13237e0c8fa41899fcac8044449373ad729ed01f4d8c1";
+// Re-pinned 2026-09-08 with the record re-taken under `naru.workspace.2`: the
+// manifest gained `"annotations":[]` (17 bytes, 1663 -> 1680 and 1871 -> 1888)
+// and nothing else; every count and status text reproduced.
+const BASELINE_DIGEST = "e055ba03a9298297e5a4df35096511ee41b7dfb68842fbc07cfd42137e7a4c8e";
+const CUSTOMIZED_DIGEST = "a283c8fa12ee03c2d2e737faf3c648de0c1a8611ae68a496b703cec0ea61bd3a";
 const MANIFEST_FILE_NAME = "http-127.0.0.1-4176-scene.gltf.naru-workspace.json";
 
 assert(save.baseline.fileName === MANIFEST_FILE_NAME, "Manifest file name changed.");
-assert(save.baseline.byteLength === 1663, `Baseline manifest is ${save.baseline.byteLength} B.`);
+assert(save.baseline.byteLength === 1680, `Baseline manifest is ${save.baseline.byteLength} B.`);
 assert(save.baseline.sha256 === BASELINE_DIGEST, "Baseline manifest digest changed.");
 assert(
   save.baseline.hiddenOccurrenceIds === 0 &&
@@ -115,7 +118,7 @@ assert(
  * The interaction has to change the manifest, or byte identity after a reopen
  * would be a statement about an empty view.
  */
-assert(save.customized.byteLength === 1871, `Customized manifest is ${save.customized.byteLength} B.`);
+assert(save.customized.byteLength === 1888, `Customized manifest is ${save.customized.byteLength} B.`);
 assert(save.customized.sha256 === CUSTOMIZED_DIGEST, "Customized manifest digest changed.");
 assert(save.customized.sha256 !== save.baseline.sha256, "The interaction changed nothing.");
 assert(
@@ -124,7 +127,7 @@ assert(
   "Customized save status changed.",
 );
 assert(save.savedFlag === "true", "The Studio did not stamp the saved flag.");
-assert(save.customized.schemaVersion === "naru.workspace.1", "Manifest schema changed.");
+assert(save.customized.schemaVersion === "naru.workspace.2", "Manifest schema changed.");
 assert(save.customized.label === PACKAGE_HREF, "Manifest label changed.");
 assert(
   save.customized.packageReference.kind === "url" &&
@@ -167,6 +170,9 @@ const VIEW = {
     "occurrence:ifc:architecture-19d7d02d53c2:15047",
   ],
   selectedOccurrenceId: "occurrence:ifc:architecture-19d7d02d53c2:15155",
+  // The recorder places no note, so the round trip also proves an empty
+  // annotation list survives a reopen and serializes identically.
+  annotations: [],
 };
 assert(
   JSON.stringify(save.customized.view) === JSON.stringify(VIEW),
@@ -238,7 +244,7 @@ for (const armLabel of ["unchanged", "reload"]) {
     `${armLabel} verified status changed.`,
   );
   assert(arm.resaved.fileName === MANIFEST_FILE_NAME, `${armLabel} re-save named another file.`);
-  assert(arm.resaved.byteLength === 1871, `${armLabel} re-save is ${arm.resaved.byteLength} B.`);
+  assert(arm.resaved.byteLength === 1888, `${armLabel} re-save is ${arm.resaved.byteLength} B.`);
   assert(arm.resaved.sha256 === CUSTOMIZED_DIGEST, `${armLabel} re-save digest changed.`);
   assert(arm.manifestIsByteIdentical === true, `${armLabel} did not restore the saved view.`);
 }
@@ -316,6 +322,8 @@ assert(
   "The reload arm restored in place, so it proves nothing the unchanged arm does not.",
 );
 
+// Re-pinned 2026-09-08 a third time when the viewport toolbar gained the
+// Note button (annotations slice); the JSON reproduced again.
 // Re-pinned 2026-09-07, twice: first with the record re-taken after the Studio
 // camera fix (the default view used to be mirrored and seen from below), then
 // again once the view cube joined the viewport. Every count and digest in the
@@ -323,19 +331,19 @@ assert(
 const CAPTURES = {
   "arms.save.screenshots.customized": [
     save.screenshots.customized,
-    "cdb1740a78351c3d23a292f5a17e887bd0387883fa97cff9499f34d7bd06f359",
+    "d493bb18af66dab6d21406c2d650bad44f7687588e3cee63d24e64def688be40",
   ],
   "arms.unchanged.screenshot": [
     unchanged.screenshot,
-    "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0",
+    "9710fdb8877e28271278b7297316180dbfe41a273c7226262eb1f301fcfaaf15",
   ],
   "arms.changedSource.screenshot": [
     changed.screenshot,
-    "ed51d78b112d057fef70783a9112b63d0334875a61543d002e8135192c64e50b",
+    "0c9246ea94af9cc16500e36b7a65f3395aa70c586d6fb57160dbaeb21ec2a95e",
   ],
   "arms.reload.screenshot": [
     reload.screenshot,
-    "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0",
+    "9710fdb8877e28271278b7297316180dbfe41a273c7226262eb1f301fcfaaf15",
   ],
 };
 for (const [name, [capture, digest]] of Object.entries(CAPTURES)) {

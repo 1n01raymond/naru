@@ -9,7 +9,14 @@
  * was not written for.
  */
 
-export const workspaceSchemaVersion = "naru.workspace.1";
+export const workspaceSchemaVersion = "naru.workspace.2";
+
+/**
+ * The version this package wrote before `view.annotations` existed. It is
+ * still read (annotations empty) so a saved manifest keeps reopening; it is
+ * never written.
+ */
+export const previousWorkspaceSchemaVersion = "naru.workspace.1";
 
 /** A hex SHA-256 digest, lowercase, unprefixed. */
 const digestPattern = /^[0-9a-f]{64}$/;
@@ -41,6 +48,8 @@ export interface WorkspaceParseLimits {
   readonly sourceCount: number;
   readonly resourceCount: number;
   readonly hiddenOccurrenceCount: number;
+  readonly annotationCount: number;
+  readonly annotationTextLength: number;
   readonly identifierLength: number;
   readonly referenceLength: number;
 }
@@ -50,6 +59,8 @@ export const defaultWorkspaceParseLimits: WorkspaceParseLimits = {
   sourceCount: 256,
   resourceCount: 256,
   hiddenOccurrenceCount: 1_000_000,
+  annotationCount: 10_000,
+  annotationTextLength: 1024,
   identifierLength: 512,
   referenceLength: 4096,
 };
@@ -103,12 +114,23 @@ export interface WorkspaceSection {
   readonly fraction: number;
 }
 
+/**
+ * A text note anchored to a world-space point in the package's metre frame.
+ * Notes are kept in the order they were written; they are not keyed by an
+ * occurrence, so a recompile never rebinds one.
+ */
+export interface WorkspaceAnnotation {
+  readonly position: readonly [number, number, number];
+  readonly text: string;
+}
+
 /** Selection and visibility are keyed by occurrence id, never by node index. */
 export interface WorkspaceView {
   readonly camera: WorkspaceCamera;
   readonly section: WorkspaceSection;
   readonly hiddenOccurrenceIds: readonly string[];
   readonly selectedOccurrenceId: string | null;
+  readonly annotations: readonly WorkspaceAnnotation[];
 }
 
 export interface WorkspaceDocument {
@@ -321,15 +343,48 @@ function readSources(
   return sources;
 }
 
+function readAnnotations(
+  value: unknown,
+  path: string,
+  limits: WorkspaceParseLimits,
+): WorkspaceAnnotation[] {
+  const entries = readArray(value, path, limits.annotationCount);
+  return entries.map((entry, index) => {
+    const entryPath = `${path}[${index}]`;
+    const record = readRecord(entry, entryPath);
+    requireKnownKeys(record, ["position", "text"], entryPath);
+    const positionPath = `${entryPath}.position`;
+    const position = readArray(record["position"], positionPath, 3);
+    if (position.length !== 3) {
+      invalid(`${positionPath} must hold exactly three coordinates.`);
+    }
+    const text = readString(record["text"], `${entryPath}.text`, limits.annotationTextLength);
+    if (text.trim() === "") {
+      invalid(`${entryPath}.text must not be blank.`);
+    }
+    return {
+      position: [
+        readFiniteNumber(position[0], `${positionPath}[0]`),
+        readFiniteNumber(position[1], `${positionPath}[1]`),
+        readFiniteNumber(position[2], `${positionPath}[2]`),
+      ],
+      text,
+    };
+  });
+}
+
 function readView(
   value: unknown,
   path: string,
   limits: WorkspaceParseLimits,
+  hasAnnotations: boolean,
 ): WorkspaceView {
   const record = readRecord(value, path);
   requireKnownKeys(
     record,
-    ["camera", "section", "hiddenOccurrenceIds", "selectedOccurrenceId"],
+    hasAnnotations
+      ? ["camera", "section", "hiddenOccurrenceIds", "selectedOccurrenceId", "annotations"]
+      : ["camera", "section", "hiddenOccurrenceIds", "selectedOccurrenceId"],
     path,
   );
 
@@ -397,6 +452,9 @@ function readView(
     },
     hiddenOccurrenceIds: [...hidden].sort(),
     selectedOccurrenceId,
+    annotations: hasAnnotations
+      ? readAnnotations(record["annotations"], `${path}.annotations`, limits)
+      : [],
   };
 }
 
@@ -427,7 +485,7 @@ export function normalizeWorkspace(
   const limits = settleLimits(options);
   const record = readRecord(value, "workspace");
   const declared = record["schemaVersion"];
-  if (declared !== workspaceSchemaVersion) {
+  if (declared !== workspaceSchemaVersion && declared !== previousWorkspaceSchemaVersion) {
     throw new WorkspaceError(
       "UNSUPPORTED_SCHEMA",
       `workspace.schemaVersion must be ${JSON.stringify(workspaceSchemaVersion)}, not ${JSON.stringify(declared)}.`,
@@ -447,7 +505,12 @@ export function normalizeWorkspace(
       ),
     },
     sources: sources.sort((left, right) => compareText(left.key, right.key)),
-    view: readView(record["view"], "workspace.view", limits),
+    view: readView(
+      record["view"],
+      "workspace.view",
+      limits,
+      declared === workspaceSchemaVersion,
+    ),
   };
 }
 
@@ -519,6 +582,10 @@ export function serializeWorkspace(
       },
       hiddenOccurrenceIds: document.view.hiddenOccurrenceIds,
       selectedOccurrenceId: document.view.selectedOccurrenceId,
+      annotations: document.view.annotations.map((annotation) => ({
+        position: [annotation.position[0], annotation.position[1], annotation.position[2]],
+        text: annotation.text,
+      })),
     },
   };
   return `${JSON.stringify(ordered)}\n`;

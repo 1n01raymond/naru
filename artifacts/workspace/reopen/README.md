@@ -16,7 +16,7 @@ getting that session back. This record is that, in four arms of one run.
 
 | Arm | Question | Answer |
 |---|---|---|
-| `save` | Does the Studio save a manifest that describes the session a person set up? | 1,663 B before the interaction, **1,871 B** after it, digest `5949870b1980…` |
+| `save` | Does the Studio save a manifest that describes the session a person set up? | 1,680 B before the interaction, **1,888 B** after it, digest `a283c8fa12ee…` |
 | `unchanged` | Does the same workspace reopen against an unchanged package? | `unverifiable` → **`verified`**, and a re-save byte-identical to what was saved |
 | `changedSource` | Does the same workspace report a source that moved under it? | **`changed-source`**, `geometryIsCurrent` false, package still `verified` |
 | `reload` | Does a reopen that must load the package first restore the same view? | `unverifiable` → **`verified`**, re-save byte-identical again |
@@ -52,14 +52,15 @@ statement about content rather than about size.
 ## Results
 
 **Save.** The Studio saves `http-127.0.0.1-4176-scene.gltf.naru-workspace.json`
-twice: once on the untouched view (1,663 B, `986dad7cbe08…`, *"Saved 0 hidden
-occurrence(s) and 4 source(s)"*), once after the interaction (1,871 B,
-`5949870b1980…`, *"Saved 3 hidden occurrence(s) and 4 source(s)"*). The two
+twice: once on the untouched view (1,680 B, `e055ba03a929…`, *"Saved 0 hidden
+occurrence(s) and 4 source(s)"*), once after the interaction (1,888 B,
+`a283c8fa12ee…`, *"Saved 3 hidden occurrence(s) and 4 source(s)"*). The two
 differ, which is what makes the round trip below a claim about a session rather
 than about an empty view. The customized manifest carries
-`schemaVersion: "naru.workspace.1"`, the package reference as a URL, the
+`schemaVersion: "naru.workspace.2"`, the package reference as a URL, the
 package digest, all five resource digests, all four source digests, three
-hidden occurrence ids, one selection, the section plane, and the camera.
+hidden occurrence ids, one selection, the section plane, the camera, and an
+empty annotation list (the recorder places no note).
 
 **Reopen against an unchanged package.** Reopening reports **`unverifiable`**
 first — the manifest's source digests are a claim the Studio has not yet
@@ -67,7 +68,7 @@ checked, and it says so rather than assuming — and restores 3 hidden
 occurrences, the selection, the section plane at 35% and the camera, dropping
 nothing. Pressing *Check sources* re-reads the four IFC documents and the state
 becomes **`verified`** with `geometryIsCurrent: true`. Saving again produces
-**1,871 bytes with digest `5949870b1980…`** — byte-identical to what was saved.
+**1,888 bytes with digest `a283c8fa12ee…`** — byte-identical to what was saved.
 That equality is the restoration proof: an approximate restore would serialize
 differently.
 
@@ -123,6 +124,11 @@ default view had been mirrored and seen from below), then again once the view
 cube joined the viewport. Both times every count, state, and digest reproduced
 the 2026-09-05 record, and only the timings and the pictures moved. The four
 pinned captures were re-pinned to the new pictures deliberately each time.
+A third re-take on 2026-09-08 followed the manifest schema bump to
+`naru.workspace.2` (annotations): both manifests grew by exactly the 17 bytes
+of `,"annotations":[]`, every other count and state reproduced, the manifest
+digests and the four capture digests (the toolbar gained a *Note* button) were
+re-pinned deliberately.
 
 ## Files
 

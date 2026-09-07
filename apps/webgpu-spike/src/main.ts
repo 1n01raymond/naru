@@ -27,6 +27,7 @@ import {
 } from "./memory-ledger.js";
 import { HierarchySearchIndex } from "./hierarchy-search.js";
 import type { HierarchySearchResult } from "./hierarchy-search.js";
+import { AnnotationSet } from "./annotations.js";
 import { DistanceMeasurement, formatMeasurement, projectToClient } from "./measurement.js";
 import { AxisSectionPlane } from "./section-plane.js";
 import type { SectionAxis } from "./section-plane.js";
@@ -248,10 +249,14 @@ const toggleSectionButton = requireElement<HTMLButtonElement>("#toggle-section")
 const sectionControls = requireElement<HTMLElement>("#section-controls");
 const measureButton = requireElement<HTMLButtonElement>("#measure-distance");
 const measureOverlay = requireElement<SVGSVGElement>("#measure-overlay");
+const annotateButton = requireElement<HTMLButtonElement>("#annotate");
+const annotationOverlay = requireElement<SVGSVGElement>("#annotation-overlay");
+const annotationInput = requireElement<HTMLInputElement>("#annotation-input");
 const viewCube = requireElement<HTMLDivElement>("#view-cube");
 const viewCubeSvg = requireElement<SVGSVGElement>("#view-cube svg");
 const viewOrientationOutput = requireElement<HTMLOutputElement>("#view-orientation");
 const measurementHud = requireElement<HTMLElement>("#measurement");
+const annotationHud = requireElement<HTMLElement>("#annotation-status");
 const sectionPosition = requireElement<HTMLInputElement>("#section-position");
 const sectionPositionValue = requireElement<HTMLOutputElement>("#section-position-value");
 const sectionDirection = requireElement<HTMLElement>("#section-direction");
@@ -303,7 +308,7 @@ interface StudioWorkspaceSession {
   /** Memoized: the reports are read once per load, never on the load path. */
   identity(): Promise<PackageIdentity | { readonly reason: string }>;
   occurrenceIds(): ReadonlySet<string>;
-  /** Isolation has no field in `naru.workspace.1`, so a save must say so. */
+  /** Isolation has no field in `naru.workspace.2`, so a save must say so. */
   isolatedObjectId(): number | undefined;
   capture(identity: PackageIdentity): WorkspaceCapture;
   restore(view: WorkspaceViewResolution): RestoredObjects;
@@ -415,6 +420,14 @@ function resetSceneUi(): void {
   viewCubeSvg.replaceChildren();
   delete document.documentElement.dataset.measureDistance;
   delete document.documentElement.dataset.measureDelta;
+  annotateButton.setAttribute("aria-pressed", "false");
+  annotationOverlay.replaceChildren();
+  annotationInput.hidden = true;
+  annotationHud.hidden = true;
+  canvas.classList.remove("is-annotating");
+  delete document.documentElement.dataset.annotationState;
+  delete document.documentElement.dataset.annotationCount;
+  delete document.documentElement.dataset.annotationSelected;
   for (const selector of ["#triangle-count", "#edge-count", "#decode-time", "#gpu-adapter"]) {
     setText(selector, "—");
   }
@@ -561,6 +574,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
 
     const camera = new OrthographicOrbitCamera(scene.bounds);
     const measurement = new DistanceMeasurement();
+    const annotations = new AnnotationSet();
     const svgNamespace = "http://www.w3.org/2000/svg";
     const svgElement = (name: string, attributes: Record<string, string>): SVGElement => {
       const element = document.createElementNS(svgNamespace, name);
@@ -602,6 +616,55 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       }
       measureOverlay.replaceChildren(...children);
     };
+    // Notes are anchored to world points, so each label is re-projected
+    // through the frame the renderer just drew, like the measurement markers.
+    const updateAnnotationOverlay = (frame: ReturnType<OrthographicOrbitCamera["frame"]>): void => {
+      const state = annotations.state();
+      const notes = annotations.list();
+      if (notes.length === 0 && state.kind !== "pending") {
+        if (annotationOverlay.childElementCount > 0) annotationOverlay.replaceChildren();
+        return;
+      }
+      const width = canvas.clientWidth;
+      const height = canvas.clientHeight;
+      annotationOverlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      const selected = annotations.selected();
+      const children: SVGElement[] = [];
+      notes.forEach((note, index) => {
+        const point = projectToClient(frame.viewProjection, frame.origin, note.position, width, height);
+        if (!point) return;
+        const group = svgElement("g", {
+          "data-index": String(index),
+          "data-selected": String(index === selected),
+        });
+        group.append(
+          svgElement("circle", { cx: String(point.x), cy: String(point.y), r: "4" }),
+          svgElement("line", {
+            x1: String(point.x),
+            y1: String(point.y),
+            x2: String(point.x),
+            y2: String(point.y - 14),
+          }),
+        );
+        const label = svgElement("text", {
+          x: String(point.x),
+          y: String(point.y - 18),
+          "text-anchor": "middle",
+        });
+        label.textContent = note.text;
+        group.append(label);
+        children.push(group);
+      });
+      if (state.kind === "pending") {
+        const point = projectToClient(frame.viewProjection, frame.origin, state.position, width, height);
+        if (point) {
+          children.push(svgElement("circle", { cx: String(point.x), cy: String(point.y), r: "5" }));
+          annotationInput.style.left = `${point.x + 10}px`;
+          annotationInput.style.top = `${point.y + 10}px`;
+        }
+      }
+      annotationOverlay.replaceChildren(...children);
+    };
     // Redraws the view cube from the camera's own basis whenever the view
     // direction changed, so the cube and the model always share one frame.
     let drawnOrientation = "";
@@ -640,6 +703,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       document.documentElement.dataset.cameraOrigin = frame.origin.join(",");
       renderer.render(frame.viewProjection, { cameraOrigin: frame.origin });
       updateMeasurementOverlay(frame);
+      updateAnnotationOverlay(frame);
       updateViewCube();
       if (cameraChanged) {
         cameraChanged = false;
@@ -668,6 +732,63 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       measurement.toggle();
       applyMeasurement();
     };
+    const applyAnnotations = (): void => {
+      const state = annotations.state();
+      const active = annotations.active();
+      annotateButton.setAttribute("aria-pressed", String(active));
+      canvas.classList.toggle("is-annotating", active);
+      const pending = state.kind === "pending";
+      annotationInput.hidden = !pending;
+      if (pending) {
+        annotationInput.value = "";
+        queueMicrotask(() => annotationInput.focus({ preventScroll: true }));
+      }
+      const count = annotations.list().length;
+      const selected = annotations.selected();
+      const hud =
+        state.kind === "armed"
+          ? "Click a surface to place a note."
+          : pending
+            ? "Type the note. Enter saves, Esc cancels."
+            : selected !== undefined
+              ? `Note ${selected + 1} of ${count} selected. Delete removes it.`
+              : count > 0
+                ? `${count} note${count === 1 ? "" : "s"}`
+                : "";
+      annotationHud.textContent = hud;
+      annotationHud.hidden = hud === "";
+      document.documentElement.dataset.annotationState = state.kind;
+      document.documentElement.dataset.annotationCount = String(count);
+      if (selected === undefined) delete document.documentElement.dataset.annotationSelected;
+      else document.documentElement.dataset.annotationSelected = String(selected);
+      scheduleRender();
+    };
+    const toggleAnnotations = (): void => {
+      annotations.toggle();
+      applyAnnotations();
+    };
+    annotationInput.addEventListener(
+      "keydown",
+      (event) => {
+        if (event.key === "Enter") annotations.commit(annotationInput.value);
+        else if (event.key === "Escape") annotations.cancel();
+        else return;
+        event.preventDefault();
+        event.stopPropagation();
+        applyAnnotations();
+      },
+      listenerOptions,
+    );
+    annotationOverlay.addEventListener(
+      "click",
+      (event) => {
+        const group = event.target instanceof Element ? event.target.closest("g[data-index]") : null;
+        if (!(group instanceof SVGGElement)) return;
+        annotations.select(Number(group.dataset["index"]));
+        applyAnnotations();
+      },
+      listenerOptions,
+    );
     const scheduleRender = (): void => {
       if (animationFrame === 0) animationFrame = requestAnimationFrame(render);
     };
@@ -1500,6 +1621,14 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         if (key === "f") fitView();
         else if (key === "c") toggleSection();
         else if (key === "m") toggleMeasurement();
+        else if (key === "n") toggleAnnotations();
+        else if ((key === "delete" || key === "backspace") && annotations.selected() !== undefined) {
+          annotations.removeSelected();
+          applyAnnotations();
+        } else if (key === "escape" && annotations.active()) {
+          annotations.cancel();
+          applyAnnotations();
+        }
         else if (key === "h" && event.shiftKey) showAll();
         else if (key === "h") hideSelection();
         else if (key === "i") isolateSelection();
@@ -1556,6 +1685,26 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         status.textContent = error instanceof Error ? error.message : String(error);
         status.dataset.state = "error";
       };
+      if (annotations.state().kind === "armed") {
+        renderer
+          .pickPoint(event.clientX, event.clientY)
+          .then(({ point }) => {
+            if (!point) {
+              annotationHud.textContent = "No surface under the cursor.";
+              annotationHud.hidden = false;
+              return;
+            }
+            annotations.place(point);
+            applyAnnotations();
+          })
+          .catch(reportPickFailure);
+        return;
+      }
+      if (annotations.state().kind === "pending") return;
+      if (annotations.selected() !== undefined) {
+        annotations.select(undefined);
+        applyAnnotations();
+      }
       if (measurement.active()) {
         renderer
           .pickPoint(event.clientX, event.clientY)
@@ -1626,6 +1775,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
           section: persistedSection(),
           hiddenObjectIds: visibility.snapshot().hiddenObjectIds,
           selectedObjectId,
+          annotations: annotations.list(),
           occurrenceIdOf: (objectId) => evidence.get(objectId)?.occurrenceId,
         }),
       restore: (view) => {
@@ -1644,6 +1794,8 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         applySection();
         applyVisibility();
         selectObject(restored.selectedObjectId);
+        annotations.restore(view.annotations);
+        applyAnnotations();
         scheduleCameraRender();
         return restored;
       },
@@ -1774,7 +1926,7 @@ async function saveWorkspace(): Promise<void> {
     }
     if (session.isolatedObjectId() !== undefined) {
       notes.push(
-        "isolation has no field in naru.workspace.1, so only the explicit hidden set was saved",
+        "isolation has no field in naru.workspace.2, so only the explicit hidden set was saved",
       );
     }
     document.documentElement.dataset.workspaceSaved = "true";
