@@ -316,25 +316,26 @@ assert(
   "The reload arm restored in place, so it proves nothing the unchanged arm does not.",
 );
 
-// Re-pinned 2026-09-07 with the record re-taken after the Studio camera fix
-// (the default view used to be mirrored and seen from below). Every count and
-// digest in the JSON reproduced; only the pictures changed.
+// Re-pinned 2026-09-07, twice: first with the record re-taken after the Studio
+// camera fix (the default view used to be mirrored and seen from below), then
+// again once the view cube joined the viewport. Every count and digest in the
+// JSON reproduced both times; only the pictures changed.
 const CAPTURES = {
   "arms.save.screenshots.customized": [
     save.screenshots.customized,
-    "f9f9250c8a684540cf0ce97903806a4ee83bc24936c44440f93be4f863246f93",
+    "cdb1740a78351c3d23a292f5a17e887bd0387883fa97cff9499f34d7bd06f359",
   ],
   "arms.unchanged.screenshot": [
     unchanged.screenshot,
-    "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d",
+    "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0",
   ],
   "arms.changedSource.screenshot": [
     changed.screenshot,
-    "a2236c6e1254c3a65da2f1171e03279154432be4651512032ee95781d8150514",
+    "ed51d78b112d057fef70783a9112b63d0334875a61543d002e8135192c64e50b",
   ],
   "arms.reload.screenshot": [
     reload.screenshot,
-    "0bdfe32150d112c57aafd41efa179693afd5350fd046354f930d660ad309d69d",
+    "abcedc7f7d5087bec48c14f5fe6f9b24f9ba51a8c92f2446025d3c6eabe538b0",
   ],
 };
 for (const [name, [capture, digest]] of Object.entries(CAPTURES)) {
