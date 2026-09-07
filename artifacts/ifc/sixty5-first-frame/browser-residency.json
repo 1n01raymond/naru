@@ -1,6 +1,6 @@
 {
   "schemaVersion": "madi.ifc-browser-residency.2",
-  "capturedAt": "2026-08-28T05:24:47.961Z",
+  "capturedAt": "2026-09-07T09:08:11.434Z",
   "browser": {
     "id": "chrome",
     "engine": "Blink",
@@ -57,9 +57,9 @@
     "servedFrom": "Vite dev static hosting with HTTP Range support"
   },
   "milestones": {
-    "hierarchyReadyMs": 2272,
-    "coarseFrameMs": 4487,
-    "readyMs": 9190
+    "hierarchyReadyMs": 2478,
+    "coarseFrameMs": 4743,
+    "readyMs": 9288
   },
   "snapshot": {
     "status": "Residency budget reached · 24326 surface batches retained · 78173 renderable occurrences",
@@ -70,7 +70,7 @@
     "triangleCount": "2,255,235",
     "edgeCount": "12",
     "binarySize": "117,878.0 KiB",
-    "decodeTime": "1117.5 ms",
+    "decodeTime": "1089.8 ms",
     "geometryResult": "65,123.5 KiB CPU / 65,218.6 KiB GPU resident (budget 65,536.0 KiB)",
     "gpuAdapter": "nvidia",
     "dataset": {
@@ -78,13 +78,27 @@
       "sceneSource": "url",
       "hierarchyMatches": "0",
       "hierarchyReady": "true",
+      "packageDocumentBytes": "448823852",
+      "packagePropertyIndexBytes": "17705010",
+      "packageSpatialIndexBytes": "0",
+      "packageDeclaredGeometryBytes": "120707064",
+      "fallbackDepthOffset": "0.0000152587890625",
       "cameraOrigin": "17.132624119520187,13.750000953674316,-30.785024255514145",
+      "viewOrientation": "isometric",
+      "viewFaces": "left,front,top",
       "coarseReady": "true",
+      "rendererGpuVertexPoolBytes": "28790184",
+      "rendererGpuBatchBufferBytes": "37993624",
+      "rendererGpuUniformBytes": "128",
+      "rendererGpuBufferBytes": "66783936",
+      "rendererGpuAttachmentBytes": "4900480",
+      "rendererCpuStagingBytes": "10833216",
       "geometryRepresentation": "mixed",
       "targetChunksTotal": "234",
       "residencyBudgetBytes": "67108864",
       "targetChunksReady": "111",
       "targetReady": "limited",
+      "storeyCount": "23",
       "targetSchedulerMode": "coarse-chunk-bounds-v1",
       "targetSchedulerDemandPriority": "retained-coarse-bounds",
       "visibilityMode": "all",
@@ -103,3473 +117,3473 @@
       "targetSchedulerSkippedChunk": "target:0155:prototype:ifc:plumbing-15382b06d0a6:3259217",
       "residencyBudgetReached": "true"
     },
-    "usedJsHeapBytes": 852946064,
-    "totalJsHeapBytes": 909363324,
+    "usedJsHeapBytes": 852514277,
+    "totalJsHeapBytes": 926834721,
     "timeline": [
       {
-        "milliseconds": 203,
+        "milliseconds": 217,
         "target": "html",
         "attribute": "data-scene-loading",
         "value": "true"
       },
       {
-        "milliseconds": 203,
+        "milliseconds": 217,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 2266,
+        "milliseconds": 2470,
         "target": "html",
         "attribute": "data-hierarchy-ready",
         "value": "true"
       },
       {
-        "milliseconds": 2266,
+        "milliseconds": 2470,
         "target": "status",
         "attribute": "data-stage",
         "value": "hierarchy"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "html",
         "attribute": "data-coarse-ready",
         "value": "true"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "coarse"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "status",
         "attribute": "data-stage",
         "value": "coarse"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "html",
         "attribute": "data-target-chunks-total",
         "value": "234"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "0"
       },
       {
-        "milliseconds": 4478,
+        "milliseconds": 4733,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4527,
+        "milliseconds": 4781,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "1"
       },
       {
-        "milliseconds": 4528,
+        "milliseconds": 4781,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4528,
+        "milliseconds": 4781,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4528,
+        "milliseconds": 4781,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4528,
+        "milliseconds": 4781,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4582,
+        "milliseconds": 4832,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "2"
       },
       {
-        "milliseconds": 4582,
+        "milliseconds": 4832,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4582,
+        "milliseconds": 4832,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4582,
+        "milliseconds": 4832,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4582,
+        "milliseconds": 4832,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4636,
+        "milliseconds": 4896,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "3"
       },
       {
-        "milliseconds": 4636,
+        "milliseconds": 4896,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4636,
+        "milliseconds": 4896,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4636,
+        "milliseconds": 4896,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4636,
+        "milliseconds": 4896,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4677,
+        "milliseconds": 4937,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "4"
       },
       {
-        "milliseconds": 4677,
+        "milliseconds": 4937,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4677,
+        "milliseconds": 4937,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4677,
+        "milliseconds": 4937,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4677,
+        "milliseconds": 4937,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4716,
+        "milliseconds": 4973,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "5"
       },
       {
-        "milliseconds": 4716,
+        "milliseconds": 4973,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4716,
+        "milliseconds": 4973,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4716,
+        "milliseconds": 4973,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4716,
+        "milliseconds": 4973,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4754,
+        "milliseconds": 5010,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "6"
       },
       {
-        "milliseconds": 4754,
+        "milliseconds": 5010,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4754,
+        "milliseconds": 5010,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4754,
+        "milliseconds": 5010,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4754,
+        "milliseconds": 5010,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4796,
+        "milliseconds": 5048,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "7"
       },
       {
-        "milliseconds": 4796,
+        "milliseconds": 5048,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4796,
+        "milliseconds": 5048,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4796,
+        "milliseconds": 5048,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4796,
+        "milliseconds": 5048,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4834,
+        "milliseconds": 5081,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "8"
       },
       {
-        "milliseconds": 4834,
+        "milliseconds": 5081,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4834,
+        "milliseconds": 5081,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4834,
+        "milliseconds": 5081,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4834,
+        "milliseconds": 5081,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4880,
+        "milliseconds": 5118,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "9"
       },
       {
-        "milliseconds": 4880,
+        "milliseconds": 5118,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4880,
+        "milliseconds": 5118,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4880,
+        "milliseconds": 5118,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4880,
+        "milliseconds": 5118,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4919,
+        "milliseconds": 5154,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "10"
       },
       {
-        "milliseconds": 4919,
+        "milliseconds": 5154,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4919,
+        "milliseconds": 5154,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4919,
+        "milliseconds": 5154,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4919,
+        "milliseconds": 5154,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4953,
+        "milliseconds": 5186,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "11"
       },
       {
-        "milliseconds": 4953,
+        "milliseconds": 5186,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4953,
+        "milliseconds": 5186,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4953,
+        "milliseconds": 5186,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4953,
+        "milliseconds": 5186,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 4993,
+        "milliseconds": 5221,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "12"
       },
       {
-        "milliseconds": 4993,
+        "milliseconds": 5221,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 4993,
+        "milliseconds": 5221,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 4993,
+        "milliseconds": 5221,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 4993,
+        "milliseconds": 5221,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5030,
+        "milliseconds": 5253,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "13"
       },
       {
-        "milliseconds": 5030,
+        "milliseconds": 5253,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5030,
+        "milliseconds": 5253,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5030,
+        "milliseconds": 5253,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5030,
+        "milliseconds": 5253,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5064,
+        "milliseconds": 5284,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "14"
       },
       {
-        "milliseconds": 5064,
+        "milliseconds": 5284,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5064,
+        "milliseconds": 5284,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5064,
+        "milliseconds": 5284,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5064,
+        "milliseconds": 5284,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5096,
+        "milliseconds": 5316,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "15"
       },
       {
-        "milliseconds": 5096,
+        "milliseconds": 5316,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5096,
+        "milliseconds": 5316,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5096,
+        "milliseconds": 5316,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5096,
+        "milliseconds": 5316,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5126,
+        "milliseconds": 5345,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "16"
       },
       {
-        "milliseconds": 5126,
+        "milliseconds": 5345,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5126,
+        "milliseconds": 5345,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5126,
+        "milliseconds": 5345,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5126,
+        "milliseconds": 5345,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5161,
+        "milliseconds": 5378,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "17"
       },
       {
-        "milliseconds": 5161,
+        "milliseconds": 5378,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5161,
+        "milliseconds": 5378,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5161,
+        "milliseconds": 5378,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5161,
+        "milliseconds": 5378,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5201,
+        "milliseconds": 5415,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "18"
       },
       {
-        "milliseconds": 5201,
+        "milliseconds": 5415,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5201,
+        "milliseconds": 5415,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5201,
+        "milliseconds": 5415,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5201,
+        "milliseconds": 5415,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5240,
+        "milliseconds": 5452,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "19"
       },
       {
-        "milliseconds": 5240,
+        "milliseconds": 5452,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5240,
+        "milliseconds": 5452,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5240,
+        "milliseconds": 5452,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5240,
+        "milliseconds": 5452,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5276,
+        "milliseconds": 5486,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "20"
       },
       {
-        "milliseconds": 5277,
+        "milliseconds": 5486,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5277,
+        "milliseconds": 5486,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5277,
+        "milliseconds": 5486,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5277,
+        "milliseconds": 5486,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5311,
+        "milliseconds": 5518,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "21"
       },
       {
-        "milliseconds": 5311,
+        "milliseconds": 5518,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5311,
+        "milliseconds": 5518,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5311,
+        "milliseconds": 5518,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5311,
+        "milliseconds": 5518,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5348,
+        "milliseconds": 5551,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "22"
       },
       {
-        "milliseconds": 5348,
+        "milliseconds": 5551,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5348,
+        "milliseconds": 5551,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5348,
+        "milliseconds": 5551,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5348,
+        "milliseconds": 5551,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5387,
+        "milliseconds": 5587,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "23"
       },
       {
-        "milliseconds": 5387,
+        "milliseconds": 5587,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5387,
+        "milliseconds": 5587,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5387,
+        "milliseconds": 5587,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5387,
+        "milliseconds": 5587,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5423,
+        "milliseconds": 5620,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "24"
       },
       {
-        "milliseconds": 5423,
+        "milliseconds": 5620,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5423,
+        "milliseconds": 5620,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5423,
+        "milliseconds": 5620,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5423,
+        "milliseconds": 5620,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5458,
+        "milliseconds": 5653,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "25"
       },
       {
-        "milliseconds": 5458,
+        "milliseconds": 5653,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5458,
+        "milliseconds": 5653,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5458,
+        "milliseconds": 5653,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5458,
+        "milliseconds": 5653,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5494,
+        "milliseconds": 5686,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "26"
       },
       {
-        "milliseconds": 5494,
+        "milliseconds": 5686,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5494,
+        "milliseconds": 5686,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5494,
+        "milliseconds": 5686,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5494,
+        "milliseconds": 5686,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5535,
+        "milliseconds": 5722,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "27"
       },
       {
-        "milliseconds": 5535,
+        "milliseconds": 5722,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5535,
+        "milliseconds": 5722,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5535,
+        "milliseconds": 5722,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5535,
+        "milliseconds": 5722,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5576,
+        "milliseconds": 5796,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "28"
       },
       {
-        "milliseconds": 5576,
+        "milliseconds": 5796,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5576,
+        "milliseconds": 5796,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5576,
+        "milliseconds": 5796,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5576,
+        "milliseconds": 5796,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5610,
+        "milliseconds": 5836,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "29"
       },
       {
-        "milliseconds": 5610,
+        "milliseconds": 5836,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5610,
+        "milliseconds": 5836,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5610,
+        "milliseconds": 5836,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5610,
+        "milliseconds": 5836,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5651,
+        "milliseconds": 5877,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "30"
       },
       {
-        "milliseconds": 5651,
+        "milliseconds": 5877,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5651,
+        "milliseconds": 5877,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5651,
+        "milliseconds": 5877,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5651,
+        "milliseconds": 5877,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5688,
+        "milliseconds": 5917,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "31"
       },
       {
-        "milliseconds": 5688,
+        "milliseconds": 5917,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5688,
+        "milliseconds": 5917,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5688,
+        "milliseconds": 5917,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5688,
+        "milliseconds": 5917,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5756,
+        "milliseconds": 5953,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "32"
       },
       {
-        "milliseconds": 5756,
+        "milliseconds": 5953,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5756,
+        "milliseconds": 5953,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5756,
+        "milliseconds": 5953,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5756,
+        "milliseconds": 5953,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5803,
+        "milliseconds": 5989,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "33"
       },
       {
-        "milliseconds": 5803,
+        "milliseconds": 5989,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5803,
+        "milliseconds": 5989,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5803,
+        "milliseconds": 5989,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5803,
+        "milliseconds": 5989,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5846,
+        "milliseconds": 6025,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "34"
       },
       {
-        "milliseconds": 5846,
+        "milliseconds": 6025,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5846,
+        "milliseconds": 6025,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5846,
+        "milliseconds": 6025,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5846,
+        "milliseconds": 6025,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5883,
+        "milliseconds": 6059,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "35"
       },
       {
-        "milliseconds": 5883,
+        "milliseconds": 6059,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5883,
+        "milliseconds": 6059,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5883,
+        "milliseconds": 6059,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5883,
+        "milliseconds": 6059,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5920,
+        "milliseconds": 6095,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "36"
       },
       {
-        "milliseconds": 5920,
+        "milliseconds": 6095,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5920,
+        "milliseconds": 6095,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5920,
+        "milliseconds": 6095,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5920,
+        "milliseconds": 6095,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5958,
+        "milliseconds": 6130,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "37"
       },
       {
-        "milliseconds": 5958,
+        "milliseconds": 6130,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5958,
+        "milliseconds": 6130,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5958,
+        "milliseconds": 6130,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5958,
+        "milliseconds": 6130,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 5995,
+        "milliseconds": 6164,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "38"
       },
       {
-        "milliseconds": 5995,
+        "milliseconds": 6164,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 5995,
+        "milliseconds": 6164,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 5995,
+        "milliseconds": 6164,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 5995,
+        "milliseconds": 6164,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6030,
+        "milliseconds": 6196,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "39"
       },
       {
-        "milliseconds": 6030,
+        "milliseconds": 6196,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6030,
+        "milliseconds": 6196,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6030,
+        "milliseconds": 6196,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6030,
+        "milliseconds": 6196,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6068,
+        "milliseconds": 6231,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "40"
       },
       {
-        "milliseconds": 6068,
+        "milliseconds": 6231,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6068,
+        "milliseconds": 6231,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6068,
+        "milliseconds": 6231,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6068,
+        "milliseconds": 6231,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6104,
+        "milliseconds": 6269,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "41"
       },
       {
-        "milliseconds": 6104,
+        "milliseconds": 6269,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6104,
+        "milliseconds": 6269,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6104,
+        "milliseconds": 6269,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6104,
+        "milliseconds": 6269,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6140,
+        "milliseconds": 6305,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "42"
       },
       {
-        "milliseconds": 6140,
+        "milliseconds": 6305,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6140,
+        "milliseconds": 6305,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6140,
+        "milliseconds": 6305,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6140,
+        "milliseconds": 6305,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6181,
+        "milliseconds": 6345,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "43"
       },
       {
-        "milliseconds": 6181,
+        "milliseconds": 6345,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6181,
+        "milliseconds": 6345,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6181,
+        "milliseconds": 6345,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6181,
+        "milliseconds": 6345,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6222,
+        "milliseconds": 6384,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "44"
       },
       {
-        "milliseconds": 6222,
+        "milliseconds": 6384,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6222,
+        "milliseconds": 6384,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6222,
+        "milliseconds": 6384,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6222,
+        "milliseconds": 6384,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6265,
+        "milliseconds": 6425,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "45"
       },
       {
-        "milliseconds": 6265,
+        "milliseconds": 6425,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6265,
+        "milliseconds": 6425,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6265,
+        "milliseconds": 6425,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6265,
+        "milliseconds": 6425,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6303,
+        "milliseconds": 6461,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "46"
       },
       {
-        "milliseconds": 6303,
+        "milliseconds": 6461,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6303,
+        "milliseconds": 6461,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6303,
+        "milliseconds": 6461,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6303,
+        "milliseconds": 6461,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6341,
+        "milliseconds": 6498,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "47"
       },
       {
-        "milliseconds": 6341,
+        "milliseconds": 6498,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6341,
+        "milliseconds": 6498,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6341,
+        "milliseconds": 6498,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6341,
+        "milliseconds": 6498,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6379,
+        "milliseconds": 6535,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "48"
       },
       {
-        "milliseconds": 6380,
+        "milliseconds": 6535,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6380,
+        "milliseconds": 6535,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6380,
+        "milliseconds": 6535,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6380,
+        "milliseconds": 6535,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6415,
+        "milliseconds": 6571,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "49"
       },
       {
-        "milliseconds": 6415,
+        "milliseconds": 6571,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6415,
+        "milliseconds": 6571,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6415,
+        "milliseconds": 6571,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6415,
+        "milliseconds": 6571,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6456,
+        "milliseconds": 6612,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "50"
       },
       {
-        "milliseconds": 6456,
+        "milliseconds": 6612,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6456,
+        "milliseconds": 6612,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6456,
+        "milliseconds": 6612,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6456,
+        "milliseconds": 6612,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6495,
+        "milliseconds": 6649,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "51"
       },
       {
-        "milliseconds": 6495,
+        "milliseconds": 6649,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6495,
+        "milliseconds": 6649,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6495,
+        "milliseconds": 6649,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6495,
+        "milliseconds": 6649,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6530,
+        "milliseconds": 6686,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "52"
       },
       {
-        "milliseconds": 6530,
+        "milliseconds": 6686,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6530,
+        "milliseconds": 6686,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6530,
+        "milliseconds": 6686,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6530,
+        "milliseconds": 6686,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6569,
+        "milliseconds": 6727,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "53"
       },
       {
-        "milliseconds": 6569,
+        "milliseconds": 6727,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6569,
+        "milliseconds": 6727,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6569,
+        "milliseconds": 6727,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6569,
+        "milliseconds": 6727,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6608,
+        "milliseconds": 6767,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "54"
       },
       {
-        "milliseconds": 6608,
+        "milliseconds": 6767,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6608,
+        "milliseconds": 6767,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6608,
+        "milliseconds": 6767,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6608,
+        "milliseconds": 6767,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6645,
+        "milliseconds": 6806,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "55"
       },
       {
-        "milliseconds": 6645,
+        "milliseconds": 6806,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6645,
+        "milliseconds": 6806,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6645,
+        "milliseconds": 6806,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6645,
+        "milliseconds": 6806,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6684,
+        "milliseconds": 6844,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "56"
       },
       {
-        "milliseconds": 6684,
+        "milliseconds": 6844,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6684,
+        "milliseconds": 6844,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6684,
+        "milliseconds": 6844,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6684,
+        "milliseconds": 6844,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6724,
+        "milliseconds": 6882,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "57"
       },
       {
-        "milliseconds": 6724,
+        "milliseconds": 6882,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6724,
+        "milliseconds": 6882,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6724,
+        "milliseconds": 6882,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6724,
+        "milliseconds": 6882,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6763,
+        "milliseconds": 6919,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "58"
       },
       {
-        "milliseconds": 6763,
+        "milliseconds": 6919,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6763,
+        "milliseconds": 6919,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6763,
+        "milliseconds": 6919,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6763,
+        "milliseconds": 6919,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6801,
+        "milliseconds": 6956,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "59"
       },
       {
-        "milliseconds": 6801,
+        "milliseconds": 6956,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6801,
+        "milliseconds": 6956,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6801,
+        "milliseconds": 6956,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6801,
+        "milliseconds": 6956,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6840,
+        "milliseconds": 6994,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "60"
       },
       {
-        "milliseconds": 6840,
+        "milliseconds": 6994,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6840,
+        "milliseconds": 6994,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6840,
+        "milliseconds": 6994,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6840,
+        "milliseconds": 6994,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6879,
+        "milliseconds": 7033,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "61"
       },
       {
-        "milliseconds": 6879,
+        "milliseconds": 7033,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6879,
+        "milliseconds": 7033,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6879,
+        "milliseconds": 7033,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6879,
+        "milliseconds": 7033,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6917,
+        "milliseconds": 7072,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "62"
       },
       {
-        "milliseconds": 6917,
+        "milliseconds": 7072,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6917,
+        "milliseconds": 7072,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6917,
+        "milliseconds": 7072,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6917,
+        "milliseconds": 7072,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6960,
+        "milliseconds": 7117,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "63"
       },
       {
-        "milliseconds": 6960,
+        "milliseconds": 7117,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6960,
+        "milliseconds": 7117,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6960,
+        "milliseconds": 7117,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6960,
+        "milliseconds": 7117,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 6998,
+        "milliseconds": 7156,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "64"
       },
       {
-        "milliseconds": 6998,
+        "milliseconds": 7156,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 6998,
+        "milliseconds": 7156,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 6998,
+        "milliseconds": 7156,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 6998,
+        "milliseconds": 7156,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7037,
+        "milliseconds": 7195,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "65"
       },
       {
-        "milliseconds": 7037,
+        "milliseconds": 7195,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7037,
+        "milliseconds": 7195,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7037,
+        "milliseconds": 7195,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7037,
+        "milliseconds": 7195,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7077,
+        "milliseconds": 7236,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "66"
       },
       {
-        "milliseconds": 7077,
+        "milliseconds": 7236,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7077,
+        "milliseconds": 7236,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7077,
+        "milliseconds": 7236,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7077,
+        "milliseconds": 7236,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7117,
+        "milliseconds": 7275,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "67"
       },
       {
-        "milliseconds": 7117,
+        "milliseconds": 7275,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7117,
+        "milliseconds": 7275,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7117,
+        "milliseconds": 7275,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7117,
+        "milliseconds": 7275,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7153,
+        "milliseconds": 7312,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "68"
       },
       {
-        "milliseconds": 7153,
+        "milliseconds": 7312,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7153,
+        "milliseconds": 7312,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7153,
+        "milliseconds": 7312,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7153,
+        "milliseconds": 7312,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7197,
+        "milliseconds": 7354,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "69"
       },
       {
-        "milliseconds": 7197,
+        "milliseconds": 7354,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7197,
+        "milliseconds": 7354,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7197,
+        "milliseconds": 7354,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7197,
+        "milliseconds": 7354,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7240,
+        "milliseconds": 7395,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "70"
       },
       {
-        "milliseconds": 7240,
+        "milliseconds": 7395,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7240,
+        "milliseconds": 7395,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7240,
+        "milliseconds": 7395,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7240,
+        "milliseconds": 7395,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7282,
+        "milliseconds": 7434,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "71"
       },
       {
-        "milliseconds": 7282,
+        "milliseconds": 7434,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7282,
+        "milliseconds": 7434,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7282,
+        "milliseconds": 7434,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7282,
+        "milliseconds": 7434,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7323,
+        "milliseconds": 7473,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "72"
       },
       {
-        "milliseconds": 7323,
+        "milliseconds": 7473,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7323,
+        "milliseconds": 7473,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7323,
+        "milliseconds": 7473,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7323,
+        "milliseconds": 7473,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7364,
+        "milliseconds": 7515,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "73"
       },
       {
-        "milliseconds": 7364,
+        "milliseconds": 7515,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7364,
+        "milliseconds": 7515,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7364,
+        "milliseconds": 7515,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7364,
+        "milliseconds": 7515,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7404,
+        "milliseconds": 7556,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "74"
       },
       {
-        "milliseconds": 7404,
+        "milliseconds": 7556,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7404,
+        "milliseconds": 7556,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7404,
+        "milliseconds": 7556,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7404,
+        "milliseconds": 7556,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7448,
+        "milliseconds": 7597,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "75"
       },
       {
-        "milliseconds": 7448,
+        "milliseconds": 7597,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7448,
+        "milliseconds": 7597,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7448,
+        "milliseconds": 7597,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7448,
+        "milliseconds": 7597,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7492,
+        "milliseconds": 7641,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "76"
       },
       {
-        "milliseconds": 7492,
+        "milliseconds": 7641,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7492,
+        "milliseconds": 7641,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7492,
+        "milliseconds": 7641,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7492,
+        "milliseconds": 7641,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7538,
+        "milliseconds": 7685,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "77"
       },
       {
-        "milliseconds": 7538,
+        "milliseconds": 7685,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7538,
+        "milliseconds": 7685,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7538,
+        "milliseconds": 7685,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7538,
+        "milliseconds": 7685,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7581,
+        "milliseconds": 7727,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "78"
       },
       {
-        "milliseconds": 7582,
+        "milliseconds": 7727,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7582,
+        "milliseconds": 7727,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7582,
+        "milliseconds": 7727,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7582,
+        "milliseconds": 7727,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7623,
+        "milliseconds": 7769,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "79"
       },
       {
-        "milliseconds": 7623,
+        "milliseconds": 7769,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7623,
+        "milliseconds": 7769,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7623,
+        "milliseconds": 7769,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7623,
+        "milliseconds": 7769,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7679,
+        "milliseconds": 7814,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "80"
       },
       {
-        "milliseconds": 7679,
+        "milliseconds": 7814,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7679,
+        "milliseconds": 7814,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7679,
+        "milliseconds": 7814,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7679,
+        "milliseconds": 7814,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7724,
+        "milliseconds": 7857,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "81"
       },
       {
-        "milliseconds": 7724,
+        "milliseconds": 7857,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7724,
+        "milliseconds": 7857,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7724,
+        "milliseconds": 7857,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7724,
+        "milliseconds": 7857,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7769,
+        "milliseconds": 7900,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "82"
       },
       {
-        "milliseconds": 7769,
+        "milliseconds": 7900,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7769,
+        "milliseconds": 7900,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7769,
+        "milliseconds": 7900,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7769,
+        "milliseconds": 7900,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7810,
+        "milliseconds": 7947,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "83"
       },
       {
-        "milliseconds": 7810,
+        "milliseconds": 7947,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7810,
+        "milliseconds": 7947,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7810,
+        "milliseconds": 7947,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7810,
+        "milliseconds": 7947,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7852,
+        "milliseconds": 7997,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "84"
       },
       {
-        "milliseconds": 7852,
+        "milliseconds": 7997,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7852,
+        "milliseconds": 7997,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7852,
+        "milliseconds": 7997,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7852,
+        "milliseconds": 7997,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7896,
+        "milliseconds": 8039,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "85"
       },
       {
-        "milliseconds": 7896,
+        "milliseconds": 8039,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7896,
+        "milliseconds": 8039,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7896,
+        "milliseconds": 8039,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7896,
+        "milliseconds": 8039,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7946,
+        "milliseconds": 8082,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "86"
       },
       {
-        "milliseconds": 7946,
+        "milliseconds": 8082,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7946,
+        "milliseconds": 8082,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7946,
+        "milliseconds": 8082,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7946,
+        "milliseconds": 8082,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 7992,
+        "milliseconds": 8125,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "87"
       },
       {
-        "milliseconds": 7992,
+        "milliseconds": 8125,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 7992,
+        "milliseconds": 8125,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 7992,
+        "milliseconds": 8125,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 7992,
+        "milliseconds": 8125,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8035,
+        "milliseconds": 8171,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "88"
       },
       {
-        "milliseconds": 8035,
+        "milliseconds": 8171,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8035,
+        "milliseconds": 8171,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8035,
+        "milliseconds": 8171,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8035,
+        "milliseconds": 8171,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8081,
+        "milliseconds": 8214,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "89"
       },
       {
-        "milliseconds": 8081,
+        "milliseconds": 8214,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8081,
+        "milliseconds": 8214,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8081,
+        "milliseconds": 8214,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8081,
+        "milliseconds": 8214,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8127,
+        "milliseconds": 8258,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "90"
       },
       {
-        "milliseconds": 8127,
+        "milliseconds": 8258,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8127,
+        "milliseconds": 8258,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8127,
+        "milliseconds": 8258,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8127,
+        "milliseconds": 8258,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8180,
+        "milliseconds": 8301,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "91"
       },
       {
-        "milliseconds": 8180,
+        "milliseconds": 8301,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8180,
+        "milliseconds": 8301,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8180,
+        "milliseconds": 8301,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8180,
+        "milliseconds": 8301,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8228,
+        "milliseconds": 8346,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "92"
       },
       {
-        "milliseconds": 8228,
+        "milliseconds": 8346,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8228,
+        "milliseconds": 8346,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8228,
+        "milliseconds": 8346,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8228,
+        "milliseconds": 8346,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8275,
+        "milliseconds": 8390,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "93"
       },
       {
-        "milliseconds": 8275,
+        "milliseconds": 8390,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8275,
+        "milliseconds": 8390,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8275,
+        "milliseconds": 8390,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8275,
+        "milliseconds": 8390,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8324,
+        "milliseconds": 8435,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "94"
       },
       {
-        "milliseconds": 8324,
+        "milliseconds": 8435,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8324,
+        "milliseconds": 8435,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8324,
+        "milliseconds": 8435,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8324,
+        "milliseconds": 8435,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8374,
+        "milliseconds": 8485,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "95"
       },
       {
-        "milliseconds": 8374,
+        "milliseconds": 8485,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8374,
+        "milliseconds": 8485,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8374,
+        "milliseconds": 8485,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8374,
+        "milliseconds": 8485,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8420,
+        "milliseconds": 8530,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "96"
       },
       {
-        "milliseconds": 8420,
+        "milliseconds": 8530,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8420,
+        "milliseconds": 8530,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8420,
+        "milliseconds": 8530,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8420,
+        "milliseconds": 8530,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8465,
+        "milliseconds": 8575,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "97"
       },
       {
-        "milliseconds": 8465,
+        "milliseconds": 8575,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8465,
+        "milliseconds": 8575,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8465,
+        "milliseconds": 8575,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8465,
+        "milliseconds": 8575,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8511,
+        "milliseconds": 8618,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "98"
       },
       {
-        "milliseconds": 8511,
+        "milliseconds": 8618,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8511,
+        "milliseconds": 8618,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8511,
+        "milliseconds": 8618,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8511,
+        "milliseconds": 8618,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8573,
+        "milliseconds": 8679,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "99"
       },
       {
-        "milliseconds": 8573,
+        "milliseconds": 8679,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8573,
+        "milliseconds": 8679,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8573,
+        "milliseconds": 8679,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8573,
+        "milliseconds": 8679,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8619,
+        "milliseconds": 8725,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "100"
       },
       {
-        "milliseconds": 8619,
+        "milliseconds": 8725,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8619,
+        "milliseconds": 8725,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8619,
+        "milliseconds": 8725,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8619,
+        "milliseconds": 8725,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8666,
+        "milliseconds": 8771,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "101"
       },
       {
-        "milliseconds": 8666,
+        "milliseconds": 8771,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8666,
+        "milliseconds": 8771,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8666,
+        "milliseconds": 8771,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8666,
+        "milliseconds": 8771,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8713,
+        "milliseconds": 8816,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "102"
       },
       {
-        "milliseconds": 8713,
+        "milliseconds": 8816,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8713,
+        "milliseconds": 8816,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8713,
+        "milliseconds": 8816,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8713,
+        "milliseconds": 8816,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8788,
+        "milliseconds": 8884,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "103"
       },
       {
-        "milliseconds": 8788,
+        "milliseconds": 8884,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8788,
+        "milliseconds": 8884,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8788,
+        "milliseconds": 8884,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8788,
+        "milliseconds": 8884,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8827,
+        "milliseconds": 8925,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "104"
       },
       {
-        "milliseconds": 8827,
+        "milliseconds": 8925,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8827,
+        "milliseconds": 8925,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8827,
+        "milliseconds": 8925,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8827,
+        "milliseconds": 8925,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8873,
+        "milliseconds": 8972,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "105"
       },
       {
-        "milliseconds": 8873,
+        "milliseconds": 8972,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8873,
+        "milliseconds": 8972,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8873,
+        "milliseconds": 8972,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8873,
+        "milliseconds": 8972,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8921,
+        "milliseconds": 9019,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "106"
       },
       {
-        "milliseconds": 8921,
+        "milliseconds": 9019,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8921,
+        "milliseconds": 9019,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8921,
+        "milliseconds": 9019,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8921,
+        "milliseconds": 9019,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 8966,
+        "milliseconds": 9064,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "107"
       },
       {
-        "milliseconds": 8966,
+        "milliseconds": 9064,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 8966,
+        "milliseconds": 9064,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 8966,
+        "milliseconds": 9064,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 8966,
+        "milliseconds": 9064,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 9010,
+        "milliseconds": 9107,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "108"
       },
       {
-        "milliseconds": 9010,
+        "milliseconds": 9107,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9010,
+        "milliseconds": 9107,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 9010,
+        "milliseconds": 9107,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 9010,
+        "milliseconds": 9107,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 9059,
+        "milliseconds": 9154,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "109"
       },
       {
-        "milliseconds": 9059,
+        "milliseconds": 9154,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9059,
+        "milliseconds": 9154,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 9059,
+        "milliseconds": 9154,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 9059,
+        "milliseconds": 9154,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 9138,
+        "milliseconds": 9231,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "110"
       },
       {
-        "milliseconds": 9138,
+        "milliseconds": 9231,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9138,
+        "milliseconds": 9231,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 9138,
+        "milliseconds": 9231,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 9138,
+        "milliseconds": 9231,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 9182,
+        "milliseconds": 9275,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "111"
       },
       {
-        "milliseconds": 9182,
+        "milliseconds": 9275,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9182,
+        "milliseconds": 9275,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "loading"
       },
       {
-        "milliseconds": 9182,
+        "milliseconds": 9275,
         "target": "status",
         "attribute": "data-state",
         "value": "loading"
       },
       {
-        "milliseconds": 9182,
+        "milliseconds": 9275,
         "target": "status",
         "attribute": "data-stage",
         "value": "target-chunks"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "111"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-residency-budget-reached",
         "value": "true"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "limited"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "status",
         "attribute": "data-state",
         "value": "ready"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "status",
         "attribute": "data-stage",
         "value": "rendered"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-scene-loading",
         "value": "false"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-target-chunks-ready",
         "value": "111"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-geometry-representation",
         "value": "mixed"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-residency-budget-reached",
         "value": "true"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "html",
         "attribute": "data-target-ready",
         "value": "limited"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "status",
         "attribute": "data-state",
         "value": "ready"
       },
       {
-        "milliseconds": 9185,
+        "milliseconds": 9281,
         "target": "status",
         "attribute": "data-stage",
         "value": "rendered"
@@ -3577,38 +3591,46 @@
     ]
   },
   "picking": {
-    "selection": "Selected 16_SFO_AT_balk vierkant beton:fundbalk 1000x600 (C30/37):975347 · node 148735 · ID 148736 · 0 CAD edge refs",
-    "selectedObjectId": "148736"
+    "selection": "Selected occurrence:ifc:facade-a9a1b20214da:52355 · node 74387 · ID 74388 · 0 CAD edge refs",
+    "selectedObjectId": "74388"
   },
   "semanticProperties": {
     "state": "resolved",
     "statusText": null,
-    "countLabel": "· 6 · IFC2X3",
-    "entryCount": 6,
+    "countLabel": "· 44 · IFC2X3",
+    "entryCount": 44,
     "sampleEntries": [
       {
-        "key": "ifc.ObjectType",
-        "value": "16_SFO_AT_balk vierkant beton:fundbalk 1000x600 (C30/37):1103213"
+        "key": "AC_Pset_RenovationAndPhasing.Renovation Status",
+        "value": "New"
       },
       {
-        "key": "ifc.PredefinedType",
-        "value": "NOTDEFINED"
+        "key": "ArchiCADProperties.ARCHICAD Classification - 20",
+        "value": "Wall"
       },
       {
-        "key": "ifc.Tag",
-        "value": "975347"
+        "key": "ArchiCADProperties.ARCHICAD IFC ID",
+        "value": "03fHlBRZ6jLAkrnk5k3AQm"
       },
       {
-        "key": "ifc.discipline",
-        "value": "structure"
+        "key": "ArchiCADProperties.Building Material / Composite / Profile / Fill",
+        "value": "DD prefabbeton gevel"
       },
       {
-        "key": "ifc.entityId",
-        "value": "152951"
+        "key": "ArchiCADProperties.Building Materials (All)",
+        "value": "DD prefabbeton gevel"
       },
       {
-        "key": "ifc.globalId",
-        "value": "21a09V0k97ORkNuf1$cKaV"
+        "key": "ArchiCADProperties.Cast Shadow",
+        "value": "true"
+      },
+      {
+        "key": "ArchiCADProperties.Classification by DIN 277",
+        "value": "Undefined"
+      },
+      {
+        "key": "ArchiCADProperties.Element ID",
+        "value": "21-wall-prefab gevelelement -2-"
       }
     ]
   },
@@ -4186,7 +4208,7 @@
     {
       "resource": "scene.bin",
       "status": 206,
-      "range": "bytes=95655180-96178763"
+      "range": "bytes=46347360-46869191"
     },
     {
       "resource": "scene.bin",
@@ -4203,18 +4225,18 @@
   "screenshots": {
     "coarse": {
       "path": "coarse-frame.png",
-      "bytes": 240120,
-      "sha256": "a2adf70c362985512acf938fd6f7e0909cc0eb2f6d7d0a0e69b7a7681ea157fc"
+      "bytes": 258674,
+      "sha256": "13b55764658518b4f41f427ac386442fac067f8fc4ce332550ff6674d77a2c14"
     },
     "budgetLimited": {
       "path": "budget-limited.png",
-      "bytes": 254255,
-      "sha256": "641495e34bb2cf851f164b9992bc0724ac9c828009c5622d8a7949ba0c0426e2"
+      "bytes": 263123,
+      "sha256": "2db36f610258ea964e2f7db99f19932e7e163e73fbd3541d3198be87819ec3e2"
     },
     "picked": {
       "path": "picked.png",
-      "bytes": 256031,
-      "sha256": "dfd1637f6059b139afb83aa4c3a99563c06930cdb04d0790607f831ee6d896f3"
+      "bytes": 266111,
+      "sha256": "f3b0894bf9f0ef0fbefe4b0e87117446581e9f4ef7eb6af0e9279e31def7bbf3"
     }
   }
 }

@@ -28,7 +28,14 @@ the eye sits 45° off the Z axis and 35.26° above the horizon, world +Y points 
 the screen, and the surface nearest the eye wins the depth test
 ([test](test/view.test.ts)). Drag to orbit (dragging down raises the eye),
 Shift-drag or middle-drag to pan, use the wheel to zoom, and press `F` to fit
-the current view. Selecting from the
+the current view. A view cube in the top-left corner of the viewport turns
+with the camera: it shows the up-to-three cube faces the eye can see, labelled
+Top, Front, Left, and so on, and its caption names the orientation (a face
+name, `Isometric`, or `Oblique`). Visible labels are never mirrored because a
+label's projected axes keep the sign of the face's facing term, and clicking a
+face snaps the camera to look at it squarely while keeping pan and zoom
+([view-cube](src/view-cube.ts), [test](test/view-cube.test.ts)); the page
+publishes `data-view-orientation` and `data-view-faces`. Selecting from the
 viewport or hierarchy highlights the same occurrence and preserves its source
 identity. `H` hides the selection, `I` isolates it, and `Shift+H` restores all
 occurrences. These actions compact stable per-prototype visibility tables into

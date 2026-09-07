@@ -1,6 +1,6 @@
 import type { SceneBounds } from "@naru3d/runtime-webgpu";
 
-type Vector3 = readonly [number, number, number];
+export type Vector3 = readonly [number, number, number];
 
 export interface CameraRelativeFrame {
   readonly viewProjection: Float32Array;
@@ -20,7 +20,10 @@ export interface OrbitCameraState {
 // above the horizon: the classic isometric view, looking down at the model.
 const defaultYaw = -Math.PI / 4;
 const defaultPitch = Math.asin(1 / Math.sqrt(3));
+/** Pitch is limited to the poles so a true top or bottom view exists. */
+const maximumPitch = Math.PI / 2;
 const minimumScale = 0.000_001;
+const poleTolerance = 1e-9;
 
 function assertOrderedFiniteBounds(bounds: SceneBounds): void {
   const values = [...bounds.min, ...bounds.max];
@@ -62,7 +65,9 @@ function clamp(value: number, minimum: number, maximum: number): number {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-interface CameraBasis {
+export interface CameraBasis {
+  /** The unit vector from the framed target toward the viewer. */
+  readonly towardEye: Vector3;
   /** Screen right, horizontal in world space. */
   readonly right: Vector3;
   /** Screen up; carries a positive world +Y component. */
@@ -81,8 +86,12 @@ interface CameraBasis {
  * negation of `towardEye`, so clip depth grows away from the eye and
  * `right x up` points back at the viewer: a right-handed, unmirrored frame in
  * which the surface nearest the eye wins the depth test.
+ *
+ * At the poles (`pitch = +-pi/2`) `towardEye` has no horizontal part, so
+ * `right` takes its limit `(cos yaw, 0, -sin yaw)`: the frame stays continuous
+ * through a top or bottom view instead of dividing by zero.
  */
-function cameraBasis(yaw: number, pitch: number): CameraBasis {
+export function orbitCameraBasis(yaw: number, pitch: number): CameraBasis {
   const cosinePitch = Math.cos(pitch);
   const towardEye: Vector3 = [
     Math.sin(yaw) * cosinePitch,
@@ -90,18 +99,17 @@ function cameraBasis(yaw: number, pitch: number): CameraBasis {
     Math.cos(yaw) * cosinePitch,
   ];
   const horizontalLength = Math.hypot(towardEye[0], towardEye[2]);
-  const right: Vector3 = [
-    towardEye[2] / horizontalLength,
-    0,
-    -towardEye[0] / horizontalLength,
-  ];
+  const right: Vector3 =
+    horizontalLength < poleTolerance
+      ? [Math.cos(yaw), 0, -Math.sin(yaw)]
+      : [towardEye[2] / horizontalLength, 0, -towardEye[0] / horizontalLength];
   const up: Vector3 = [
     towardEye[1] * right[2],
     towardEye[2] * right[0] - towardEye[0] * right[2],
     -towardEye[1] * right[0],
   ];
   const depth: Vector3 = [-towardEye[0], -towardEye[1], -towardEye[2]];
-  return { right, up, depth };
+  return { towardEye, right, up, depth };
 }
 
 /**
@@ -175,7 +183,7 @@ export class OrthographicOrbitCamera {
       throw new TypeError("Camera state must contain finite values.");
     }
     this.yaw = yaw;
-    this.pitch = clamp(pitch, -Math.PI * 0.495, Math.PI * 0.495);
+    this.pitch = clamp(pitch, -maximumPitch, maximumPitch);
     this.panRight = panRight;
     this.panUp = panUp;
     this.zoom = clamp(zoom, 0.05, 100);
@@ -190,7 +198,7 @@ export class OrthographicOrbitCamera {
 
   /** Frames the complete scene while preserving the current view direction. */
   fit(): void {
-    const { right, up } = cameraBasis(this.yaw, this.pitch);
+    const { right, up } = orbitCameraBasis(this.yaw, this.pitch);
     const projectedX = this.corners.map((corner) => dot(right, corner));
     const projectedY = this.corners.map((corner) => dot(up, corner));
     this.fittedHalfWidth = Math.max(
@@ -208,8 +216,24 @@ export class OrthographicOrbitCamera {
 
   orbit(deltaX: number, deltaY: number): void {
     if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY)) return;
-    this.yaw += deltaX * 0.006;
-    this.pitch = clamp(this.pitch + deltaY * 0.006, -Math.PI * 0.495, Math.PI * 0.495);
+    this.setOrientation(this.yaw + deltaX * 0.006, this.pitch + deltaY * 0.006);
+  }
+
+  /**
+   * Turns the view to an orientation (a view-cube face, for example) while
+   * keeping pan and zoom, exactly as orbiting does. Pitch is clamped to the
+   * poles; yaw is taken as given, so a caller can pick the yaw a face reads
+   * upright from.
+   */
+  setOrientation(yaw: number, pitch: number): void {
+    if (!Number.isFinite(yaw) || !Number.isFinite(pitch)) return;
+    this.yaw = yaw;
+    this.pitch = clamp(pitch, -maximumPitch, maximumPitch);
+  }
+
+  /** The current view direction, for anything that draws relative to it. */
+  basis(): CameraBasis {
+    return orbitCameraBasis(this.yaw, this.pitch);
   }
 
   pan(deltaX: number, deltaY: number, width: number, height: number, aspect: number): void {
@@ -239,7 +263,7 @@ export class OrthographicOrbitCamera {
 
   /** Builds a stable f32 projection around a double-precision camera origin. */
   frame(aspect: number): CameraRelativeFrame {
-    const { right, up } = cameraBasis(this.yaw, this.pitch);
+    const { right, up } = orbitCameraBasis(this.yaw, this.pitch);
     const target: Vector3 = [
       this.center[0] + right[0] * this.panRight + up[0] * this.panUp,
       this.center[1] + right[1] * this.panRight + up[1] * this.panUp,
@@ -249,7 +273,7 @@ export class OrthographicOrbitCamera {
   }
 
   private projection(aspect: number, origin: Vector3): CameraRelativeFrame {
-    const { right, up, depth } = cameraBasis(this.yaw, this.pitch);
+    const { right, up, depth } = orbitCameraBasis(this.yaw, this.pitch);
     const { halfWidth, halfHeight } = this.halfExtents(aspect);
     const target: Vector3 = [
       this.center[0] + right[0] * this.panRight + up[0] * this.panUp - origin[0],

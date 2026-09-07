@@ -106,18 +106,27 @@ assert(
       "Residency budget reached · 24326 surface batches retained · 78173 renderable occurrences",
   "The optimized scene must reach its deterministic rendered ready state.",
 );
+// Re-pinned 2026-09-07 after the Studio camera fix (PR #133): the default view
+// now looks from above, so the centre-viewport click lands on a prefab facade
+// wall panel (occurrence 52355 of the facade document, 44 IFC2X3 entries)
+// instead of the foundation beam 148736 the mirrored from-below view exposed.
+// Every residency, geometry, and network pin above reproduced unchanged.
 assert(
-  Number(evidence.picking?.selectedObjectId) === 148736 &&
-    /node 148735 · ID 148736/u.test(evidence.picking?.selection ?? ""),
-  "Picking must resolve the same concrete foundation beam.",
+  Number(evidence.picking?.selectedObjectId) === 74388 &&
+    /occurrence:ifc:facade-a9a1b20214da:52355 · node 74387 · ID 74388/u.test(
+      evidence.picking?.selection ?? "",
+    ),
+  "Picking must resolve the same prefab facade wall panel.",
 );
 assert(
   evidence.semanticProperties?.state === "resolved" &&
-    evidence.semanticProperties.entryCount === 6 &&
+    evidence.semanticProperties.entryCount === 44 &&
     evidence.semanticProperties.sampleEntries.some(
-      (entry) => entry.key === "ifc.globalId" && entry.value === "21a09V0k97ORkNuf1$cKaV",
+      (entry) =>
+        entry.key === "ArchiCADProperties.ARCHICAD IFC ID" &&
+        entry.value === "03fHlBRZ6jLAkrnk5k3AQm",
     ),
-  "The picked beam must resolve its six IFC2X3 property entries.",
+  "The picked wall panel must resolve its 44 IFC2X3 property entries.",
 );
 
 const rangeResponses = evidence.binaryRequests.filter(

@@ -85,6 +85,13 @@ import {
   observeWorkspace,
   resolveRestoredObjects,
 } from "./workspace-session.js";
+import {
+  describeOrientation,
+  isViewCubeFace,
+  orientationCaption,
+  projectViewCube,
+  viewCubeFaceOrientations,
+} from "./view-cube.js";
 import type { RestoredObjects, WorkspaceCapture } from "./workspace-session.js";
 import faviconUrl from "../../../docs/media/naru-favicon.svg?url";
 import inverseMarkUrl from "../../../docs/media/naru-mark-inverse.svg?url";
@@ -241,6 +248,9 @@ const toggleSectionButton = requireElement<HTMLButtonElement>("#toggle-section")
 const sectionControls = requireElement<HTMLElement>("#section-controls");
 const measureButton = requireElement<HTMLButtonElement>("#measure-distance");
 const measureOverlay = requireElement<SVGSVGElement>("#measure-overlay");
+const viewCube = requireElement<HTMLDivElement>("#view-cube");
+const viewCubeSvg = requireElement<SVGSVGElement>("#view-cube svg");
+const viewOrientationOutput = requireElement<HTMLOutputElement>("#view-orientation");
 const measurementHud = requireElement<HTMLElement>("#measurement");
 const sectionPosition = requireElement<HTMLInputElement>("#section-position");
 const sectionPositionValue = requireElement<HTMLOutputElement>("#section-position-value");
@@ -400,6 +410,9 @@ function resetSceneUi(): void {
   measurementHud.hidden = true;
   canvas.classList.remove("is-measuring");
   delete document.documentElement.dataset.measureState;
+  delete document.documentElement.dataset.viewOrientation;
+  delete document.documentElement.dataset.viewFaces;
+  viewCubeSvg.replaceChildren();
   delete document.documentElement.dataset.measureDistance;
   delete document.documentElement.dataset.measureDelta;
   for (const selector of ["#triangle-count", "#edge-count", "#decode-time", "#gpu-adapter"]) {
@@ -589,6 +602,35 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       }
       measureOverlay.replaceChildren(...children);
     };
+    // Redraws the view cube from the camera's own basis whenever the view
+    // direction changed, so the cube and the model always share one frame.
+    let drawnOrientation = "";
+    const updateViewCube = (): void => {
+      const { yaw, pitch } = camera.state();
+      const key = `${yaw},${pitch}`;
+      if (key === drawnOrientation) return;
+      drawnOrientation = key;
+      const cube = projectViewCube(camera.basis());
+      const children: SVGElement[] = [];
+      for (const face of cube.faces) {
+        const lightness = 70 + 22 * face.facing;
+        children.push(
+          svgElement("polygon", {
+            points: face.points.map((point) => point.join(",")).join(" "),
+            fill: `hsl(200 22% ${lightness.toFixed(1)}%)`,
+            "data-face": face.face,
+          }),
+        );
+        const label = svgElement("text", { transform: face.labelTransform, "data-face": face.face });
+        label.textContent = face.label;
+        children.push(label);
+      }
+      viewCubeSvg.replaceChildren(...children);
+      const orientation = describeOrientation(yaw, pitch);
+      viewOrientationOutput.textContent = orientationCaption(orientation);
+      document.documentElement.dataset.viewOrientation = orientation;
+      document.documentElement.dataset.viewFaces = cube.faces.map((face) => face.face).join(",");
+    };
     let updateTargetView = (_frame: ReturnType<OrthographicOrbitCamera["frame"]>): void => {};
     let cameraChanged = false;
     const render = (): void => {
@@ -598,6 +640,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       document.documentElement.dataset.cameraOrigin = frame.origin.join(",");
       renderer.render(frame.viewProjection, { cameraOrigin: frame.origin });
       updateMeasurementOverlay(frame);
+      updateViewCube();
       if (cameraChanged) {
         cameraChanged = false;
         updateTargetView(frame);
@@ -1371,6 +1414,17 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       scheduleCameraRender();
     };
     requireElement<HTMLButtonElement>("#fit-view").addEventListener("click", fitView, listenerOptions);
+    viewCube.addEventListener(
+      "click",
+      (event) => {
+        const face = (event.target as Element | null)?.closest("[data-face]")?.getAttribute("data-face");
+        if (!isViewCubeFace(face)) return;
+        const orientation = viewCubeFaceOrientations[face];
+        camera.setOrientation(orientation.yaw, orientation.pitch);
+        scheduleCameraRender();
+      },
+      listenerOptions,
+    );
     hideSelectionButton.addEventListener("click", hideSelection, listenerOptions);
     isolateSelectionButton.addEventListener("click", isolateSelection, listenerOptions);
     showAllButton.addEventListener("click", showAll, listenerOptions);

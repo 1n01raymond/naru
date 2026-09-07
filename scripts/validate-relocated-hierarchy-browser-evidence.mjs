@@ -53,7 +53,12 @@ const ENDPOINT = {
   residentDecodedBytes: "66686508",
   residentGpuBytes: "66783808",
   triangleCount: "2,255,235",
-  occurrenceName: "Selected 16_SFO_AT_balk vierkant beton:fundbalk 1000x600 (C30/37):975347",
+  // Re-pinned 2026-09-07 after the Studio camera fix (PR #133): the default
+  // view now looks from above, so the centre-viewport click lands on a prefab
+  // facade wall panel (occurrence 52355 of the facade document, 44 IFC2X3
+  // entries) instead of the foundation beam 975347 the mirrored from-below view
+  // exposed. Every residency, geometry, and network pin reproduced unchanged.
+  occurrenceName: "Selected occurrence:ifc:facade-a9a1b20214da:52355",
 };
 for (const arm of arms.values()) {
   for (const [index, sample] of arm.samples.entries()) {
@@ -194,7 +199,7 @@ const COUNTERS = {
   "snapshot.dataset.targetChunksTotal": "234",
   "snapshot.dataset.residencyBudgetBytes": "67108864",
   "snapshot.dataset.visibleOccurrences": "78173",
-  "semanticProperties.entryCount": 6,
+  "semanticProperties.entryCount": 44,
 };
 for (const [key, value] of Object.entries(COUNTERS)) {
   const counter = record.endpoint.counters.find((entry) => entry.key === key);

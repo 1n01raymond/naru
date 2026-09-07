@@ -140,6 +140,10 @@
         </div>
         <canvas id="viewport"></canvas>
         <svg id="measure-overlay" class="measure-overlay" aria-hidden="true"></svg>
+        <div id="view-cube" class="view-cube" role="group" aria-label="View orientation">
+          <svg viewBox="-1.9 -1.9 3.8 3.8" aria-hidden="true"></svg>
+          <output id="view-orientation" title="Click a face to look at it squarely">Isometric</output>
+        </div>
         <div class="hud">
           <span id="status" data-state="loading">Loading compiled glTF hierarchy…</span>
           <span id="selection">Click an occurrence to resolve its source identity.</span>
