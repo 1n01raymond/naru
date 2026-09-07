@@ -1,6 +1,7 @@
 # NARU workspace
 
-`@naru3d/workspace` owns the `naru.workspace.1` document: a versioned,
+`@naru3d/workspace` owns the `naru.workspace.2` document (`naru.workspace.1`
+is still read and treated as an empty annotation list): a versioned,
 non-authoritative record of what an import pointed at and what the user was
 looking at. It holds the format, a fail-closed parser, a canonical serializer,
 and the pure decision that a reopen makes. It depends on no renderer, no
@@ -26,7 +27,7 @@ input-to-output identity; it carries no camera, no selection, and no answer to
 
 ```jsonc
 {
-  "schemaVersion": "naru.workspace.1",
+  "schemaVersion": "naru.workspace.2",
   "label": "Digital Hub review",
   "package": {
     "reference": { "kind": "url", "href": "https://example.test/digital-hub/" },
@@ -40,7 +41,8 @@ input-to-output identity; it carries no camera, no selection, and no answer to
     "camera": { "yaw": 0, "pitch": 0, "panRight": 0, "panUp": 0, "zoom": 1 },
     "section": { "enabled": false, "axis": "x", "direction": 1, "fraction": 0.5 },
     "hiddenOccurrenceIds": [],
-    "selectedOccurrenceId": null
+    "selectedOccurrenceId": null,
+    "annotations": [{ "position": [58.6, 2.4, -6.6], "text": "Check slab thickness here" }]
   }
 }
 ```

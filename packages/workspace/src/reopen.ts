@@ -9,6 +9,7 @@
  */
 
 import type {
+  WorkspaceAnnotation,
   WorkspaceCamera,
   WorkspaceDocument,
   WorkspaceSection,
@@ -79,6 +80,8 @@ export interface WorkspaceViewResolution {
   readonly droppedHiddenOccurrenceIds: readonly string[];
   readonly selectedOccurrenceId: string | null;
   readonly droppedSelection: boolean;
+  /** Notes are anchored to world points, so none is ever dropped. */
+  readonly annotations: readonly WorkspaceAnnotation[];
   /** False when no hierarchy was supplied, so nothing could be dropped. */
   readonly resolvedAgainstHierarchy: boolean;
 }
@@ -208,6 +211,7 @@ function resolveView(
       droppedHiddenOccurrenceIds: [],
       selectedOccurrenceId: document.view.selectedOccurrenceId,
       droppedSelection: false,
+      annotations: document.view.annotations,
       resolvedAgainstHierarchy: false,
     };
   }
@@ -225,6 +229,7 @@ function resolveView(
     droppedHiddenOccurrenceIds: dropped,
     selectedOccurrenceId: selectionSurvives ? selected : null,
     droppedSelection: selected !== null && !selectionSurvives,
+    annotations: document.view.annotations,
     resolvedAgainstHierarchy: true,
   };
 }

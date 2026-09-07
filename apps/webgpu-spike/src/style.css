@@ -1060,3 +1060,63 @@ code {
     grid-template-columns: 1fr;
   }
 }
+
+.annotation-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.annotation-overlay circle {
+  fill: rgb(6 20 28 / 85%);
+  stroke: #8ee3ff;
+  stroke-width: 2;
+}
+
+.annotation-overlay line {
+  stroke: #8ee3ff;
+  stroke-width: 1.5;
+}
+
+.annotation-overlay text {
+  fill: #8ee3ff;
+  font: 12px/1 ui-monospace, "Cascadia Code", monospace;
+  paint-order: stroke;
+  stroke: rgb(6 20 28 / 92%);
+  stroke-width: 4;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.annotation-overlay g[data-selected="true"] text {
+  fill: #ffffff;
+  text-decoration: underline;
+}
+
+.annotation-overlay g[data-selected="true"] circle {
+  stroke: #ffffff;
+}
+
+.annotation-input {
+  position: absolute;
+  z-index: 2;
+  width: 260px;
+  padding: 6px 8px;
+  border: 1px solid #8ee3ff;
+  border-radius: 6px;
+  color: #e8f6fb;
+  background: rgb(6 20 28 / 94%);
+  font: 12px/1.4 ui-monospace, "Cascadia Code", monospace;
+}
+
+#annotation-status {
+  color: #8ee3ff;
+}
+
+canvas.is-annotating {
+  cursor: crosshair;
+}

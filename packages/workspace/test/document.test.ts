@@ -12,6 +12,16 @@ const digestA = "a".repeat(64);
 const digestB = "b".repeat(64);
 const digestC = "c".repeat(64);
 
+function view(): Record<string, unknown> {
+  return {
+    camera: { yaw: 0.7, pitch: -0.35, panRight: 12.5, panUp: -3.25, zoom: 1.75 },
+    section: { enabled: true, axis: "z", direction: -1, fraction: 0.42 },
+    hiddenOccurrenceIds: ["occurrence-2", "occurrence-1"],
+    selectedOccurrenceId: "occurrence-9",
+    annotations: [],
+  };
+}
+
 function workspace(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
     schemaVersion: workspaceSchemaVersion,
@@ -28,12 +38,7 @@ function workspace(overrides: Record<string, unknown> = {}): Record<string, unkn
       { key: "architecture", label: "arc.ifc", byteLength: 9_022_255, sha256: digestB },
       { key: "structure", label: "str.ifc", byteLength: 4_119_887, sha256: digestC },
     ],
-    view: {
-      camera: { yaw: 0.7, pitch: -0.35, panRight: 12.5, panUp: -3.25, zoom: 1.75 },
-      section: { enabled: true, axis: "z", direction: -1, fraction: 0.42 },
-      hiddenOccurrenceIds: ["occurrence-2", "occurrence-1"],
-      selectedOccurrenceId: "occurrence-9",
-    },
+    view: view(),
     ...overrides,
   };
 }
@@ -93,14 +98,58 @@ describe("workspace manifest", () => {
 
   it("refuses a schema version it was not written for", () => {
     expectRefusal(
-      () => normalizeWorkspace(workspace({ schemaVersion: "naru.workspace.2" })),
+      () => normalizeWorkspace(workspace({ schemaVersion: "naru.workspace.3" })),
       "UNSUPPORTED_SCHEMA",
-      "naru.workspace.1",
+      "naru.workspace.2",
     );
     expectRefusal(
       () => normalizeWorkspace(workspace({ schemaVersion: undefined })),
       "UNSUPPORTED_SCHEMA",
       "schemaVersion",
+    );
+  });
+
+  it("reads a naru.workspace.1 manifest as one with no annotations and rewrites it as .2", () => {
+    const { annotations: _dropped, ...legacyView } = view();
+    const parsed = normalizeWorkspace(
+      workspace({ schemaVersion: "naru.workspace.1", view: legacyView }),
+    );
+    expect(parsed.schemaVersion).toBe("naru.workspace.2");
+    expect(parsed.view.annotations).toEqual([]);
+    expect(serializeWorkspace(parsed)).toContain('"schemaVersion":"naru.workspace.2"');
+  });
+
+  it("keeps annotations in order and refuses malformed ones", () => {
+    const parsed = normalizeWorkspace(
+      workspace({
+        view: {
+          ...view(),
+          annotations: [
+            { position: [1, 2, 3], text: "second" },
+            { position: [-0.5, 0, 12.25], text: "first" },
+          ],
+        },
+      }),
+    );
+    expect(parsed.view.annotations).toEqual([
+      { position: [1, 2, 3], text: "second" },
+      { position: [-0.5, 0, 12.25], text: "first" },
+    ]);
+    const withAnnotations = (annotations: unknown) =>
+      normalizeWorkspace(workspace({ view: { ...view(), annotations } }));
+    expectRefusal(() => withAnnotations([{ position: [1, 2, 3], text: "x", color: "red" }]), "INVALID_WORKSPACE", "color");
+    expectRefusal(() => withAnnotations([{ position: [1, Number.NaN, 3], text: "x" }]), "INVALID_WORKSPACE", "position");
+    expectRefusal(() => withAnnotations([{ position: [1, 2], text: "x" }]), "INVALID_WORKSPACE", "position");
+    expectRefusal(() => withAnnotations([{ position: [1, 2, 3], text: "   " }]), "INVALID_WORKSPACE", "text");
+    expectRefusal(
+      () => withAnnotations([{ position: [1, 2, 3], text: "x".repeat(1025) }]),
+      "LIMIT_EXCEEDED",
+      "text",
+    );
+    expectRefusal(
+      () => withAnnotations(Array.from({ length: 10_001 }, () => ({ position: [0, 0, 0], text: "n" }))),
+      "LIMIT_EXCEEDED",
+      "annotations",
     );
   });
 

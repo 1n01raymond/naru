@@ -35,6 +35,7 @@ const saved: WorkspaceDocument = normalizeWorkspace({
     section: { enabled: true, axis: "z", direction: -1, fraction: 0.42 },
     hiddenOccurrenceIds: ["occurrence-hidden", "occurrence-gone"],
     selectedOccurrenceId: "occurrence-selected",
+    annotations: [],
   },
 });
 
