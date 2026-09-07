@@ -215,6 +215,43 @@ describe("residency visibility updates", () => {
     expect(Array.from(isolated.visibility.counts)).toEqual([1]);
   });
 
+  it("keeps a storey scope across residency updates and leaves snapshots untouched", () => {
+    const initial = new OccurrenceVisibility(
+      { batches: [coarseBatch], sharedObjectIdsAcrossBatches: true },
+      maskPromoted([]),
+    );
+    initial.setScope(new Set([1, 2]));
+    expect(initial.isVisible(3)).toBe(false);
+    expect(Array.from(initial.counts)).toEqual([2]);
+    expect(initial.state()).toEqual({
+      mode: "all",
+      totalOccurrences: 3,
+      visibleOccurrences: 2,
+      hiddenOccurrences: 1,
+      scopedOccurrences: 2,
+    });
+    expect(initial.snapshot()).toEqual({ hiddenObjectIds: [] });
+
+    initial.hide(1);
+    const updated = OccurrenceVisibility.forResidencyUpdate(
+      initial,
+      { batches: [coarseBatch, batch([2]), batch([3])], sharedObjectIdsAcrossBatches: true },
+      maskPromoted([1, 2]),
+      [0],
+    );
+    expect(updated.visibility.scope()).toBe(initial.scope());
+    expect(Array.from(updated.visibility.counts)).toEqual([0, 1, 0]);
+    expect(updated.visibility.state()).toMatchObject({ mode: "hidden", scopedOccurrences: 2 });
+
+    updated.visibility.restore(updated.visibility.snapshot());
+    expect(updated.visibility.isVisible(3)).toBe(false);
+
+    updated.visibility.setScope(undefined);
+    expect(Array.from(updated.visibility.counts)).toEqual([0, 1, 1]);
+    expect(updated.visibility.state().scopedOccurrences).toBeUndefined();
+    expect(() => updated.visibility.setScope(new Set([42]))).toThrow(/Unknown scene object ID 42/u);
+  });
+
   it("rejects object IDs outside the established scene universe", () => {
     const initial = new OccurrenceVisibility(
       { batches: [coarseBatch], sharedObjectIdsAcrossBatches: true },

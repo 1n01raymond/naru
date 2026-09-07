@@ -8,6 +8,8 @@ export interface VisibilityState {
   readonly visibleOccurrences: number;
   readonly hiddenOccurrences: number;
   readonly isolatedObjectId?: number;
+  /** Size of the active scope (a storey, for example); absent when unscoped. */
+  readonly scopedOccurrences?: number;
 }
 
 export interface OccurrenceVisibilitySnapshot {
@@ -61,6 +63,7 @@ export class OccurrenceVisibility {
   private readonly objectIds: Set<number>;
   private readonly hiddenObjectIds = new Set<number>();
   private isolatedObjectId?: number;
+  private scopeObjectIds?: ReadonlySet<number>;
   private visibleOccurrences = 0;
   private residencyChangedBatchIndexes?: readonly number[];
 
@@ -126,6 +129,7 @@ export class OccurrenceVisibility {
     const { previous } = reuse;
     for (const objectId of previous.hiddenObjectIds) this.hiddenObjectIds.add(objectId);
     this.isolatedObjectId = previous.isolatedObjectId;
+    this.scopeObjectIds = previous.scopeObjectIds;
     // Distinct visible ids are invariant under residency swaps: an admitted
     // mesh's coarse instances become masked while its target instances appear,
     // and an evicted mesh's coarse instances unmask again.
@@ -196,11 +200,32 @@ export class OccurrenceVisibility {
     return this.objectIds.has(objectId);
   }
 
+  /**
+   * Restricts rendering to a scope of object IDs (a building storey), on top of
+   * the hide/isolate intent. The scope is view state, not workspace intent: it
+   * survives residency updates but is excluded from `snapshot()`, so the
+   * workspace manifest never carries it. Passing `undefined` lifts the scope.
+   */
+  setScope(objectIds: ReadonlySet<number> | undefined): void {
+    if (objectIds !== undefined) {
+      for (const objectId of objectIds) this.requireObject(objectId);
+    }
+    this.scopeObjectIds = objectIds;
+    this.rebuildTables();
+  }
+
+  scope(): ReadonlySet<number> | undefined {
+    return this.scopeObjectIds;
+  }
+
   isVisible(objectId: number): boolean {
     return this.objectIds.has(objectId) && this.isVisibleKnown(objectId);
   }
 
   private isVisibleKnown(objectId: number): boolean {
+    if (this.scopeObjectIds !== undefined && !this.scopeObjectIds.has(objectId)) {
+      return false;
+    }
     return this.isolatedObjectId === undefined
       ? !this.hiddenObjectIds.has(objectId)
       : this.isolatedObjectId === objectId;
@@ -221,6 +246,9 @@ export class OccurrenceVisibility {
       ...(this.isolatedObjectId === undefined
         ? {}
         : { isolatedObjectId: this.isolatedObjectId }),
+      ...(this.scopeObjectIds === undefined
+        ? {}
+        : { scopedOccurrences: this.scopeObjectIds.size }),
     };
   }
 
