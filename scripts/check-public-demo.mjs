@@ -143,14 +143,20 @@ async function checkApiReference(baseUrl, attempt) {
   const html = await response.text();
   assert(html.includes("<title>NARU API"), `${indexUrl.href} is not the NARU API reference.`);
 
-  const modulePaths = [...html.matchAll(/href="(modules\/[^"]+\.html)"/gu)].map(
+  // TypeDoc's index page is the README; the package list lives on
+  // `modules.html` (the index only reaches it through the navigation script).
+  const modulesUrl = cacheBusted(new URL("modules.html", new URL("api/", baseUrl)), attempt);
+  const modulesResponse = await fetchChecked(modulesUrl);
+  assert(modulesResponse.status === 200, `${modulesUrl.href} returned HTTP ${modulesResponse.status}.`);
+  const modulesHtml = await modulesResponse.text();
+  const modulePaths = [...modulesHtml.matchAll(/href="(modules\/[^"]+\.html)"/gu)].map(
     (match) => match[1],
   );
   const expectedModules = ["scene-ir", "runtime-webgpu", "workspace", "compiler"];
   for (const name of expectedModules) {
     assert(
       modulePaths.some((path) => path.includes(name)),
-      `${indexUrl.href} does not list the @naru3d/${name} package.`,
+      `${modulesUrl.href} does not list the @naru3d/${name} package.`,
     );
   }
 
