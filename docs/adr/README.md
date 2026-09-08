@@ -38,6 +38,7 @@ reverse. They explain context and trade-offs rather than only the final choice.
 | [0022](0022-workspace-manifest.md) | Persist a non-authoritative workspace manifest keyed by source and package identity | Accepted |
 | [0023](0023-public-package-delivery-origin.md) | Serve public demo packages from a Cloudflare R2 delivery origin | Accepted |
 | [0024](0024-persistent-package-cache.md) | Keep verified package resources in a quota-bounded browser cache tier | Proposed |
+| [0025](0025-shape-preserving-lod-representation.md) | Shape-preserving LOD as a declared-error representation | Proposed |
 
 ## Phase 0 review
 

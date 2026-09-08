@@ -245,6 +245,10 @@ CAD simplification is conservative:
 LOD generation is plugin/profile based so industries can define importance
 rules for fasteners, pipes, equipment, or architectural components.
 
+The first shape-preserving level, its ownership, serialized profile, and
+selection rule are decided in
+[ADR-0025](adr/0025-shape-preserving-lod-representation.md) (Proposed).
+
 ## 12. Quantization and precision
 
 Positions are encoded relative to local prototype/chunk origins. Candidate
