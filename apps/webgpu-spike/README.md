@@ -381,6 +381,18 @@ recordings: `data-workspace-state`, `data-workspace-geometry-current`,
 
 One headed browser record exercises all of that end to end:
 [`artifacts/workspace/reopen/`](../../artifacts/workspace/reopen/README.md)
+
+**Persistent package cache.** Digest-declared sidecars (properties, relocated
+hierarchy, spatial index) are kept across sessions in a verified Cache Storage
+tier ([ADR-0024](../../docs/adr/0024-persistent-package-cache.md)) under a
+256 MiB quota; `?persistentCacheMiB=` changes it and `0` disables the tier.
+Every hit is re-hashed against the package's declared digest before decode, and
+the document and geometry buffers stay network-only until they declare one.
+**Clear cache** deletes every entry. Recordings read `data-persistent-cache`
+(`off`, `unavailable`, `closed`, `ready`, `reset`),
+`data-persistent-cache-hits`, `data-persistent-cache-misses`,
+`data-persistent-cache-entries`, and `data-persistent-cache-bytes`; the tier is
+proved by fake-storage unit tests and has no committed browser record.
 saves a session of three hidden walls, one selected slab, a section plane and a
 moved camera; reopens it against the unchanged Digital Hub package as
 `unverifiable`, then `verified` after **Check sources**, re-saving the identical

@@ -204,6 +204,22 @@ Each tier has independent accounting and eviction. Content hashes allow cache
 reuse across workspace revisions and model manifests. Selected content,
 currently visible target LOD, and resources with active operations are pinned.
 
+The persistent tier is `PersistentPackageCache`
+([ADR-0024](adr/0024-persistent-package-cache.md)): a content-addressed
+Cache Storage store under the embedding application's origin, keyed by the
+SHA-256 and byte length the package document declares. The ADR-0011 transport
+resolves a digest-declared resource there before the network and publishes
+verified network bytes to it afterwards; a hit is re-hashed against the same
+declared identity before any parser or decoder sees it, and mismatching bytes
+are deleted and counted as an invalidated miss. Entries are evicted
+least-recently-used under an explicit quota (256 MiB by default), the open
+scene's resources are protected until the next load, and a publish that cannot
+fit beside the protected set is refused. Persisted encoded bytes are reported
+by the tier's own statistics and never enter the decoded or GPU totals above.
+Today only the property, hierarchy, and spatial-index sidecars declare a
+digest, so the document and both geometry buffers stay network-only
+([fake-storage tests](../packages/runtime-webgpu/test/package-cache.test.ts)).
+
 ### Residency budgets are not a process bound
 
 The decoded and GPU budgets bound admitted target geometry and nothing else.

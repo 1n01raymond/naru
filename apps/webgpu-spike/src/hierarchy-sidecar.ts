@@ -47,6 +47,7 @@ async function fetchSidecarResource(
   resource: URL | string,
   kind: "json" | "binary",
   byteLength: number,
+  sha256: string,
   signal?: AbortSignal,
 ): Promise<Uint8Array> {
   const transport = transportOf(source);
@@ -57,6 +58,7 @@ async function fetchSidecarResource(
     kind,
     label: typeof resource === "string" ? resource : url.href,
     limitBytes: transport.resourceLimit(byteLength),
+    expected: { sha256, byteLength },
     ...(signal ? { signal } : {}),
   });
 }
@@ -116,13 +118,20 @@ export async function loadHierarchySidecar(
 ): Promise<CompiledHierarchySidecar> {
   const { ref } = source;
   const jsonBytes = source.kind === "url"
-    ? await fetchSidecarResource(source, source.jsonUrl, "json", ref.byteLength, signal)
+    ? await fetchSidecarResource(source, source.jsonUrl, "json", ref.byteLength, ref.sha256, signal)
     : new Uint8Array(await source.jsonFile.arrayBuffer());
   await verify(jsonBytes, ref.uri, ref.byteLength, ref.sha256);
   const json = JSON.parse(new TextDecoder().decode(jsonBytes)) as unknown;
   const columns = columnsOf(json, ref.uri);
   const columnBytes = source.kind === "url"
-    ? await fetchSidecarResource(source, columns.uri, "binary", columns.byteLength, signal)
+    ? await fetchSidecarResource(
+        source,
+        columns.uri,
+        "binary",
+        columns.byteLength,
+        columns.sha256,
+        signal,
+      )
     : await readLocalColumns(source.resourceFiles, columns.uri);
   await verify(columnBytes, columns.uri, columns.byteLength, columns.sha256);
   return { json, columns: columnBytes };

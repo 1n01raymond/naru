@@ -40,6 +40,7 @@ async function readBytes(source: SpatialDemandSource, signal?: AbortSignal): Pro
     kind: "binary",
     label: source.url.href,
     limitBytes: transport.resourceLimit(source.ref.byteLength),
+    expected: { sha256: source.ref.sha256, byteLength: source.ref.byteLength },
     ...(signal ? { signal } : {}),
   });
 }
