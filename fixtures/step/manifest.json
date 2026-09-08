@@ -156,6 +156,37 @@
         "kernel": "Open CASCADE Technology",
         "kernelVersion": "7.9.3"
       }
+    },
+    {
+      "id": "lod-corpus",
+      "kind": "assembly",
+      "provenanceType": "generated",
+      "path": "lod-corpus.step",
+      "sourcePath": "generators/generate_lod_corpus.py",
+      "sourceUrl": "https://github.com/1n01raymond/naru/blob/main/fixtures/step/generators/generate_lod_corpus.py",
+      "license": "Apache-2.0",
+      "licenseUrl": "https://github.com/1n01raymond/naru/blob/main/LICENSE",
+      "licenseFile": "LICENSE.md",
+      "sha256": "02c78ff73b23eb0ceab0c73cf0af43a75bdf1877db0d2425131b30766450129c",
+      "purposes": [
+        "assembly",
+        "lod-comparison",
+        "analytic-surfaces",
+        "curved-surfaces",
+        "thin-features",
+        "fillets",
+        "planar-control",
+        "explicit-edges"
+      ],
+      "attribution": "NARU Contributors",
+      "generatedWith": {
+        "tool": "CadQuery",
+        "toolVersion": "2.8.0",
+        "binding": "cadquery-ocp",
+        "bindingVersion": "7.9.3.1.1",
+        "kernel": "Open CASCADE Technology",
+        "kernelVersion": "7.9.3"
+      }
     }
   ]
 }
