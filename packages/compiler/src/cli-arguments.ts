@@ -37,6 +37,7 @@ General options:
   --spatial-index                Emit the optional occurrence demand BVH
   --spatial-leaf-capacity <n>    Maximum occurrences per BVH leaf (default: 64)
   --relocate-hierarchy-nodes     Move mesh-less nodes into a hierarchy sidecar
+  --reduced-lod <meters>         Emit a reduced level within this measured deviation
   --json-events                  Write import lifecycle events to stdout as NDJSON
   --help                         Show this help`;
 
@@ -50,6 +51,7 @@ export interface CompileArguments {
   readonly spatialIndex: boolean;
   readonly spatialLeafCapacity?: number;
   readonly relocateHierarchyNodes: boolean;
+  readonly reducedLodMeters?: number;
   readonly jsonEvents: boolean;
 }
 
@@ -72,6 +74,7 @@ export interface IfcCompileArguments {
   readonly elideDerivedIdentifiers: boolean;
   readonly omitDefaultNodeTransforms: boolean;
   readonly relocateHierarchyNodes: boolean;
+  readonly reducedLodMeters?: number;
   readonly retainSceneIr: boolean;
   readonly stagedPreviewDirectory?: string;
   readonly jsonEvents: boolean;
@@ -84,6 +87,7 @@ const sharedOptions = {
   "spatial-index": { type: "boolean" },
   "spatial-leaf-capacity": { type: "string" },
   "relocate-hierarchy-nodes": { type: "boolean" },
+  "reduced-lod": { type: "string" },
   "json-events": { type: "boolean" },
 } as const;
 
@@ -212,6 +216,7 @@ export function parseCompileArguments(argumentList: readonly string[]): CompileA
   const linearTolerance = numericOption(values["linear-tolerance"], "linear-tolerance");
   const angularTolerance = numericOption(values["angular-tolerance"], "angular-tolerance");
   const spatialIndex = values["spatial-index"] ?? false;
+  const reducedLodMeters = numericOption(values["reduced-lod"], "reduced-lod");
   const spatialLeafCapacity = integerOption(
     values["spatial-leaf-capacity"],
     "spatial-leaf-capacity",
@@ -228,6 +233,7 @@ export function parseCompileArguments(argumentList: readonly string[]): CompileA
     spatialIndex,
     ...(spatialLeafCapacity === undefined ? {} : { spatialLeafCapacity }),
     relocateHierarchyNodes: values["relocate-hierarchy-nodes"] ?? false,
+    ...(reducedLodMeters === undefined ? {} : { reducedLodMeters }),
     jsonEvents: values["json-events"] ?? false,
   };
 }
@@ -271,6 +277,7 @@ export function parseIfcCompileArguments(
   const threads = integerOption(values.threads, "threads");
   const targetChunkKib = integerOption(values["target-chunk-kib"], "target-chunk-kib");
   const spatialIndex = values["spatial-index"] ?? false;
+  const reducedLodMeters = numericOption(values["reduced-lod"], "reduced-lod");
   const spatialLeafCapacity = integerOption(
     values["spatial-leaf-capacity"],
     "spatial-leaf-capacity",
@@ -300,6 +307,7 @@ export function parseIfcCompileArguments(
     elideDerivedIdentifiers: values["elide-derived-identifiers"] ?? false,
     omitDefaultNodeTransforms: values["omit-default-node-transforms"] ?? false,
     relocateHierarchyNodes: values["relocate-hierarchy-nodes"] ?? false,
+    ...(reducedLodMeters === undefined ? {} : { reducedLodMeters }),
     retainSceneIr: values["retain-scene-ir"] ?? false,
     ...(stagedPreviewDirectory ? { stagedPreviewDirectory } : {}),
     jsonEvents: values["json-events"] ?? false,

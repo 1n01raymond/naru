@@ -475,7 +475,10 @@ object is not dropped solely because a coarse LOD omits its surface; the runtime
 may force a selected-object representation to load.
 
 How a `simplified` representation is generated, serialized, and selected is
-decided in [ADR-0025](adr/0025-shape-preserving-lod-representation.md).
+decided in [ADR-0025](adr/0025-shape-preserving-lod-representation.md). The
+compiler's `--reduced-lod` produces one as `<id>#reduced` with accuracy
+`{ kind: "simplified", linearTolerance }`, sharing the source representation's
+`faceSourceIds` semantics and explicit edges ([COMPILER §11](COMPILER.md#11-lod-and-simplification)).
 
 ## 16. Diagnostics
 

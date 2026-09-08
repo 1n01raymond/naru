@@ -748,3 +748,70 @@ describe("malformed mesh primitives", () => {
     );
   });
 });
+
+describe("reduced level under naru.progressive-package.1", () => {
+  type Chunk = { id: string; meshIndexes: number[]; byteOffset: number; byteLength: number };
+  type Doc = {
+    nodes: { mesh?: number; extras?: { madi?: Record<string, unknown> } }[];
+    extras: { madi: Record<string, unknown>; naru?: Record<string, unknown> };
+  };
+
+  async function reducedFixture(): Promise<{ json: Doc; chunk: Chunk; bytes: Buffer }> {
+    const [json, bytes] = await Promise.all([
+      readFile(new URL("scene.gltf", progressiveUrl), "utf8").then(JSON.parse) as Promise<Doc>,
+      readFile(new URL("scene.bin", progressiveUrl)),
+    ]);
+    const progressive = json.extras.madi.progressive as { targetChunks: Chunk[] };
+    const chunk = progressive.targetChunks[0]!;
+    const reducedId = chunk.id.replace(/^target:/u, "reduced:");
+    json.extras.naru = {
+      progressive: {
+        schemaVersion: "naru.progressive-package.1",
+        ...progressive,
+        reducedChunks: [{ ...chunk, id: reducedId }],
+      },
+    };
+    delete json.extras.madi.progressive;
+    for (const node of json.nodes) {
+      if (node.mesh !== undefined && chunk.meshIndexes.includes(node.mesh) && node.extras?.madi) {
+        node.extras.madi.reducedMesh = node.mesh;
+      }
+    }
+    return { json, chunk: { ...chunk, id: reducedId }, bytes };
+  }
+
+  it("decodes a reduced chunk with the target's identity and a residency cost", async () => {
+    const { json, chunk, bytes } = await reducedFixture();
+    const prepared = prepareCompiledGltfDecoder(json);
+    expect(prepared.hierarchy.reducedChunks.map(({ id }) => id)).toEqual([chunk.id]);
+    const range = Uint8Array.from(
+      bytes.subarray(chunk.byteOffset, chunk.byteOffset + chunk.byteLength),
+    ).buffer;
+    const reduced = prepared.decode(range, { targetChunkId: chunk.id });
+    expect(reduced.summary.representation).toBe("reduced");
+    const target = prepared.decode(range.slice(0), {
+      targetChunkId: chunk.id.replace(/^reduced:/u, "target:"),
+    });
+    expect(target.summary.representation).toBe("target");
+    expect(reduced.objectEvidence).toEqual(target.objectEvidence);
+    expect(prepared.targetChunkResidencyCosts.get(chunk.id)).toEqual(
+      prepared.targetChunkResidencyCosts.get(chunk.id.replace(/^reduced:/u, "target:")),
+    );
+  });
+
+  it("fails closed on an unknown schema version and on a chunk id shared across levels", async () => {
+    const wrongSchema = await reducedFixture();
+    (wrongSchema.json.extras.naru!.progressive as Record<string, unknown>).schemaVersion =
+      "naru.progressive-package.2";
+    expect(() => inspectCompiledHierarchy(wrongSchema.json)).toThrowError(
+      /schemaVersion must be naru\.progressive-package\.1/u,
+    );
+
+    const shared = await reducedFixture();
+    const progressive = shared.json.extras.naru!.progressive as { reducedChunks: Chunk[] };
+    progressive.reducedChunks[0]!.id = shared.chunk.id.replace(/^reduced:/u, "target:");
+    expect(() => prepareCompiledGltfDecoder(shared.json)).toThrowError(
+      /both a target and a reduced chunk/u,
+    );
+  });
+});

@@ -13,6 +13,7 @@ const hierarchy: CompiledHierarchy = {
   sourceFormat: "test",
   binaryUri: "scene.bin",
   binaryByteLength: 0,
+  reducedChunks: [],
   targetChunks: [
     {
       id: "chunk",

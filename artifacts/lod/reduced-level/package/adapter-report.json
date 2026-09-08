@@ -1,0 +1,61 @@
+{
+  "schemaVersion": "phase-0-occt-evidence.2",
+  "source": {
+    "path": "lod-corpus.step",
+    "sha256": "02c78ff73b23eb0ceab0c73cf0af43a75bdf1877db0d2425131b30766450129c",
+    "format": "STEP AP214",
+    "schemaIdentifiers": [
+      "AUTOMOTIVE_DESIGN { 1 0 10303 214 1 1 1 1 }"
+    ],
+    "units": "mm"
+  },
+  "toolchain": {
+    "cadquery": "2.8.0",
+    "ocp": "7.9.3.1",
+    "cadqueryOcpPackage": "7.9.3.1.1"
+  },
+  "options": {
+    "linearTolerance": 0.15,
+    "angularTolerance": 0.15
+  },
+  "counts": {
+    "hierarchyDepthBelowRoot": 1,
+    "prototypeCount": 5,
+    "partPrototypeCount": 4,
+    "occurrenceNodeCount": 5,
+    "partOccurrenceCount": 4,
+    "representationCount": 4,
+    "materialCount": 1,
+    "faceSourceCount": 36,
+    "edgeSourceCount": 82,
+    "triangleCount": 6147,
+    "edgeSegmentCount": 217
+  },
+  "prototypeReuse": [],
+  "reader": {
+    "status": "done",
+    "transfer": true,
+    "warnings": []
+  },
+  "diagnostics": {
+    "counts": {
+      "info": 1,
+      "warning": 0,
+      "error": 0
+    },
+    "codes": [
+      "PHASE0_OCCT_PYTHON_BINDING"
+    ],
+    "unsupportedEntities": []
+  },
+  "unsupportedEntityInspection": {
+    "status": "not-exercised",
+    "entityCount": 0,
+    "entities": [],
+    "reason": "The selected fixture does not contain an entity known to be unsupported by the Phase 0 adapter."
+  },
+  "validation": {
+    "sceneIr": "enforced during compiler hydration and @madi/scene-ir tests",
+    "visual": "recorded in artifacts/occt/README.md"
+  }
+}

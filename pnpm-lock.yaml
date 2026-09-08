@@ -100,6 +100,9 @@ importers:
       '@naru3d/scene-ir':
         specifier: workspace:*
         version: link:../scene-ir
+      meshoptimizer:
+        specifier: 1.2.0
+        version: 1.2.0
     devDependencies:
       '@types/node':
         specifier: 22.20.1

@@ -75,6 +75,7 @@ function decoded(
       binaryUri: "scene.bin",
       binaryByteLength: 0,
       targetChunks: [],
+      reducedChunks: [],
       entries: [],
       renderableOccurrences: batches.length,
       sharedMeshes: batches.length,

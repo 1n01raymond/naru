@@ -19,6 +19,7 @@ import type {
 } from "./import-job.js";
 import { compileSceneToGltf } from "./gltf.js";
 import type { CompileStage } from "./gltf.js";
+import { prepareReducedLod } from "./lod/reduce.js";
 import { hydrateIfcSceneSplit, ifcSceneSplitEncodingVersion } from "./ifc-scene.js";
 import { readIfcStructure } from "./ifc-structure-stream.js";
 import {
@@ -87,6 +88,8 @@ export interface IfcFederationCompileOptions {
   readonly elideDerivedIdentifiers?: boolean;
   readonly omitDefaultNodeTransforms?: boolean;
   readonly relocateHierarchyNodes?: boolean;
+  /** Emit a declared-error `reduced` level (ADR-0025). */
+  readonly reducedLodMeters?: number;
   /**
    * Record wall-clock stage durations into the result's `stages`. Timing is
    * diagnostic only: it never enters the adapter report, the build report,
@@ -141,6 +144,9 @@ export interface IfcAdapterProcessTiming {
   readonly ledger: unknown;
 }
 
+/** Compile sub-stages the timing ledger serializes (pinned by its schema). */
+export type LedgerCompileStage = Exclude<CompileStage, "reduceGeometry">;
+
 export interface IfcFederationStageTiming {
   readonly schemaVersion: "naru.ifc-federation-stage-timing.1";
   /** Entry of `compileIfcFederation` to its return; excludes temp-dir cleanup. */
@@ -151,7 +157,7 @@ export interface IfcFederationStageTiming {
   /** The structure stream scan, one component of `readSceneIr`. */
   readonly structureReadMilliseconds: number;
   /** Sub-stages of `compile`; `other` closes the ledger. */
-  readonly compileStages: Readonly<Record<CompileStage | "other", number>>;
+  readonly compileStages: Readonly<Record<LedgerCompileStage | "other", number>>;
   /** Present when the adapter ran (a package-cache hit skips it). */
   readonly adapter?: IfcAdapterProcessTiming;
 }
@@ -331,6 +337,7 @@ function federationCacheInput(
         ? { omitDefaultNodeTransforms: true }
         : {}),
       ...(options.relocateHierarchyNodes === true ? { relocateHierarchyNodes: true } : {}),
+      ...(options.reducedLodMeters === undefined ? {} : { reducedLodMeters: options.reducedLodMeters }),
       ...Object.fromEntries(
         sources.map(({ discipline, uriHint }) => [`uriHint.${discipline}`, uriHint]),
       ),
@@ -491,7 +498,8 @@ class StageLedger {
   private readonly startedAt = performance.now();
   private readonly durations = new Map<IfcFederationStageName, number>();
   structureReadMilliseconds = 0;
-  readonly compileStages: Record<CompileStage, number> = {
+  /** Ledger keys are pinned by `naru.ifc-federation-stage-timing.1`; `reduceGeometry` folds into `other`. */
+  readonly compileStages: Record<LedgerCompileStage, number> = {
     validateScene: 0,
     encodeGeometry: 0,
     measureDocument: 0,
@@ -708,6 +716,7 @@ export async function compileIfcFederation(
         elideDerivedIdentifiers: options.elideDerivedIdentifiers,
         omitDefaultNodeTransforms: options.omitDefaultNodeTransforms,
         relocateHierarchyNodes: options.relocateHierarchyNodes,
+        reducedLodMeters: options.reducedLodMeters,
       },
     },
     options.job,
@@ -930,18 +939,22 @@ async function runIfcFederationCompile(
         ? { omitDefaultNodeTransforms: true }
         : {}),
       ...(options.relocateHierarchyNodes === true ? { relocateHierarchyNodes: true } : {}),
+      ...(options.reducedLodMeters === undefined
+        ? {}
+        : { reducedLod: { maxDeviationMeters: options.reducedLodMeters } }),
       // The package carries the adapter's value column file byte-verbatim as
       // a lazy property sidecar; the compiler still never materializes a
       // property value.
       propertyColumns: properties,
     };
+    if (compileOptions.reducedLod) await prepareReducedLod();
     const compiled = stageSync(ledger, "compile", () =>
       compileSceneToGltf(
         scene,
         compileOptions,
         ledger
           ? (compileStage, milliseconds) => {
-              ledger.compileStages[compileStage] += milliseconds;
+              if (compileStage !== "reduceGeometry") ledger.compileStages[compileStage] += milliseconds;
             }
           : undefined,
       ),

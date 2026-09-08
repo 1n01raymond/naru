@@ -143,7 +143,12 @@ project-owned 0.25 mm / 10,000 km headed Chrome/Firefox record is checked by
 `pnpm precision:check`.
 
 The current experimental decoder accepts a target-only package or a progressive
-package with separate target and coarse external buffers. The progressive slice
+package with separate target and coarse external buffers. A package compiled
+with `--reduced-lod` declares `extras.naru.progressive` under
+`naru.progressive-package.1` instead, adding `reducedChunks`: a third
+per-prototype level the decoder fetches, decodes, and prices exactly like a
+target chunk. Nothing selects it yet
+([ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md)). The progressive slice
 uses `extras.madi.coarseMesh` and preserves node-derived object IDs while the
 renderer replaces prototype AABBs with target meshes. A batch handed to
 `reconcileBatches` with `representation: "coarse"` is drawn and picked through

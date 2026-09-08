@@ -117,7 +117,12 @@ export interface CompilerBuildReport {
     readonly nodeTransforms?: "default-omitted";
     /** Optional size policy that moves mesh-less nodes into a sidecar. */
     readonly hierarchyNodes?: "relocated";
-    readonly progressiveRepresentation?: "prototype-aabb-v1";
+    readonly progressiveRepresentation?: "prototype-aabb-v1" | "prototype-aabb-reduced-v1";
+    /** Present when a declared-error `reduced` level was requested (ADR-0025). */
+    readonly reducedLod?: {
+      readonly method: string;
+      readonly maxDeviationMeters: number;
+    };
     readonly targetChunking?: "prototype-range-v1" | "coalesced-prototype-range-v1";
     /** Maximum bytes per progressive target request when coalescing is enabled. */
     readonly targetChunkByteBudget?: number;
@@ -146,7 +151,16 @@ export interface CompilerBuildReport {
     readonly triangleCount: number;
     readonly edgeSegmentCount: number;
     readonly targetChunkCount?: number;
+    readonly reducedChunkCount?: number;
+    readonly reducedPrototypeCount?: number;
+    readonly reducedTriangleCount?: number;
   };
+  /**
+   * Per-prototype outcome of the `reduced` level (ADR-0025). Present only
+   * when `reducedLod` was requested; every payload prototype has one entry,
+   * so a retained prototype is visible with its reason.
+   */
+  readonly reducedLod?: readonly ReducedLodPrototypeRecord[];
   readonly prototypeReuse: readonly {
     readonly prototypeId: string;
     readonly occurrenceCount: number;
@@ -241,6 +255,30 @@ export interface CompileGltfOptions {
   readonly relocateHierarchyNodes?: boolean;
   readonly hierarchyUri?: string;
   readonly hierarchyBinaryUri?: string;
+  /**
+   * Emit a third per-prototype level, `reduced`, whose measured deviation
+   * from `target` stays within `maxDeviationMeters` (ADR-0025). Requires
+   * `coarseBounds`. The package then declares `extras.naru.progressive`
+   * (`naru.progressive-package.1`) instead of `extras.madi.progressive`.
+   * `prepareReducedLod()` must have resolved before the compile.
+   */
+  readonly reducedLod?: {
+    readonly maxDeviationMeters: number;
+  };
+}
+
+/** One prototype's `reduced`-level decision, recorded in the build report. */
+export interface ReducedLodPrototypeRecord {
+  readonly prototypeId: string;
+  readonly outcome: "reduced" | "retained";
+  /** Present when retained; a closed vocabulary from `lod/reduce.ts`. */
+  readonly reason?: string;
+  readonly inputTriangles: number;
+  /** Equals `inputTriangles` when retained. */
+  readonly outputTriangles: number;
+  /** Sampled two-sided p95 / max deviation in meters; null when never measured. */
+  readonly sampledTwoSidedP95Meters: number | null;
+  readonly sampledTwoSidedMaxMeters: number | null;
 }
 
 export interface PackageValidationIssue {

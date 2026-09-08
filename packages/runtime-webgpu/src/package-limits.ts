@@ -14,7 +14,7 @@ export interface CompiledPackageLimits {
   readonly accessors: number;
   /** `bufferViews.length`; sixty5 declares 343,886. */
   readonly bufferViews: number;
-  /** `extras.madi.progressive.targetChunks.length`; sixty5 declares 234. */
+  /** Declared target (or reduced) chunks per package; sixty5 declares 234 target chunks. */
   readonly targetChunks: number;
   /**
    * Deepest chain of glTF nodes the active scene may contain. Digital Hub, the

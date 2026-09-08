@@ -20,7 +20,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@naru3d/scene-ir": "workspace:*"
+    "@naru3d/scene-ir": "workspace:*",
+    "meshoptimizer": "1.2.0"
   },
   "devDependencies": {
     "@types/node": "22.20.1"

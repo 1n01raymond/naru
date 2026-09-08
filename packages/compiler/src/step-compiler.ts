@@ -16,6 +16,7 @@ import type {
   ImportJobReporter,
 } from "./import-job.js";
 import { compileSceneToGltf } from "./gltf.js";
+import { prepareReducedLod } from "./lod/reduce.js";
 import { writeCompiledPackage } from "./package-output.js";
 import { inspectStepFile } from "./step-source.js";
 import type { StepSourceInspection } from "./step-source.js";
@@ -49,6 +50,8 @@ export interface StepCompileOptions {
   readonly spatialIndex?: boolean;
   readonly spatialLeafCapacity?: number;
   readonly relocateHierarchyNodes?: boolean;
+  /** Emit a declared-error `reduced` level (ADR-0025). */
+  readonly reducedLodMeters?: number;
   readonly environment?: NodeJS.ProcessEnv;
   /** Lifecycle events and cancellation for this compile. */
   readonly job?: ImportJobOptions;
@@ -156,6 +159,7 @@ function cacheInput(
         ? {}
         : { spatialLeafCapacity: options.spatialLeafCapacity }),
       ...(options.relocateHierarchyNodes === true ? { relocateHierarchyNodes: true } : {}),
+      ...(options.reducedLodMeters === undefined ? {} : { reducedLodMeters: options.reducedLodMeters }),
     },
   };
 }
@@ -227,6 +231,7 @@ export async function compileStepFile(
         spatialIndex: options.spatialIndex,
         spatialLeafCapacity: options.spatialLeafCapacity,
         relocateHierarchyNodes: options.relocateHierarchyNodes,
+        reducedLodMeters: options.reducedLodMeters,
       },
     },
     options.job,
@@ -358,7 +363,11 @@ async function runStepCompile(
         ? {}
         : { spatialLeafCapacity: options.spatialLeafCapacity }),
       ...(options.relocateHierarchyNodes === true ? { relocateHierarchyNodes: true } : {}),
+      ...(options.reducedLodMeters === undefined
+        ? {}
+        : { reducedLod: { maxDeviationMeters: options.reducedLodMeters } }),
     };
+    if (compileOptions.reducedLod) await prepareReducedLod();
     const compiled = compileSceneToGltf(scene, compileOptions);
     reporter.enter("verifying");
     const validation = validateCompiledGltf(

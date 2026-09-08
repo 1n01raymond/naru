@@ -248,6 +248,18 @@ rules for fasteners, pipes, equipment, or architectural components.
 The first shape-preserving level, its ownership, serialized profile, and
 selection rule are decided in
 [ADR-0025](adr/0025-shape-preserving-lod-representation.md) (Proposed).
+`--reduced-lod <meters>` implements the representation: for each prototype
+the compiler simplifies the `target` surface with meshoptimizer (whole shape,
+unlocked boundary, absolute error = the declared deviation), runs it twice so
+a non-deterministic result is refused, and admits the result only if the
+mesh-only #126 checks pass against the prototype's own `target`; otherwise
+the prototype retains `target` with a reason in `build-report.json`
+`reducedLod`. Admitted levels are welded, carry the explicit edge segments,
+and follow the target payloads in `scene.bin` as `reduced:NNNN:<prototype>`
+chunks declared in `extras.naru.progressive.reducedChunks`
+(`naru.progressive-package.1`); a package compiled without the flag keeps
+`extras.madi.progressive`. Gate 1 is recorded in
+[`artifacts/lod/reduced-level/`](../artifacts/lod/reduced-level/README.md).
 
 ## 12. Quantization and precision
 

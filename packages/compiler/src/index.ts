@@ -1,4 +1,4 @@
-export { compileSceneToGltf } from "./gltf.js";
+export { compileSceneToGltf, progressivePackageSchema } from "./gltf.js";
 export type { CompileStage, CompileStageObserver } from "./gltf.js";
 export { measureJsonDocument } from "./json-document.js";
 export type { JsonByteSink, StreamedJsonDocument } from "./json-document.js";
@@ -138,6 +138,7 @@ export type {
   IfcFederationStageName,
   IfcFederationStageTiming,
   InspectedIfcFederationDocument,
+  LedgerCompileStage,
 } from "./ifc-federation.js";
 export type { IfcSourceInspection, SupportedIfcSchema } from "./ifc-source.js";
 export * from "./types.js";
