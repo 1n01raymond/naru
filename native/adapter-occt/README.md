@@ -79,6 +79,17 @@ with STEP entity source references; they do not make supported geometry fail.
 `pnpm occt:diagnostics:check` verifies the fixture digest, geometry preservation,
 Scene IR warning, and matching build-report record.
 
+## Analytic face description
+
+`tools/describe_analytic_faces.py` writes `naru.occt-analytic-faces.1`: for
+every face of a STEP source it records the face id the adapter emits in
+`faceSourceIds` and, where the underlying surface is a plane, cylinder, or
+sphere, that surface's parameters. The LOD method comparison
+(`scripts/record-lod-method-comparison-evidence.mjs`) uses it to measure
+reduced meshes against the source surface instead of against another mesh.
+Faces on other surface types are listed without parameters and are measured
+by sampling only. It is not part of a compile.
+
 ## Native spike output contract
 
 The JSON is inspection evidence, not a stable API. It reports:
