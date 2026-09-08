@@ -3,6 +3,8 @@ import {
   NaruWebGpuError,
   NaruWebGpuRenderer,
   PackageTransport,
+  defaultPersistentPackageCacheQuotaBytes,
+  openPersistentPackageCache,
   resolveFallbackDepthOffset,
 } from "@naru3d/runtime-webgpu";
 import type {
@@ -11,6 +13,7 @@ import type {
   CompiledTargetChunk,
   DecodedCompiledScene,
   GeometryRepresentation,
+  PersistentPackageCache,
   SpatialDemandPriority,
 } from "@naru3d/runtime-webgpu";
 
@@ -120,6 +123,22 @@ function residencyBudgetFromLocation(): number {
   const mebibytes = Number(value);
   if (!Number.isFinite(mebibytes) || mebibytes < 4 || mebibytes > 1024) {
     throw new RangeError("residencyMiB must be between 4 and 1024.");
+  }
+  return Math.round(mebibytes * 1024 * 1024);
+}
+
+/**
+ * Quota of the verified persistent package cache (ADR-0024).
+ * `?persistentCacheMiB=0` disables the tier for an A/B comparison; the default
+ * is the runtime's 256 MiB. The quota bounds encoded bytes on disk only and
+ * never widens the decoded or GPU residency budget.
+ */
+function persistentCacheQuotaFromLocation(): number {
+  const value = new URL(window.location.href).searchParams.get("persistentCacheMiB");
+  if (value === null) return defaultPersistentPackageCacheQuotaBytes;
+  const mebibytes = Number(value);
+  if (!Number.isFinite(mebibytes) || mebibytes < 0 || mebibytes > 4096) {
+    throw new RangeError("persistentCacheMiB must be between 0 and 4096.");
   }
   return Math.round(mebibytes * 1024 * 1024);
 }
@@ -273,6 +292,7 @@ const openDemoSceneButton = requireElement<HTMLButtonElement>("#open-demo-scene"
 const openPygamerSceneButton = requireElement<HTMLButtonElement>("#open-pygamer-scene");
 const cancelSceneLoadButton = requireElement<HTMLButtonElement>("#cancel-scene-load");
 const saveWorkspaceButton = requireElement<HTMLButtonElement>("#save-workspace");
+const clearCacheButton = requireElement<HTMLButtonElement>("#clear-cache");
 const workspaceFileInput = requireElement<HTMLInputElement>("#workspace-file");
 const workspaceSourcesInput = requireElement<HTMLInputElement>("#workspace-sources");
 const workspaceStatus = requireElement<HTMLElement>("#workspace-status");
@@ -294,6 +314,39 @@ requireElement<HTMLImageElement>("#naru-brand-mark").src = inverseMarkUrl;
 
 let disposeActiveScene: (() => void) | undefined;
 let cancelPendingSceneLoad: (() => void) | undefined;
+
+/**
+ * The verified persistent package cache is opened once per page. A quota of
+ * zero disables it; an unavailable Cache Storage resolves to `undefined` and
+ * every lookup is then a plain network read.
+ */
+const persistentCacheQuotaBytes = persistentCacheQuotaFromLocation();
+const persistentCachePromise: Promise<PersistentPackageCache | undefined> =
+  persistentCacheQuotaBytes === 0
+    ? Promise.resolve(undefined)
+    : openPersistentPackageCache({ quotaBytes: persistentCacheQuotaBytes });
+
+function publishPersistentCacheStats(cache: PersistentPackageCache | undefined): void {
+  const root = document.documentElement.dataset;
+  if (!cache) {
+    root.persistentCache = persistentCacheQuotaBytes === 0 ? "off" : "unavailable";
+    delete root.persistentCacheHits;
+    delete root.persistentCacheMisses;
+    delete root.persistentCacheEntries;
+    delete root.persistentCacheBytes;
+    clearCacheButton.disabled = true;
+    return;
+  }
+  const stats = cache.stats();
+  root.persistentCache = stats.state;
+  root.persistentCacheHits = String(stats.hits);
+  root.persistentCacheMisses = String(stats.misses);
+  root.persistentCacheEntries = String(stats.entries);
+  root.persistentCacheBytes = String(stats.storedBytes);
+  clearCacheButton.disabled = false;
+}
+
+void persistentCachePromise.then(publishPersistentCacheStats);
 
 /**
  * What the open scene lets a workspace do.
@@ -446,7 +499,14 @@ async function loadScene(source: SceneSource): Promise<boolean> {
   try {
     status.textContent = "Loading compiled glTF hierarchy…";
     status.dataset.state = "loading";
-    const loaded = await loadSceneHierarchy(source, cancellation.signal);
+    const persistence = await persistentCachePromise;
+    persistence?.release();
+    const loaded = await loadSceneHierarchy(
+      source,
+      cancellation.signal,
+      persistence ? { persistence } : undefined,
+    );
+    publishPersistentCacheStats(persistence);
     const { hierarchy } = loaded;
     const chunksByPrototype = targetChunkByPrototype(hierarchy);
     const residencyBudget = residencyBudgetFromLocation();
@@ -2161,6 +2221,15 @@ cancelSceneLoadButton.addEventListener("click", () => {
 
 saveWorkspaceButton.addEventListener("click", () => {
   void saveWorkspace();
+});
+
+clearCacheButton.addEventListener("click", () => {
+  void persistentCachePromise.then(async (cache) => {
+    if (!cache) return;
+    clearCacheButton.disabled = true;
+    await cache.clear();
+    publishPersistentCacheStats(cache);
+  });
 });
 
 workspaceFileInput.addEventListener("change", () => {

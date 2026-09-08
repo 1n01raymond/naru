@@ -198,6 +198,11 @@ toolchains close that gate ([record](../artifacts/cache/README.md)).
 - A shared cache must enforce repository/tenant authorization independently of
   content identity. Knowing a digest does not grant access to source-derived
   geometry or properties.
+- The browser-side persistent tier ([ADR-0024](adr/0024-persistent-package-cache.md))
+  follows the same rule from the other side: it is partitioned by the
+  application's origin, keyed by declared SHA-256 and byte length, re-verifies
+  every hit before decode, refuses bytes that miss their declared identity,
+  and degrades any storage failure to a miss so it can never block a scene.
 
 ## 5. Incremental and shared-cache stages
 

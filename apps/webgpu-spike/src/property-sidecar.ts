@@ -89,6 +89,7 @@ async function fetchBytes(
   resource: URL | string,
   kind: "json" | "binary",
   declaredByteLength: number,
+  sha256: string,
 ): Promise<Uint8Array> {
   const transport = transportOf(source);
   // A string resource is a URI the header declared, so the same transport that
@@ -100,6 +101,9 @@ async function fetchBytes(
     kind,
     label: typeof resource === "string" ? resource : url.href,
     limitBytes: transport.resourceLimit(declaredByteLength),
+    // The declared identity lets a verified persistent tier serve or keep the
+    // bytes; the digest check after the read stays in force either way.
+    expected: { sha256, byteLength: declaredByteLength },
   });
 }
 
@@ -152,7 +156,7 @@ export class PropertySidecarStore {
     }
     const source = this.source;
     const jsonBytes = source.kind === "url"
-      ? await fetchBytes(source, source.jsonUrl, "json", ref.byteLength)
+      ? await fetchBytes(source, source.jsonUrl, "json", ref.byteLength, ref.sha256)
       : new Uint8Array(await source.jsonFile.arrayBuffer());
     if (jsonBytes.byteLength !== ref.byteLength) {
       throw new RangeError(
@@ -168,7 +172,13 @@ export class PropertySidecarStore {
       JSON.parse(new TextDecoder().decode(jsonBytes)),
     );
     const columns = source.kind === "url"
-      ? await fetchBytes(source, document.columns.uri, "binary", document.columns.byteLength)
+      ? await fetchBytes(
+          source,
+          document.columns.uri,
+          "binary",
+          document.columns.byteLength,
+          document.columns.sha256,
+        )
       : await this.readLocalColumns(document.columns.uri);
     if (columns.byteLength !== document.columns.byteLength) {
       throw new RangeError(

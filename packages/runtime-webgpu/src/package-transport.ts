@@ -13,6 +13,8 @@
  * surface an embedder configures, and `openPackageTransport` binds one to the
  * document whose origin its resources are held to.
  */
+import type { PackageResourceIdentity, PackageResourcePersistence } from "./package-cache.js";
+
 
 /** Byte and count ceilings a remote package may not exceed. */
 export interface PackageTransferLimits {
@@ -197,6 +199,12 @@ export interface PackageResponseRequest {
   readonly allowedOrigins?: readonly string[];
   /** Replaces the global fetch for this request. */
   readonly fetch?: PackageFetch;
+  /**
+   * The identity the package declares for this resource. Only a request that
+   * states one may be served from, or published to, a persistent tier: the
+   * tier verifies bytes against it before they are handed back.
+   */
+  readonly expected?: PackageResourceIdentity;
 }
 
 /**
@@ -388,6 +396,12 @@ export interface PackageTransportPolicy {
    */
   readonly additionalOrigins?: readonly string[];
   readonly fetch?: PackageFetch;
+  /**
+   * A verified persistent tier (ADR-0024). Consulted before the network for a
+   * request that declares its `expected` identity and fed after it; never
+   * part of the descriptor, so a Worker can only inherit the network policy.
+   */
+  readonly persistence?: PackageResourcePersistence;
 }
 
 /**
@@ -419,6 +433,7 @@ export class PackageTransport {
   /** Every origin this package's resources may be fetched from. */
   readonly origins: readonly string[];
   readonly #fetch: PackageFetch | undefined;
+  readonly #persistence: PackageResourcePersistence | undefined;
 
   constructor(documentUrl: URL | string, policy: PackageTransportPolicy = {}) {
     const url = documentUrl instanceof URL ? documentUrl : new URL(documentUrl);
@@ -430,6 +445,7 @@ export class PackageTransport {
       ...(policy.additionalOrigins ?? []).filter((origin) => origin !== url.origin),
     ]);
     this.#fetch = policy.fetch;
+    this.#persistence = policy.persistence;
   }
 
   /** Rebuilds a transport on the far side of a Worker boundary. */
@@ -483,11 +499,29 @@ export class PackageTransport {
     return readBoundedBody(response, limitBytes, label);
   }
 
-  fetchResource(
+  /**
+   * Reads one resource, from the persistent tier when the request declares an
+   * identity the tier holds verified bytes for, and from the network otherwise.
+   * Network bytes are published only when they match the declared identity;
+   * mismatching bytes are returned unchanged so the caller raises its own
+   * verification error, exactly as it does without a tier.
+   */
+  async fetchResource(
     url: URL,
     request: PackageResponseRequest & { readonly limitBytes: number },
   ): Promise<Uint8Array> {
-    return fetchPackageResource(url, { ...this.#applied(request), limitBytes: request.limitBytes });
+    const tier = this.#persistence;
+    const expected = request.expected;
+    if (tier && expected) {
+      const held = await tier.lookup(expected, request.label, request.signal);
+      if (held) return held;
+    }
+    const bytes = await fetchPackageResource(url, {
+      ...this.#applied(request),
+      limitBytes: request.limitBytes,
+    });
+    if (tier && expected) await tier.publish(expected, bytes, request.label);
+    return bytes;
   }
 
   /** A caller may narrow a request, so an explicit field wins over the policy. */

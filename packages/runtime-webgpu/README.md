@@ -82,6 +82,17 @@ Direct WebGPU rendering and the Phase 1 compiled glTF runtime boundary.
   a Worker boundary, so a Worker inherits a policy and cannot widen one. A
   consumer outside the Studio exercises every axis in
   [`artifacts/security/embedder-overrides`](../../artifacts/security/embedder-overrides/README.md).
+- `openPersistentPackageCache({ quotaBytes })` opens the verified persistent
+  tier of [ADR-0024](../../docs/adr/0024-persistent-package-cache.md) and
+  returns `undefined` where Cache Storage is unusable; passed as the policy's
+  `persistence`, the transport resolves a request that carries an `expected`
+  `{ sha256, byteLength }` from the tier before the network and publishes
+  verified network bytes back. A hit is re-hashed against the declared identity
+  before it is returned, mismatching bytes are refused, the open scene's
+  resources are protected from LRU eviction until `release()`, and `stats()`
+  reports encoded persistent bytes apart from decoded/GPU residency.
+  `MemoryPersistentPackageStorage` backs the
+  [fake-storage tests](test/package-cache.test.ts).
 - `compiledSceneTransferables(scene)` lists owned typed-array buffers for a
   zero-copy Worker-to-main-thread transfer.
 - `NaruWebGpuRenderer` uploads those batches and renders surfaces, edges, and an

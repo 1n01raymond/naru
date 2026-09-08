@@ -63,6 +63,26 @@ export type {
   PackageTransportPolicy,
 } from "./package-transport.js";
 export {
+  CacheStoragePackageStorage,
+  MemoryPersistentPackageStorage,
+  PersistentPackageCache,
+  defaultPersistentPackageCacheQuotaBytes,
+  openPersistentPackageCache,
+  persistentPackageCacheManifestSchema,
+  persistentPackageCacheSchema,
+  persistentPackageCacheStorageName,
+} from "./package-cache.js";
+export type {
+  PackageResourceIdentity,
+  PackageResourcePersistence,
+  PersistentPackageCacheEntry,
+  PersistentPackageCacheManifest,
+  PersistentPackageCacheOptions,
+  PersistentPackageCacheState,
+  PersistentPackageCacheStats,
+  PersistentPackageStorage,
+} from "./package-cache.js";
+export {
   decodeSpatialDemandIndex,
   querySpatialDemandIndex,
   SpatialDemandIndexError,

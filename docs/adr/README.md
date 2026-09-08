@@ -37,6 +37,7 @@ reverse. They explain context and trade-offs rather than only the final choice.
 | [0021](0021-staged-hierarchy-first-import.md) | Publish an import assembly tree per document, before geometry | Accepted |
 | [0022](0022-workspace-manifest.md) | Persist a non-authoritative workspace manifest keyed by source and package identity | Accepted |
 | [0023](0023-public-package-delivery-origin.md) | Serve public demo packages from a Cloudflare R2 delivery origin | Accepted |
+| [0024](0024-persistent-package-cache.md) | Keep verified package resources in a quota-bounded browser cache tier | Proposed |
 
 ## Phase 0 review
 
