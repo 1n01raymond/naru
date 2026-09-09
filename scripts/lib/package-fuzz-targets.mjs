@@ -66,7 +66,7 @@ function asArrayBuffer(bytes) {
  * defect rather than as the malformed input it came from.
  */
 function chunkSlice(document, chunkId, bytes) {
-  const chunks = document?.extras?.madi?.progressive?.targetChunks;
+  const chunks = document?.extras?.naru?.progressive?.targetChunks ?? document?.extras?.madi?.progressive?.targetChunks;
   if (!Array.isArray(chunks)) return bytes;
   const chunk = chunks.find(
     (entry) => entry !== null && typeof entry === "object" && entry.id === chunkId,

@@ -50,6 +50,7 @@ function coarseScene(): DecodedCompiledScene {
       binaryUri: "scene.bin",
       binaryByteLength: 1,
       targetChunks: [],
+      reducedChunks: [],
       entries: [],
       renderableOccurrences: 2,
       sharedMeshes: 2,

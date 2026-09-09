@@ -222,6 +222,26 @@ sixty5 packages in a headed browser: first coarse frame 4,408 -> 3,703 ms
 It stays off by default until `naru.package-hierarchy.1` leaves
 `experimental-not-interchange`.
 
+## Emit a reduced level
+
+`--reduced-lod <meters>` adds a third per-prototype level beside `target` and
+the coarse prototype AABB. Each surface is welded and simplified with
+meshoptimizer over the whole shape with unlocked borders, run twice so a
+non-deterministic result is discarded, and admitted only when the mesh-only
+checks from the [method comparison](../../artifacts/lod/method-comparison/README.md)
+pass against the prototype's own target mesh. A prototype the checks refuse
+keeps its target level and records why in `build-report.json` under
+`reducedLod` (`checks-failed`, `no-reduction`, `nondeterministic`, and the
+other retention reasons). Explicit edges are carried from the target level
+unchanged. The admitted payloads are packed as `reduced:NNNN:<prototype>`
+chunks after the target payloads and are declared in
+`extras.naru.progressive.reducedChunks` under `naru.progressive-package.1`;
+a package compiled without the flag keeps `extras.madi.progressive`
+unchanged. The option is off by default, is part of the compiled-cache key,
+and changes the package digest when it is on. See
+[ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md) and the
+[reduced-level record](../../artifacts/lod/reduced-level/README.md).
+
 The committed [engineering-scale qualification
 record](../../artifacts/ifc/engineering-baseline/README.md) uses this option
 together with compact JSON, a spatial index, and spatial-leaf payload order.

@@ -530,6 +530,10 @@ may be added later behind a reviewed unsafe/experimental capability.
 - direct WebGPU surface and explicit edge rendering;
 - fixed chunk layout with simple allocators;
 - manifest/hierarchy load followed by coarse and display chunks;
+- a decodable `reduced` level in packages compiled with `--reduced-lod`,
+  Range-fetched and priced by the same `batchResidencyCost` as a target chunk
+  and not yet selected for display
+  ([ADR-0025](adr/0025-shape-preserving-lod-representation.md));
 - Worker decode;
 - CPU coarse culling and prototype instancing;
 - object-ID click picking;

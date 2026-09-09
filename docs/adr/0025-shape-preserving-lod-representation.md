@@ -185,9 +185,40 @@ close no roadmap exit criterion are unit tests, not fresh-process records.
 | Gate | What must hold | State |
 |---|---|---|
 | 0 | Method and topology class settled on a project-owned fixture with predeclared checks | **Met**: [`artifacts/lod/method-comparison/`](../../artifacts/lod/method-comparison/README.md) |
-| 1 | Compiling `fixtures/step/lod-corpus.step` twice yields byte-identical packages under `naru.progressive-package.1`; `reduced` is emitted for the parts the record admits and withheld for `curved-shell` under the meshopt arm; the Khronos validator reports 0 errors; a committed validator pins the digests, per-prototype deviations, and level triangle counts | Open |
-| 2 | Unit tests cover projected-error hysteresis at both thresholds, selected-object pinning, section and `pickPoint` on a reduced level, edge-segment reuse, same-prototype eviction order, and unsupported-topology retention | Open |
+| 1 | Compiling `fixtures/step/lod-corpus.step` twice yields byte-identical packages under `naru.progressive-package.1`; `reduced` is emitted for the parts the record admits and withheld for `curved-shell` under the meshopt arm; the Khronos validator reports 0 errors; a committed validator pins the digests, per-prototype deviations, and level triangle counts | **Met** (2026-09-08): [`artifacts/lod/reduced-level/`](../../artifacts/lod/reduced-level/README.md), `pnpm lod:reduced:check` |
+| 2 | Unit tests cover projected-error hysteresis at both thresholds, selected-object pinning, section and `pickPoint` on a reduced level, edge-segment reuse, same-prototype eviction order, and unsupported-topology retention | Partial: unsupported-topology retention, determinism retention, edge reuse, and loader decoding of a reduced chunk are covered by [`reduced-lod.test.ts`](../../packages/compiler/test/reduced-lod.test.ts) and [`compiled-gltf.test.ts`](../../packages/runtime-webgpu/test/compiled-gltf.test.ts); hysteresis, pinning, section/`pickPoint`, and eviction order wait for the selection slice |
 | 3 | One headed record on the corpus: at two predeclared camera distances, the frame drawn with `reduced` admitted agrees with a `target`-only reference frame on at least 99% of viewport pixels within 8/255 per channel, and picked object ids on a predeclared grid are identical; recorded in Chrome and Firefox, divergences visible in the record | Open |
+
+### Implementation notes (2026-09-08, compiler and loader slice)
+
+The first slice landed the representation, not the selection. Where it
+narrows the Decision above, the narrowing is deliberate and stated here:
+
+- The level is opt-in: `--reduced-lod <meters>` (`reducedLodMeters`, part of
+  the compiled-cache key). Only a package compiled with it carries
+  `extras.naru.progressive` (`naru.progressive-package.1`); every other
+  package keeps `extras.madi.progressive`, so no committed digest moved. The
+  loader accepts both blocks, prefers `naru`, and fails closed on any other
+  `schemaVersion`.
+- One admission arm runs in the compiler: meshoptimizer
+  `simplifyWithAttributes`, whole shape, unlocked boundary, absolute error =
+  the declared deviation, executed twice so a non-deterministic result
+  retains `target`. The checks are the mesh-only subset of the #126 set,
+  measured against the prototype's own `target` (sampled two-sided p95 and
+  max, edge boundary delta and alignment, section, silhouette ratio, hole
+  count, identity conflicts). Analytic-face classification and OCCT
+  retessellation stay in the offline method-comparison record; a prototype
+  the meshopt arm cannot admit retains `target` with a recorded reason
+  (`checks-failed`, `no-reduction`, `nondeterministic`, `no-explicit-edges`,
+  `multiple-material-groups`, ...) in `build-report.json` `reducedLod`.
+- Explicit edge segments are carried from `target` with identical content but
+  re-encoded into the reduced payload, so a reduced chunk is self-contained
+  for Range delivery; the reduced surface is welded on exact position and
+  normal so it is never larger than its target.
+- The reduced chunks follow the target payloads in `scene.bin`, are declared
+  in `reducedChunks`, and are priced by the unchanged `batchResidencyCost`.
+  The Studio does not select them yet; that switch, with its hysteresis and
+  pinning tests and the gate-3 record, is the next slice.
 
 Out of scope for acceptance: any sixty5 or Digital Hub number. A real-large
 measurement, if ever taken, is its own record with its own predeclared

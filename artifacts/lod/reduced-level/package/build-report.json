@@ -1,0 +1,120 @@
+{
+  "schemaVersion": "madi.phase1.compiler-report.1",
+  "profile": "madi.experimental.gltf.1",
+  "status": "experimental-not-interchange",
+  "compiler": {
+    "name": "@madi/compiler",
+    "version": "0.0.0",
+    "generator": "MADI compiler 0.0.0 / experimental glTF profile 1"
+  },
+  "options": {
+    "binaryUri": "scene.bin",
+    "coarseBinaryUri": "coarse.bin",
+    "coordinateSystem": "right-handed-y-up-meters",
+    "geometryEncoding": "gltf-f32",
+    "progressiveRepresentation": "prototype-aabb-reduced-v1",
+    "reducedLod": {
+      "method": "meshoptimizer-whole-shape-unlocked",
+      "maxDeviationMeters": 0.001
+    },
+    "targetChunking": "prototype-range-v1"
+  },
+  "source": {
+    "sceneId": "scene:occt:02c78ff73b23eb0c",
+    "revisionId": "revision:occt:02c78ff73b23eb0c:14b35fda",
+    "sourceDigest": "sha256:02c78ff73b23eb0ceab0c73cf0af43a75bdf1877db0d2425131b30766450129c",
+    "adapter": "madi-occt-xde-evidence 0.1.0",
+    "optionsDigest": "sha256:14b35fda584ddfbfe5614edd5a32be03938610e8b3ffbd51acdc8c8cc9df9abd"
+  },
+  "output": {
+    "packageDigest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+    "resources": [
+      {
+        "path": "scene.gltf",
+        "mediaType": "model/gltf+json",
+        "bytes": 101850,
+        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+      },
+      {
+        "path": "scene.bin",
+        "mediaType": "application/octet-stream",
+        "bytes": 578988,
+        "sha256": "605a834d17258bf2bbd65e8d8dd157c149653ff4c6c00b67814825b88708affb"
+      },
+      {
+        "path": "coarse.bin",
+        "mediaType": "application/octet-stream",
+        "bytes": 3648,
+        "sha256": "4ed33c1be1ddeea9ffcdbe38155b054f2a2fe63b6bbfcb7703799df496cb3cfa"
+      }
+    ]
+  },
+  "counts": {
+    "prototypeCount": 5,
+    "compiledPrototypeCount": 4,
+    "occurrenceCount": 5,
+    "renderableOccurrenceCount": 4,
+    "gltfNodeCount": 6,
+    "gltfMeshCount": 10,
+    "materialCount": 4,
+    "triangleCount": 6147,
+    "edgeSegmentCount": 217,
+    "targetChunkCount": 4,
+    "reducedChunkCount": 2,
+    "reducedPrototypeCount": 2,
+    "reducedTriangleCount": 472
+  },
+  "reducedLod": [
+    {
+      "prototypeId": "prototype:part:curved-shell",
+      "outcome": "retained",
+      "reason": "checks-failed",
+      "inputTriangles": 3623,
+      "outputTriangles": 0,
+      "sampledTwoSidedP95Meters": 0.0010017025330849821,
+      "sampledTwoSidedMaxMeters": 0.0014526307819412987
+    },
+    {
+      "prototypeId": "prototype:part:fillet-bracket",
+      "outcome": "reduced",
+      "inputTriangles": 784,
+      "outputTriangles": 162,
+      "sampledTwoSidedP95Meters": 0.00001676552849105298,
+      "sampledTwoSidedMaxMeters": 0.00041477252029056757
+    },
+    {
+      "prototypeId": "prototype:part:planar-control",
+      "outcome": "retained",
+      "reason": "no-reduction",
+      "inputTriangles": 28,
+      "outputTriangles": 0,
+      "sampledTwoSidedP95Meters": 3.552713678800501e-18,
+      "sampledTwoSidedMaxMeters": 1.2631196225257117e-17
+    },
+    {
+      "prototypeId": "prototype:part:thin-plate-holes",
+      "outcome": "reduced",
+      "inputTriangles": 1712,
+      "outputTriangles": 310,
+      "sampledTwoSidedP95Meters": 6.019202908607637e-16,
+      "sampledTwoSidedMaxMeters": 0.0005947672429085638
+    }
+  ],
+  "prototypeReuse": [],
+  "diagnostics": {
+    "counts": {
+      "info": 1,
+      "warning": 0,
+      "error": 0
+    },
+    "codes": [
+      "PHASE0_OCCT_PYTHON_BINDING"
+    ]
+  },
+  "limitations": [
+    "This is an experimental glTF profile, not a MADI interchange format.",
+    "The coarse representation is a prototype AABB; the reduced level is a declared-error shape-preserving LOD emitted only for prototypes that pass the compiler's mesh-only checks, and prototypes it retains draw their target level.",
+    "Local geometry and transform linear components are f32; translations that exceed the 1e-8 metre f32 error budget retain JavaScript number precision for camera-relative rendering.",
+    "MADI source mapping uses glTF extras until an interoperable extension is justified."
+  ]
+}

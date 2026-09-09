@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "naru.reduced-lod-evidence.1",
+  "mode": "fresh-process-double-compile-reduced-level",
+  "recordedAt": "2026-09-08T13:39:59.737Z",
+  "adr": "docs/adr/0025-shape-preserving-lod-representation.md",
+  "source": {
+    "path": "fixtures/step/lod-corpus.step",
+    "bytes": 114233,
+    "sha256": "02c78ff73b23eb0ceab0c73cf0af43a75bdf1877db0d2425131b30766450129c"
+  },
+  "options": {
+    "reducedLod": {
+      "method": "meshoptimizer-whole-shape-unlocked",
+      "maxDeviationMeters": 0.001
+    },
+    "progressiveRepresentation": "prototype-aabb-reduced-v1"
+  },
+  "toolchain": {
+    "compiler": {
+      "name": "@madi/compiler",
+      "version": "0.0.0",
+      "generator": "MADI compiler 0.0.0 / experimental glTF profile 1"
+    },
+    "meshoptimizer": "1.2.0",
+    "gltfValidator": "2.0.0-dev.3.10",
+    "node": "v22.14.0",
+    "platform": "win32"
+  },
+  "determinism": {
+    "repeats": 2,
+    "identical": true,
+    "files": {
+      "scene.gltf": {
+        "bytes": 101850,
+        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+      },
+      "scene.bin": {
+        "bytes": 578988,
+        "sha256": "605a834d17258bf2bbd65e8d8dd157c149653ff4c6c00b67814825b88708affb"
+      },
+      "coarse.bin": {
+        "bytes": 3648,
+        "sha256": "4ed33c1be1ddeea9ffcdbe38155b054f2a2fe63b6bbfcb7703799df496cb3cfa"
+      },
+      "build-report.json": {
+        "bytes": 4116,
+        "sha256": "960a86661763c02466f858e3db76888f9ce652cea6baa5aeb12884acb917c695"
+      },
+      "adapter-report.json": {
+        "bytes": 1501,
+        "sha256": "cee2ce28e76650997e746d2809d3f1904f2e52fff1e5bf5e6da508b14610eed2"
+      }
+    }
+  },
+  "packageDigest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+  "gltfValidation": {
+    "errors": 0,
+    "warnings": 0
+  },
+  "progressive": {
+    "schemaVersion": "naru.progressive-package.1",
+    "strategy": "prototype-aabb-reduced-v1",
+    "targetChunks": [
+      {
+        "id": "target:0000:prototype:part:curved-shell",
+        "prototypeId": "prototype:part:curved-shell",
+        "byteLength": 319900,
+        "triangles": 3623
+      },
+      {
+        "id": "target:0001:prototype:part:thin-plate-holes",
+        "prototypeId": "prototype:part:thin-plate-holes",
+        "byteLength": 153208,
+        "triangles": 1712
+      },
+      {
+        "id": "target:0002:prototype:part:fillet-bracket",
+        "prototypeId": "prototype:part:fillet-bracket",
+        "byteLength": 70892,
+        "triangles": 784
+      },
+      {
+        "id": "target:0003:prototype:part:planar-control",
+        "prototypeId": "prototype:part:planar-control",
+        "byteLength": 3352,
+        "triangles": 28
+      }
+    ],
+    "reducedChunks": [
+      {
+        "id": "reduced:0000:prototype:part:thin-plate-holes",
+        "prototypeId": "prototype:part:thin-plate-holes",
+        "byteLength": 19992,
+        "triangles": 310
+      },
+      {
+        "id": "reduced:0001:prototype:part:fillet-bracket",
+        "prototypeId": "prototype:part:fillet-bracket",
+        "byteLength": 11644,
+        "triangles": 162
+      }
+    ]
+  },
+  "counts": {
+    "prototypeCount": 5,
+    "compiledPrototypeCount": 4,
+    "occurrenceCount": 5,
+    "renderableOccurrenceCount": 4,
+    "gltfNodeCount": 6,
+    "gltfMeshCount": 10,
+    "materialCount": 4,
+    "triangleCount": 6147,
+    "edgeSegmentCount": 217,
+    "targetChunkCount": 4,
+    "reducedChunkCount": 2,
+    "reducedPrototypeCount": 2,
+    "reducedTriangleCount": 472
+  },
+  "prototypes": [
+    {
+      "prototypeId": "prototype:part:curved-shell",
+      "outcome": "retained",
+      "reason": "checks-failed",
+      "inputTriangles": 3623,
+      "outputTriangles": 0,
+      "sampledTwoSidedP95Meters": 0.0010017025330849821,
+      "sampledTwoSidedMaxMeters": 0.0014526307819412987
+    },
+    {
+      "prototypeId": "prototype:part:fillet-bracket",
+      "outcome": "reduced",
+      "inputTriangles": 784,
+      "outputTriangles": 162,
+      "sampledTwoSidedP95Meters": 0.00001676552849105298,
+      "sampledTwoSidedMaxMeters": 0.00041477252029056757
+    },
+    {
+      "prototypeId": "prototype:part:planar-control",
+      "outcome": "retained",
+      "reason": "no-reduction",
+      "inputTriangles": 28,
+      "outputTriangles": 0,
+      "sampledTwoSidedP95Meters": 3.552713678800501e-18,
+      "sampledTwoSidedMaxMeters": 1.2631196225257117e-17
+    },
+    {
+      "prototypeId": "prototype:part:thin-plate-holes",
+      "outcome": "reduced",
+      "inputTriangles": 1712,
+      "outputTriangles": 310,
+      "sampledTwoSidedP95Meters": 6.019202908607637e-16,
+      "sampledTwoSidedMaxMeters": 0.0005947672429085638
+    }
+  ],
+  "elapsedSeconds": 5.2
+}

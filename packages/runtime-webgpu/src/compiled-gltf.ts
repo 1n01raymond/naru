@@ -16,6 +16,8 @@ import type { DecodedPackageHierarchy } from "./package-hierarchy.js";
 import { supportedSpatialDemandIndexSchema } from "./spatial-index.js";
 
 const supportedProfile = "madi.experimental.gltf.1";
+/** `extras.naru.progressive` schema a reduced-level package declares (ADR-0025). */
+export const supportedProgressivePackageSchema = "naru.progressive-package.1";
 const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
 export type JsonRecord = Record<string, unknown>;
@@ -153,6 +155,8 @@ export interface CompiledHierarchy {
   readonly relocatedHierarchy?: CompiledHierarchyRef;
   readonly spatialIndex?: CompiledSpatialIndexRef;
   readonly targetChunks: readonly CompiledTargetChunk[];
+  /** Declared-error reduced level (ADR-0025); empty for legacy packages. */
+  readonly reducedChunks: readonly CompiledTargetChunk[];
   readonly entries: readonly CompiledHierarchyEntry[];
   readonly renderableOccurrences: number;
   readonly sharedMeshes: number;
@@ -198,7 +202,7 @@ export interface DecodedCompiledScene {
   };
 }
 
-export type GeometryRepresentation = "target" | "coarse";
+export type GeometryRepresentation = "target" | "coarse" | "reduced";
 
 export interface DecodeCompiledGltfOptions {
   readonly representation?: GeometryRepresentation;
@@ -571,32 +575,58 @@ function traverseActiveNodes(
   }
 }
 
-function targetChunksFor(
-  progressive: JsonRecord | undefined,
+interface ProgressiveExtras {
+  readonly record: JsonRecord;
+  readonly path: "extras.naru.progressive" | "extras.madi.progressive";
+}
+
+/**
+ * A package declares its progressive layout under `extras.naru.progressive`
+ * (`naru.progressive-package.1`, ADR-0025) or, for the frozen legacy family,
+ * `extras.madi.progressive` (ADR-0007). A `naru` block with any other schema
+ * version fails closed; the legacy block is never consulted when it exists.
+ */
+function progressiveExtrasFor(document: CompiledGltfDocument): ProgressiveExtras | undefined {
+  const naru = recordAt(recordAt(document.extras, "naru"), "progressive");
+  if (naru) {
+    if (naru.schemaVersion !== supportedProgressivePackageSchema) {
+      throw new CompiledGltfError(
+        "INVALID_GLTF",
+        `extras.naru.progressive.schemaVersion must be ${supportedProgressivePackageSchema}.`,
+      );
+    }
+    return { record: naru, path: "extras.naru.progressive" };
+  }
+  const madi = recordAt(recordAt(document.extras, "madi"), "progressive");
+  return madi ? { record: madi, path: "extras.madi.progressive" } : undefined;
+}
+
+function chunksFor(
+  progressive: ProgressiveExtras | undefined,
+  key: "targetChunks" | "reducedChunks",
   document: CompiledGltfDocument,
   targetBufferIndex: number,
   limits: CompiledPackageLimits,
 ): readonly CompiledTargetChunk[] {
-  if (progressive?.targetChunks === undefined) return [];
-  if (!Array.isArray(progressive.targetChunks)) {
-    throw new CompiledGltfError(
-      "INVALID_GLTF",
-      "extras.madi.progressive.targetChunks must be an array.",
-    );
+  const level = key === "targetChunks" ? "target" : "reduced";
+  const declared = progressive?.record[key];
+  if (progressive === undefined || declared === undefined) return [];
+  if (!Array.isArray(declared)) {
+    throw new CompiledGltfError("INVALID_GLTF", `${progressive.path}.${key} must be an array.`);
   }
-  assertWithinLimit(progressive.targetChunks.length, limits.targetChunks, "target chunks");
+  assertWithinLimit(declared.length, limits.targetChunks, `${level} chunks`);
   const targetBuffer = document.buffers[targetBufferIndex];
   if (!targetBuffer) throw new CompiledGltfError("INVALID_GLTF", "Missing target buffer.");
   const ids = new Set<string>();
   const claimedMeshes = new Set<number>();
-  const chunks = progressive.targetChunks.map((value, chunkIndex) => {
+  const chunks = declared.map((value, chunkIndex) => {
     if (!isRecord(value)) {
       throw new CompiledGltfError(
         "INVALID_GLTF",
-        `extras.madi.progressive.targetChunks[${chunkIndex}] must be an object.`,
+        `${progressive.path}.${key}[${chunkIndex}] must be an object.`,
       );
     }
-    const label = `extras.madi.progressive.targetChunks[${chunkIndex}]`;
+    const label = `${progressive.path}.${key}[${chunkIndex}]`;
     if (typeof value.id !== "string" || value.id.trim() === "" || ids.has(value.id)) {
       throw new CompiledGltfError("INVALID_GLTF", `${label}.id must be unique and non-empty.`);
     }
@@ -638,7 +668,7 @@ function targetChunksFor(
       if (claimedMeshes.has(result)) {
         throw new CompiledGltfError(
           "INVALID_GLTF",
-          `meshes[${result}] belongs to more than one target chunk.`,
+          `meshes[${result}] belongs to more than one ${level} chunk.`,
         );
       }
       claimedMeshes.add(result);
@@ -688,9 +718,9 @@ function propertiesRefFor(rootMadi: JsonRecord): CompiledPropertiesRef | undefin
   };
 }
 
-function spatialIndexRefFor(progressive: JsonRecord | undefined): CompiledSpatialIndexRef | undefined {
-  if (progressive?.spatialIndex === undefined) return undefined;
-  const spatialIndex = recordAt(progressive, "spatialIndex");
+function spatialIndexRefFor(progressive: ProgressiveExtras | undefined): CompiledSpatialIndexRef | undefined {
+  if (progressive?.record.spatialIndex === undefined) return undefined;
+  const spatialIndex = recordAt(progressive.record, "spatialIndex");
   if (
     !spatialIndex ||
     spatialIndex.schemaVersion !== supportedSpatialDemandIndexSchema ||
@@ -703,7 +733,7 @@ function spatialIndexRefFor(progressive: JsonRecord | undefined): CompiledSpatia
   ) {
     throw new CompiledGltfError(
       "INVALID_GLTF",
-      `extras.madi.progressive.spatialIndex must use ${supportedSpatialDemandIndexSchema} and carry uri, byteLength, and sha256.`,
+      `${progressive.path}.spatialIndex must use ${supportedSpatialDemandIndexSchema} and carry uri, byteLength, and sha256.`,
     );
   }
   return {
@@ -848,14 +878,23 @@ export function inspectCompiledHierarchy(
   const limits = resolveCompiledPackageLimits(options.limits);
   const document = parseCompiledGltf(value, options);
   const rootMadi = recordAt(document.extras, "madi") ?? {};
-  const progressive = recordAt(rootMadi, "progressive");
+  const progressive = progressiveExtrasFor(document);
   const targetBufferIndex = progressive
-    ? finiteInteger(progressive.targetBuffer, "extras.madi.progressive.targetBuffer", document.buffers.length)
+    ? finiteInteger(
+        progressive.record.targetBuffer,
+        `${progressive.path}.targetBuffer`,
+        document.buffers.length,
+      )
     : 0;
   const coarseBufferIndex = progressive
-    ? finiteInteger(progressive.coarseBuffer, "extras.madi.progressive.coarseBuffer", document.buffers.length)
+    ? finiteInteger(
+        progressive.record.coarseBuffer,
+        `${progressive.path}.coarseBuffer`,
+        document.buffers.length,
+      )
     : undefined;
-  const targetChunks = targetChunksFor(progressive, document, targetBufferIndex, limits);
+  const targetChunks = chunksFor(progressive, "targetChunks", document, targetBufferIndex, limits);
+  const reducedChunks = chunksFor(progressive, "reducedChunks", document, targetBufferIndex, limits);
   const derivation = nodeIdentityDerivationFrom(rootMadi);
   const relocatedHierarchy = hierarchyRefFor(rootMadi);
   const documentEntries: CompiledHierarchyEntry[] = [];
@@ -950,6 +989,7 @@ export function inspectCompiledHierarchy(
       ...(relocatedHierarchy ? { relocatedHierarchy } : {}),
       ...(spatialIndex ? { spatialIndex } : {}),
       targetChunks,
+      reducedChunks,
       entries,
       // Relocation moves only the nodes that draw nothing, so the document
       // always holds every renderable occurrence -- including when the tree
@@ -1208,6 +1248,7 @@ interface PreparedRenderableNode {
   readonly nodeIndex: number;
   readonly targetMeshIndex: number;
   readonly coarseMeshIndex?: number;
+  readonly reducedMeshIndex?: number;
   readonly worldTransform: Float64Array;
   readonly label: string;
   readonly occurrenceId: string;
@@ -1227,6 +1268,11 @@ interface PreparedCompiledGltfState {
     readonly PreparedRenderableNode[]
   >;
   readonly targetChunksById: ReadonlyMap<string, CompiledTargetChunk>;
+  readonly renderableNodesByReducedChunk: ReadonlyMap<
+    string,
+    readonly PreparedRenderableNode[]
+  >;
+  readonly reducedChunksById: ReadonlyMap<string, CompiledTargetChunk>;
 }
 
 interface SelectedMeshPrimitives {
@@ -1344,20 +1390,22 @@ function measureMeshBatches(
   return cost;
 }
 
-/** Residency cost of every target chunk, known before any range is fetched. */
-function measureTargetChunks(
+/**
+ * Residency cost of every chunk of one level, known before any range is
+ * fetched. Reduced chunks are priced by the same formula as target chunks.
+ */
+function measureChunks(
   document: CompiledGltfDocument,
-  hierarchy: CompiledHierarchy,
-  renderableNodesByTargetChunk: ReadonlyMap<string, readonly PreparedRenderableNode[]>,
-): ReadonlyMap<string, ResidencyCost> {
-  const costs = new Map<string, ResidencyCost>();
-  for (const chunk of hierarchy.targetChunks) {
+  chunks: readonly CompiledTargetChunk[],
+  renderableNodesByChunk: ReadonlyMap<string, readonly PreparedRenderableNode[]>,
+  meshIndexOf: (node: PreparedRenderableNode) => number,
+  costs: Map<string, ResidencyCost>,
+): void {
+  for (const chunk of chunks) {
     const occurrencesByMesh = new Map<number, number>();
-    for (const node of renderableNodesByTargetChunk.get(chunk.id) ?? []) {
-      occurrencesByMesh.set(
-        node.targetMeshIndex,
-        (occurrencesByMesh.get(node.targetMeshIndex) ?? 0) + 1,
-      );
+    for (const node of renderableNodesByChunk.get(chunk.id) ?? []) {
+      const meshIndex = meshIndexOf(node);
+      occurrencesByMesh.set(meshIndex, (occurrencesByMesh.get(meshIndex) ?? 0) + 1);
     }
     let cost: ResidencyCost = { decodedBytes: 0, gpuBytes: 0 };
     for (const [meshIndex, instanceCount] of occurrencesByMesh) {
@@ -1371,7 +1419,6 @@ function measureTargetChunks(
     }
     costs.set(chunk.id, cost);
   }
-  return costs;
 }
 
 function decodeMesh(
@@ -1541,6 +1588,15 @@ function prepareCompiledGltfState(
                 document.meshes.length,
               ),
             }),
+        ...(nodeMadi.reducedMesh === undefined
+          ? {}
+          : {
+              reducedMeshIndex: finiteInteger(
+                nodeMadi.reducedMesh,
+                `nodes[${nodeIndex}].extras.madi.reducedMesh`,
+                document.meshes.length,
+              ),
+            }),
         worldTransform,
         label: node.name ?? occurrenceId,
         occurrenceId,
@@ -1560,33 +1616,69 @@ function prepareCompiledGltfState(
 
   for (const root of activeRoots(document)) traverse(root, identityMatrix, new Set());
 
-  const renderableNodesByTargetChunk = new Map<
-    string,
-    readonly PreparedRenderableNode[]
-  >();
-  const targetChunksById = new Map<string, CompiledTargetChunk>();
-  for (const chunk of hierarchy.targetChunks) {
-    targetChunksById.set(chunk.id, chunk);
-    renderableNodesByTargetChunk.set(
-      chunk.id,
-      chunk.meshIndexes
-        .flatMap((meshIndex) => renderableNodesByTargetMesh.get(meshIndex) ?? [])
-        .sort((left, right) => left.ordinal - right.ordinal),
-    );
+  const indexChunks = (
+    chunks: readonly CompiledTargetChunk[],
+    nodesByMesh: ReadonlyMap<number, readonly PreparedRenderableNode[]>,
+  ) => {
+    const nodesByChunk = new Map<string, readonly PreparedRenderableNode[]>();
+    const chunksById = new Map<string, CompiledTargetChunk>();
+    for (const chunk of chunks) {
+      chunksById.set(chunk.id, chunk);
+      nodesByChunk.set(
+        chunk.id,
+        chunk.meshIndexes
+          .flatMap((meshIndex) => nodesByMesh.get(meshIndex) ?? [])
+          .sort((left, right) => left.ordinal - right.ordinal),
+      );
+    }
+    return { nodesByChunk, chunksById };
+  };
+  const target = indexChunks(hierarchy.targetChunks, renderableNodesByTargetMesh);
+  // Reduced chunks list reduced mesh indexes; nodes reach them through
+  // `extras.madi.reducedMesh`, so index the nodes by that mesh first.
+  const renderableNodesByReducedMesh = new Map<number, PreparedRenderableNode[]>();
+  for (const prepared of renderableNodes) {
+    if (prepared.reducedMeshIndex === undefined) continue;
+    const meshNodes = renderableNodesByReducedMesh.get(prepared.reducedMeshIndex) ?? [];
+    meshNodes.push(prepared);
+    renderableNodesByReducedMesh.set(prepared.reducedMeshIndex, meshNodes);
   }
+  const reduced = indexChunks(hierarchy.reducedChunks, renderableNodesByReducedMesh);
+  for (const chunkId of reduced.chunksById.keys()) {
+    if (target.chunksById.has(chunkId)) {
+      throw new CompiledGltfError(
+        "INVALID_GLTF",
+        `Chunk ${chunkId} is declared as both a target and a reduced chunk.`,
+      );
+    }
+  }
+
+  const targetChunkResidencyCosts = new Map<string, ResidencyCost>();
+  measureChunks(
+    document,
+    hierarchy.targetChunks,
+    target.nodesByChunk,
+    (node) => node.targetMeshIndex,
+    targetChunkResidencyCosts,
+  );
+  measureChunks(
+    document,
+    hierarchy.reducedChunks,
+    reduced.nodesByChunk,
+    (node) => node.reducedMeshIndex ?? node.targetMeshIndex,
+    targetChunkResidencyCosts,
+  );
 
   return {
     document,
     hierarchy,
-    targetChunkResidencyCosts: measureTargetChunks(
-      document,
-      hierarchy,
-      renderableNodesByTargetChunk,
-    ),
+    targetChunkResidencyCosts,
     activeNodeCount,
     renderableNodes,
-    renderableNodesByTargetChunk,
-    targetChunksById,
+    renderableNodesByTargetChunk: target.nodesByChunk,
+    targetChunksById: target.chunksById,
+    renderableNodesByReducedChunk: reduced.nodesByChunk,
+    reducedChunksById: reduced.chunksById,
   };
 }
 
@@ -1623,40 +1715,50 @@ function decodePreparedCompiledGltf(
   options: DecodeCompiledGltfOptions,
 ): DecodedCompiledScene {
   const { document, hierarchy } = state;
-  const representation = options.representation ?? "target";
-  if (representation === "coarse" && options.targetChunkId !== undefined) {
+  if ((options.representation ?? "target") === "coarse" && options.targetChunkId !== undefined) {
     throw new CompiledGltfError(
       "UNSUPPORTED_GEOMETRY",
       "A target chunk cannot be decoded as a coarse representation.",
     );
   }
-  const targetChunk = options.targetChunkId === undefined
+  // A chunk id names its level: a reduced chunk always decodes the reduced
+  // level, whatever `representation` the caller passed.
+  const reducedChunk = options.targetChunkId === undefined
+    ? undefined
+    : state.reducedChunksById.get(options.targetChunkId);
+  const targetChunk = options.targetChunkId === undefined || reducedChunk
     ? undefined
     : state.targetChunksById.get(options.targetChunkId);
-  if (options.targetChunkId !== undefined && !targetChunk) {
+  if (options.targetChunkId !== undefined && !targetChunk && !reducedChunk) {
     throw new CompiledGltfError(
       "INVALID_GLTF",
       `Unknown target chunk ${options.targetChunkId}.`,
     );
   }
-  const progressive = recordAt(recordAt(document.extras, "madi"), "progressive");
-  const bufferIndex = targetChunk?.buffer ?? (representation === "coarse"
+  const representation: GeometryRepresentation = reducedChunk
+    ? "reduced"
+    : options.representation ?? "target";
+  const chunk = targetChunk ?? reducedChunk;
+  const progressive = progressiveExtrasFor(document);
+  const bufferIndex = chunk?.buffer ?? (representation === "coarse"
     ? finiteInteger(
-        progressive?.coarseBuffer,
-        "extras.madi.progressive.coarseBuffer",
+        progressive?.record.coarseBuffer,
+        `${progressive?.path ?? "extras.madi.progressive"}.coarseBuffer`,
         document.buffers.length,
       )
     : progressive
       ? finiteInteger(
-          progressive.targetBuffer,
-          "extras.madi.progressive.targetBuffer",
+          progressive.record.targetBuffer,
+          `${progressive.path}.targetBuffer`,
           document.buffers.length,
         )
       : 0);
-  const accessors = new BinaryAccessors(document, binary, bufferIndex, targetChunk);
+  const accessors = new BinaryAccessors(document, binary, bufferIndex, chunk);
   const selectedRenderableNodes = targetChunk
     ? state.renderableNodesByTargetChunk.get(targetChunk.id) ?? []
-    : state.renderableNodes;
+    : reducedChunk
+      ? state.renderableNodesByReducedChunk.get(reducedChunk.id) ?? []
+      : state.renderableNodes;
   const meshGeometry = new Map<number, DecodedMeshGeometry>();
   const instances = new Map<
     string,
@@ -1684,7 +1786,11 @@ function decodePreparedCompiledGltf(
           `nodes[${nodeIndex}].extras.madi.coarseMesh`,
           document.meshes.length,
         )
-      : targetMeshIndex;
+      : representation === "reduced"
+        ? // A whole-buffer reduced decode falls back to the target mesh for
+          // nodes whose prototype retained its target (ADR-0025).
+          prepared.reducedMeshIndex ?? targetMeshIndex
+        : targetMeshIndex;
     const mesh = document.meshes[meshIndex];
     if (!mesh) throw new CompiledGltfError("INVALID_GLTF", `Missing meshes[${meshIndex}].`);
     const geometry = meshGeometry.get(meshIndex) ?? decodeMesh(document, accessors, mesh, meshIndex);

@@ -26,6 +26,7 @@ function decodedScene(surfaceVertices = new Float32Array()): DecodedCompiledScen
       binaryUri: "scene.bin",
       binaryByteLength: 0,
       targetChunks: [],
+      reducedChunks: [],
       entries: [],
       renderableOccurrences: 0,
       sharedMeshes: 0,

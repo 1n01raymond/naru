@@ -1,4 +1,9 @@
 import { performance } from "node:perf_hooks";
+import { buildReducedRepresentation, reducedLodProtocol } from "./lod/reduce.js";
+import type { ReducedLodPrototypeRecord } from "./types.js";
+
+/** Schema identifier of the `extras.naru.progressive` block (ADR-0025). */
+export const progressivePackageSchema = "naru.progressive-package.1";
 import { createHash } from "node:crypto";
 
 import {
@@ -714,7 +719,7 @@ function buildPropertySidecar(
 }
 
 /** Compiler sub-stages a `CompileStageObserver` receives, with wall-clock milliseconds. */
-export type CompileStage = "validateScene" | "encodeGeometry" | "measureDocument";
+export type CompileStage = "validateScene" | "encodeGeometry" | "reduceGeometry" | "measureDocument";
 
 /**
  * Receives the duration of each named sub-stage of `compileSceneToGltf`. It is
@@ -765,6 +770,13 @@ export function compileSceneToGltf(
     (options.spatialIndex !== true || options.targetChunkByteBudget === undefined)
   ) {
     throw new TypeError("spatialPayloadOrder requires spatialIndex and targetChunkByteBudget.");
+  }
+  const reducedLod = options.reducedLod;
+  if (reducedLod !== undefined) {
+    if (!coarseBounds) throw new TypeError("reducedLod requires coarseBounds.");
+    if (!Number.isFinite(reducedLod.maxDeviationMeters) || reducedLod.maxDeviationMeters <= 0) {
+      throw new TypeError("reducedLod.maxDeviationMeters must be a positive finite number.");
+    }
   }
   const spatialBinaryUri = options.spatialBinaryUri ?? "spatial.bin";
   if (
@@ -880,6 +892,48 @@ export function compileSceneToGltf(
     edgeSegmentCount += compiled.edges;
   }
   observeStage?.("encodeGeometry", performance.now() - encodeStarted);
+  // The reduced level is placed after every target payload so target ranges
+  // stay contiguous; each prototype is admitted only by its own checks.
+  const reducedGeometryByPrototype = new Map<string, GeometryResource>();
+  const reducedRangesByPrototype = new Map<string, TargetGeometryRange>();
+  const reducedLodRecords: ReducedLodPrototypeRecord[] = [];
+  let reducedTriangleCount = 0;
+  if (reducedLod !== undefined) {
+    const reduceStarted = stageStarted();
+    for (const prototype of payloadPrototypes) {
+      const representation = representationFor(prototype, representations);
+      if (!representation) continue;
+      const outcome = buildReducedRepresentation(
+        representation,
+        reducedLod.maxDeviationMeters,
+        scaleToMeters,
+      );
+      const meters = (name: string): number | null => {
+        const check = outcome.report?.checks.find((entry) => entry.name === name);
+        return check === undefined || check.value === null ? null : check.value * scaleToMeters;
+      };
+      reducedLodRecords.push({
+        prototypeId: prototype.id,
+        outcome: outcome.outcome,
+        ...(outcome.outcome === "retained" ? { reason: outcome.reason } : {}),
+        inputTriangles: outcome.report?.inputTriangles ?? (representation.surface?.indices.length ?? 0) / 3,
+        outputTriangles: outcome.outcome === "reduced" ? outcome.report.outputTriangles : 0,
+        sampledTwoSidedP95Meters: meters("sampled-two-sided-p95"),
+        sampledTwoSidedMaxMeters: meters("sampled-two-sided-max"),
+      });
+      if (outcome.outcome !== "reduced") continue;
+      const byteOffset = builder.byteLength;
+      const compiled = appendGeometry(builder, prototype, outcome.representation, scaleToMeters);
+      reducedGeometryByPrototype.set(prototype.id, compiled.resource);
+      reducedRangesByPrototype.set(prototype.id, {
+        prototypeId: prototype.id,
+        byteOffset,
+        byteLength: builder.byteLength - byteOffset,
+      });
+      reducedTriangleCount += compiled.triangles;
+    }
+    observeStage?.("reduceGeometry", performance.now() - reduceStarted);
+  }
   if (coarseBuilder && options.spatialPayloadOrder === true) {
     for (const prototype of prototypes) {
       const representation = representationFor(prototype, representations);
@@ -911,8 +965,13 @@ export function compileSceneToGltf(
   const meshVariants = new Map<string, number>();
   const coarseMeshVariants = new Map<string, number>();
   const targetMeshesByPrototype = new Map<string, Set<number>>();
+  const reducedMeshesByPrototype = new Map<string, Set<number>>();
 
-  function meshFor(resource: GeometryResource, overrideMaterialId?: MaterialId): number {
+  function meshFor(
+    resource: GeometryResource,
+    overrideMaterialId?: MaterialId,
+    level: "target" | "reduced" = "target",
+  ): number {
     const variantKey = `${resource.representation.id}\u0000${overrideMaterialId ?? ""}`;
     const existing = meshVariants.get(variantKey);
     if (existing !== undefined) return existing;
@@ -984,9 +1043,10 @@ export function compileSceneToGltf(
       },
     });
     meshVariants.set(variantKey, meshIndex);
-    const prototypeMeshes = targetMeshesByPrototype.get(resource.prototype.id) ?? new Set();
+    const meshesByPrototype = level === "reduced" ? reducedMeshesByPrototype : targetMeshesByPrototype;
+    const prototypeMeshes = meshesByPrototype.get(resource.prototype.id) ?? new Set();
     prototypeMeshes.add(meshIndex);
-    targetMeshesByPrototype.set(resource.prototype.id, prototypeMeshes);
+    meshesByPrototype.set(resource.prototype.id, prototypeMeshes);
     return meshIndex;
   }
 
@@ -1169,6 +1229,10 @@ export function compileSceneToGltf(
     const coarseMesh = coarseGeometry === undefined
       ? undefined
       : coarseMeshFor(coarseGeometry, occurrence.materialOverrideId);
+    const reducedGeometry = reducedGeometryByPrototype.get(prototype.id);
+    const reducedMesh = reducedGeometry === undefined
+      ? undefined
+      : meshFor(reducedGeometry, occurrence.materialOverrideId, "reduced");
     const { semanticId, sourceRef } = nodeIdentityFor(occurrence);
     const worldMatrix = relocatedWorldMatrices?.get(occurrence.id);
     if (relocateHierarchy && worldMatrix === undefined) {
@@ -1193,6 +1257,7 @@ export function compileSceneToGltf(
           initialVisibility: occurrence.initialVisibility,
           tags: [...occurrence.tags],
           ...(coarseMesh === undefined ? {} : { coarseMesh }),
+          ...(reducedMesh === undefined ? {} : { reducedMesh }),
         },
       },
     });
@@ -1252,12 +1317,16 @@ export function compileSceneToGltf(
 
   const binary = builder.finish();
   const coarseBinary = coarseBuilder?.finish();
-  const targetChunks = coarseBinary
-    ? [...targetChunkGroups(
-        [...targetRangesByPrototype.values()]
+  const chunkTable = (
+    level: "target" | "reduced",
+    rangesByPrototype: ReadonlyMap<string, TargetGeometryRange>,
+    meshesByPrototype: ReadonlyMap<string, ReadonlySet<number>>,
+  ) =>
+    [...targetChunkGroups(
+        [...rangesByPrototype.values()]
         .map((range) => ({
           ...range,
-          meshIndexes: [...(targetMeshesByPrototype.get(range.prototypeId) ?? [])].sort(
+          meshIndexes: [...(meshesByPrototype.get(range.prototypeId) ?? [])].sort(
             (left, right) => left - right,
           ),
           occurrenceCount: occurrenceCounts.get(range.prototypeId) ?? 0,
@@ -1272,7 +1341,7 @@ export function compileSceneToGltf(
             (left.prototypeIds[0] ?? "").localeCompare(right.prototypeIds[0] ?? "", "en"),
         )
         .map((chunk, priority) => ({
-          id: `target:${String(priority).padStart(4, "0")}:${chunk.prototypeIds[0]}`,
+          id: `${level}:${String(priority).padStart(4, "0")}:${chunk.prototypeIds[0]}`,
           buffer: 0,
           byteOffset: chunk.byteOffset,
           byteLength: chunk.byteLength,
@@ -1281,7 +1350,12 @@ export function compileSceneToGltf(
           prototypeIds: chunk.prototypeIds,
           occurrenceCount: chunk.occurrenceCount,
           priority,
-        }))
+        }));
+  const targetChunks = coarseBinary
+    ? chunkTable("target", targetRangesByPrototype, targetMeshesByPrototype)
+    : [];
+  const reducedChunks = coarseBinary && reducedLod !== undefined
+    ? chunkTable("reduced", reducedRangesByPrototype, reducedMeshesByPrototype)
     : [];
   const spatialIndex = options.spatialIndex === true
     ? (() => {
@@ -1355,7 +1429,7 @@ export function compileSceneToGltf(
         sourceDigest: scene.revision.sourceDigest,
         optionsDigest: scene.revision.optionsDigest,
         ...(declaresDerivation ? { nodeIdentityDerivation: derivation } : {}),
-        ...(coarseBinary
+        ...(coarseBinary && reducedLod === undefined
           ? {
               progressive: {
                 strategy: "prototype-aabb-v1",
@@ -1420,6 +1494,37 @@ export function compileSceneToGltf(
           }),
         ),
       },
+      ...(coarseBinary && reducedLod !== undefined
+        ? {
+            naru: {
+              progressive: {
+                schemaVersion: progressivePackageSchema,
+                strategy: "prototype-aabb-reduced-v1",
+                targetBuffer: 0,
+                coarseBuffer: 1,
+                targetChunks,
+                reducedChunks,
+                reducedLod: {
+                  method: reducedLodProtocol.method,
+                  maxDeviationMeters: reducedLod.maxDeviationMeters,
+                },
+                ...(options.spatialPayloadOrder === true
+                  ? { targetPayloadOrder: "spatial-leaf-anchor-v1" }
+                  : {}),
+                ...(spatialIndex && spatialBinaryDigest
+                  ? {
+                      spatialIndex: {
+                        schemaVersion: spatialDemandIndexSchema,
+                        uri: spatialBinaryUri,
+                        byteLength: spatialIndex.bytes.byteLength,
+                        sha256: spatialBinaryDigest,
+                      },
+                    }
+                  : {}),
+              },
+            },
+          }
+        : {}),
     },
   };
   const packageHash = createHash("sha256");
@@ -1471,7 +1576,17 @@ export function compileSceneToGltf(
       ...(declaresDerivation ? { nodeIdentifiers: "derived-elided" as const } : {}),
       ...(omitDefaultTransforms ? { nodeTransforms: "default-omitted" as const } : {}),
       ...(hierarchySidecar ? { hierarchyNodes: "relocated" as const } : {}),
-      ...(coarseBinary ? { progressiveRepresentation: "prototype-aabb-v1" as const } : {}),
+      ...(coarseBinary
+        ? reducedLod === undefined
+          ? { progressiveRepresentation: "prototype-aabb-v1" as const }
+          : {
+              progressiveRepresentation: "prototype-aabb-reduced-v1" as const,
+              reducedLod: {
+                method: reducedLodProtocol.method,
+                maxDeviationMeters: reducedLod.maxDeviationMeters,
+              },
+            }
+        : {}),
       ...(coarseBinary
         ? {
             targetChunking: options.targetChunkByteBudget === undefined
@@ -1575,7 +1690,15 @@ export function compileSceneToGltf(
       triangleCount,
       edgeSegmentCount,
       ...(coarseBinary ? { targetChunkCount: targetChunks.length } : {}),
+      ...(coarseBinary && reducedLod !== undefined
+        ? {
+            reducedChunkCount: reducedChunks.length,
+            reducedPrototypeCount: reducedGeometryByPrototype.size,
+            reducedTriangleCount,
+          }
+        : {}),
     },
+    ...(reducedLod === undefined ? {} : { reducedLod: reducedLodRecords }),
     prototypeReuse: [...occurrenceCounts]
       .filter(([, count]) => count > 1)
       .sort(([left], [right]) => left.localeCompare(right, "en"))
@@ -1586,7 +1709,9 @@ export function compileSceneToGltf(
     },
     limitations: [
       "This is an experimental glTF profile, not a MADI interchange format.",
-      ...(coarseBinary
+      ...(coarseBinary && reducedLod !== undefined
+        ? ["The coarse representation is a prototype AABB; the reduced level is a declared-error shape-preserving LOD emitted only for prototypes that pass the compiler's mesh-only checks, and prototypes it retains draw their target level."]
+        : coarseBinary
         ? ["The coarse representation is a prototype AABB, not a shape-preserving LOD."]
         : ["Only one target display representation per prototype is emitted; coarse LOD is pending."]),
       ...(occurrences.some(({ localTransform }) =>
