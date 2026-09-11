@@ -1,6 +1,9 @@
 # Phase 2 Execution and Evidence Tracker
 
-Status: Current (opened 2026-08-28; documentation review 2026-09-06)
+Status: Complete (opened 2026-08-28; exited 2026-09-12). The exit decision and
+consolidated performance summary are in the
+[Phase 2 completion report](PHASE_2_REPORT.md). This tracker stays live: its
+work order, workstreams, and evidence debt carried into Phase 3 unchanged.
 
 Phase 2 turns the completed source-to-browser vertical slice into a usable
 large-scene alpha. The [roadmap](ROADMAP.md) remains authoritative for scope and
@@ -67,10 +70,12 @@ record changed and no claim widened: every startup and memory figure this
 tracker cites is Windows x64 on one discrete-GPU host, and nothing here
 supports a cross-platform statement.
 
-With that scoping all four criteria read **Met**. Exiting the phase is a
-separate step. It needs an evidence review and a closing report in the shape of
-the [Phase 1 report](PHASE_1_REPORT.md), and the criteria closing does not
-empty the work order, workstreams, or evidence debt below.
+With that scoping all four criteria read **Met**. The separate exit step is
+done: the 2026-09-12 evidence review is published as the
+[Phase 2 completion report](PHASE_2_REPORT.md), in the shape of the
+[Phase 1 report](PHASE_1_REPORT.md). Closing the criteria did not empty the
+work order, workstreams, or evidence debt below, and none of them is a Phase 2
+gate any more.
 
 No percentage-complete claim is derived from this table. The gates differ too
 much in risk and effort for a raw item count to be meaningful.

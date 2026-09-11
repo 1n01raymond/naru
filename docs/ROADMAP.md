@@ -210,8 +210,10 @@ without extending the completed vertical-slice scope.
 
 ## Phase 2 — Large-scene alpha (`0.2.x`)
 
-Status: Current. Detailed implementation state, dependencies, prioritized work,
-and evidence debt live in the [Phase 2 tracker](PHASE_2.md).
+Status: Complete (2026-09-12). See the
+[completion report](PHASE_2_REPORT.md). Detailed implementation state,
+dependencies, prioritized work, and surviving evidence debt live in the
+[Phase 2 tracker](PHASE_2.md).
 
 - content-addressed persistent cache under the
   [import/cache product contract](IMPORT_AND_CACHE.md): cancellable background
@@ -257,6 +259,8 @@ nodes (21.88%) above both levers, so document size is measured, not solved.
 - workspace reopens against unchanged source and detects changed source.
 
 ## Phase 3 — Open platform beta (`0.3.x`)
+
+Status: Current.
 
 - plugin manifest, capabilities, commands, panels, namespaced workspace data;
 - worker analysis API and bounded overlays;
@@ -333,6 +337,13 @@ turning an exploratory comparison into a renderer-decision claim.
 
 ### After Phase 2
 
-Decide whether NARU's strongest adoption path is Studio, embedded runtime, or
-compiler infrastructure. Preserve all three boundaries, but concentrate
-maintainer resources where external use appears.
+Decision: continue to Phase 3. The 2026-09-12 evidence review closed all four
+large-scene criteria ([record](PHASE_2_REPORT.md)) after the project owner
+scoped the startup and memory criteria to one disclosed host across two browser
+engines; the second-operating-system repeat stays as evidence debt rather than
+an open gate. The surviving work order, workstreams, and evidence debt move
+with the project instead of closing with the phase.
+
+Still open for the maintainer: decide whether NARU's strongest adoption path is
+Studio, embedded runtime, or compiler infrastructure. Preserve all three
+boundaries, but concentrate maintainer resources where external use appears.

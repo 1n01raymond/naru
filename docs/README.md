@@ -28,14 +28,16 @@ Read in this order:
     known limits.
 13. [Phase 1 completion report](PHASE_1_REPORT.md) — exit decision and
     consolidated reproducible performance summary.
-14. [Phase 2 tracker](PHASE_2.md) — current priorities, dependencies, official
-    exit-gate status, and evidence debt.
-15. [Architecture decisions](adr/README.md) — decisions and alternatives.
-16. [Branching and releases](BRANCHING.md) — work branches, pull requests,
+14. [Phase 2 tracker](PHASE_2.md) — large-scene priorities, dependencies,
+    exit-gate status, and the evidence debt carried into Phase 3.
+15. [Phase 2 completion report](PHASE_2_REPORT.md) — exit decision and
+    consolidated reproducible performance summary for the large-scene alpha.
+16. [Architecture decisions](adr/README.md) — decisions and alternatives.
+17. [Branching and releases](BRANCHING.md) — work branches, pull requests,
     merge rules, backports, tags, and enforcement gates.
-17. [Translations](TRANSLATIONS.md) — README languages, terminology, and
+18. [Translations](TRANSLATIONS.md) — README languages, terminology, and
     maintenance workflow.
-18. [API reference](API_REFERENCE.md) — the TypeDoc-generated surface of the
+19. [API reference](API_REFERENCE.md) — the TypeDoc-generated surface of the
     four workspace packages, published with the demo site at `naru/api/`.
 
 ## Documentation rules
