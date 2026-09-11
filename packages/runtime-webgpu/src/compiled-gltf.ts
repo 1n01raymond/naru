@@ -1759,8 +1759,16 @@ function prepareCompiledGltfState(
     targetChunkResidencyCosts,
   );
 
+  // The node graph and the scene list are read here and never again: decoding
+  // works from the prepared occurrence tables above, and every later document
+  // access is buffers/bufferViews/accessors/meshes/materials/extras. The state
+  // therefore keeps a shallow copy without them, so a caller that drops its own
+  // reference to the parsed document releases the node array for the rest of
+  // the session instead of paying for it until the decoder is discarded.
+  const geometryDocument: CompiledGltfDocument = { ...document, nodes: [], scenes: [] };
+
   return {
-    document,
+    document: geometryDocument,
     hierarchy,
     targetChunkResidencyCosts,
     activeNodeCount,

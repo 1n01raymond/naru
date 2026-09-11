@@ -53,6 +53,11 @@ Direct WebGPU rendering and the Phase 1 compiled glTF runtime boundary.
   compatibility wrapper. It also publishes `targetChunkResidencyCosts`, the
   decoded and GPU bytes each declared chunk would cost, measured from accessor
   counts alone so a scheduler can refuse a chunk before requesting its range.
+  Preparation is also the last reader of `nodes` and `scenes`, so the state it
+  keeps is a shallow copy of the document without them: a caller that drops its
+  own reference releases the node graph for the rest of the session. On the
+  657.1 MB sixty5 package that is 99.47 MiB of 455.96 retained heap in a Node
+  harness, with every decoded summary, evidence array, and bound unchanged.
 - A prototype mesh is split into one primitive per material but stores its
   vertex pool once, so every primitive references the same POSITION and NORMAL
   accessors. Each pool is therefore interleaved once per mesh and the identical
