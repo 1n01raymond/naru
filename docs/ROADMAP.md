@@ -232,9 +232,13 @@ Current scale evidence: the [31-document sixty5 Design + Engineering
 qualification](../artifacts/ifc/engineering-baseline/README.md) records 104,337
 renderable geometric occurrences, 46,059,890 submitted triangles, 66,396
 geometric prototypes, and 10,394,938 unique triangles in a Khronos-clean
-package. It closes the source/package measurement portion of the first exit
-criterion. The package is not yet publicly hosted or smoke-tested through
-Studio, so that criterion remains partial.
+package. That package is now served from the delivery origin accepted in
+[ADR-0023](adr/0023-public-package-delivery-origin.md) and opened through the
+deployed Studio in a [browser record](../artifacts/public-demo/engineering-baseline-origin/README.md),
+so the first exit criterion is met. The published bytes are the publishing
+host's compile rather than the macOS qualification's; both digests are pinned,
+and the reconciliation is tracked as a limitation in the
+[Phase 2 tracker](PHASE_2.md).
 
 That package's 405,570,167-byte compiled document is now split member by member
 ([record](../artifacts/compiler/node-field-elision/README.md)): its 268,002

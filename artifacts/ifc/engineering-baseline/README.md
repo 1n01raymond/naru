@@ -43,9 +43,12 @@ The decoded index has depth 11, leaf capacity 64, and root bounds
 `[42.2852108480, 57.9000015259, 0.5]` metres.
 
 This is package qualification, not a startup, frame-time, memory, or renderer
-comparison. The 854.4 MB package is not committed and has not yet been
-published or opened through the public Studio delivery path, so the Phase 2
-public-baseline exit criterion remains partial.
+comparison. The 854.4 MB package is not committed. It is now served from the
+delivery origin and opened through the deployed Studio in a separate
+[browser record](../../public-demo/engineering-baseline-origin/README.md),
+which closes the Phase 2 public-baseline exit criterion; the published bytes
+are the publishing host's compile rather than this record's, and both digests
+are pinned where they are claimed.
 
 West Riverside Hospital is excluded because its upstream publisher does not
 state redistribution terms; no source-derived geometry, properties, screenshot,
