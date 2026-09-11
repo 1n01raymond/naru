@@ -59,6 +59,13 @@ export interface LoadedSceneHierarchy {
   readonly documentByteLength: number;
   readonly hierarchy: CompiledHierarchy;
   /**
+   * Bytes of the relocated hierarchy sidecar, JSON header plus columns, for a
+   * package that carries its assembly tree outside the document. Recorded at
+   * load because the sidecar is read once and dropped: only the decoded tree
+   * outlives this call, and nothing later can restate the transferred size.
+   */
+  readonly relocatedHierarchyBytes?: number;
+  /**
    * The transfer policy this package was opened under, for the Worker that
    * fetches its ranges. Absent for local files, which are never transferred.
    */
@@ -203,6 +210,9 @@ export async function loadSceneHierarchy(
       document,
       hierarchySidecar ? { hierarchy: hierarchySidecar } : {},
     );
+    const relocatedHierarchyBytes = hierarchyRef && hierarchySidecar
+      ? hierarchyRef.byteLength + hierarchySidecar.columns.byteLength
+      : undefined;
     const targetUrl = resourceUrl(hierarchy.binaryUri);
     const coarseUrl = hierarchy.coarseBinaryUri
       ? resourceUrl(hierarchy.coarseBinaryUri)
@@ -222,6 +232,7 @@ export async function loadSceneHierarchy(
       documentSource: { kind: "bytes", bytes: bufferOf(documentBytes) },
       documentByteLength: documentBytes.byteLength,
       hierarchy,
+      ...(relocatedHierarchyBytes === undefined ? {} : { relocatedHierarchyBytes }),
       transport: transport.describe(),
       targetBinary: { kind: "url", href: targetUrl.href },
       ...(coarseUrl ? { coarseBinary: { kind: "url" as const, href: coarseUrl.href } } : {}),
@@ -257,18 +268,19 @@ export async function loadSceneHierarchy(
   if (localHierarchyRef && !localHierarchyJson) {
     throw new TypeError(`Select ${localHierarchyRef.uri} with the glTF file.`);
   }
+  // Bound to a name rather than inlined so the transferred sidecar size stays
+  // readable here; the decoded tree is all that survives this call.
+  const localHierarchySidecar = localHierarchyRef && localHierarchyJson
+    ? await loadHierarchySidecar({
+        kind: "file",
+        ref: localHierarchyRef,
+        jsonFile: localHierarchyJson,
+        resourceFiles: source.binaryFiles,
+      })
+    : undefined;
   const { hierarchy } = inspectCompiledHierarchy(
     document,
-    localHierarchyRef && localHierarchyJson
-      ? {
-          hierarchy: await loadHierarchySidecar({
-            kind: "file",
-            ref: localHierarchyRef,
-            jsonFile: localHierarchyJson,
-            resourceFiles: source.binaryFiles,
-          }),
-        }
-      : {},
+    localHierarchySidecar ? { hierarchy: localHierarchySidecar } : {},
   );
   const fileFor = (uri: string): File | undefined => {
     const expectedName = decodeURIComponent(
@@ -313,6 +325,12 @@ export async function loadSceneHierarchy(
     documentSource: { kind: "file", file: source.gltfFile },
     documentByteLength: source.gltfFile.size,
     hierarchy,
+    ...(localHierarchyRef && localHierarchySidecar
+      ? {
+          relocatedHierarchyBytes:
+            localHierarchyRef.byteLength + localHierarchySidecar.columns.byteLength,
+        }
+      : {}),
     targetBinary: { kind: "file", file: targetFile },
     ...(coarseFile ? { coarseBinary: { kind: "file" as const, file: coarseFile } } : {}),
     ...(propertiesRef && sidecarJsonFile

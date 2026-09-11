@@ -176,4 +176,71 @@ describe("GeometryDecoder lifecycle", () => {
     ).rejects.toThrow("decode failed");
     decoder.dispose();
   });
+
+  it("survives repeated open, replace, cancel, and dispose cycles", async () => {
+    const { GeometryDecoder } = await decoderModule();
+    const cycles = 3;
+
+    for (let cycle = 0; cycle < cycles; cycle += 1) {
+      // Open: one session, one Worker, one transferred document.
+      const openControl = new AbortController();
+      const open = new GeometryDecoder(
+        { kind: "bytes", bytes: new Uint8Array([cycle]).buffer },
+        openControl.signal,
+      );
+      const openWorker = FakeWorker.instances[cycle * 2];
+      if (!openWorker) throw new TypeError("The decoder did not construct a Worker.");
+      openWorker.respond(initialized(1));
+      const openWork = open.decode(
+        { kind: "url", href: "https://example.test/open.bin" },
+        "target",
+      );
+
+      // Replace: the replacement session exists before the open one is disposed,
+      // which is the overlap the Studio accepts so a failed load keeps the scene.
+      const replaceControl = new AbortController();
+      const replacement = new GeometryDecoder(
+        { kind: "bytes", bytes: new Uint8Array([cycle, 1]).buffer },
+        replaceControl.signal,
+      );
+      const replacementWorker = FakeWorker.instances[cycle * 2 + 1];
+      if (!replacementWorker) throw new TypeError("The decoder did not construct a Worker.");
+      expect(openWorker.terminated).toBe(0);
+      open.dispose();
+      await expect(openWork).rejects.toThrow();
+      expect(openWorker.terminated).toBe(1);
+      expect(openWorker.listenerCount).toBe(0);
+
+      // Cancel: in-flight work on the replacement fails as a cancellation.
+      replacementWorker.respond(initialized(1));
+      const replacementWork = replacement.decode(
+        { kind: "url", href: "https://example.test/replacement.bin" },
+        "target",
+      );
+      replaceControl.abort();
+      await expect(replacementWork).rejects.toMatchObject({ name: "AbortError" });
+
+      // Dispose: idempotent after a cancellation already terminated the Worker.
+      replacement.dispose();
+      expect(replacementWorker.terminated).toBe(1);
+      expect(replacementWorker.listenerCount).toBe(0);
+
+      // A Worker response that arrives after both sessions are gone is ignored.
+      for (const worker of [openWorker, replacementWorker]) {
+        expect(() => worker.respond({
+          type: "ready",
+          requestId: 2,
+          scene: undefined,
+          decodeMilliseconds: 1,
+        } as unknown as GeometryWorkerResponse)).not.toThrow();
+      }
+    }
+
+    // Every cycle left exactly one terminated Worker per session and no listener.
+    expect(FakeWorker.instances).toHaveLength(cycles * 2);
+    for (const worker of FakeWorker.instances) {
+      expect(worker.terminated).toBe(1);
+      expect(worker.listenerCount).toBe(0);
+    }
+  });
 });
