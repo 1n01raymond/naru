@@ -3023,7 +3023,7 @@
     },
     "naru": {
       "progressive": {
-        "schemaVersion": "naru.progressive-package.1",
+        "schemaVersion": "naru.progressive-package.2",
         "strategy": "prototype-aabb-reduced-v1",
         "targetBuffer": 0,
         "coarseBuffer": 1,
@@ -3103,7 +3103,8 @@
               "prototype:part:thin-plate-holes"
             ],
             "occurrenceCount": 1,
-            "priority": 0
+            "priority": 0,
+            "maxDeviationMeters": 0.0005947672429085638
           },
           {
             "id": "reduced:0001:prototype:part:fillet-bracket",
@@ -3118,12 +3119,14 @@
               "prototype:part:fillet-bracket"
             ],
             "occurrenceCount": 1,
-            "priority": 1
+            "priority": 1,
+            "maxDeviationMeters": 0.00041477252029056757
           }
         ],
         "reducedLod": {
           "method": "meshoptimizer-whole-shape-unlocked",
-          "maxDeviationMeters": 0.001
+          "requestedToleranceMeters": 0.001,
+          "maxDeviationMeters": 0.0005947672429085638
         }
       }
     }

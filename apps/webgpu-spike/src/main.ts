@@ -661,19 +661,18 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     }
 
     // ADR-0025: the declared-error `reduced` level stands in for a `target`
-    // chunk covering exactly the same prototypes. The deviation bound is
-    // document-level and the camera is orthographic, so the projected error is
-    // the same everywhere on screen and the level is one per-frame decision.
+    // chunk covering exactly the same prototypes, and every reduced chunk
+    // declares the deviation its own geometry stays within. The camera is
+    // orthographic, so one metres-per-pixel scale serves the whole frame, but
+    // each chunk divides its own bound by it: a coarsely reduced chunk can be
+    // back on its exact tessellation while a faithful one stays reduced.
     const reducedLodPlan = planReducedChunks(
       hierarchy.targetChunks,
       hierarchy.reducedChunks,
     );
     const reducedLodSelector =
-      hierarchy.reducedLod !== undefined && reducedLodPlan.substitutes.size > 0
-        ? new ReducedLodSelector(
-            hierarchy.reducedLod.maxDeviationMeters,
-            lodThresholdsFromLocation(),
-          )
+      reducedLodPlan.bounds.size > 0
+        ? new ReducedLodSelector(reducedLodPlan.bounds, lodThresholdsFromLocation())
         : undefined;
     /**
      * The chunk the scheduler should hold for a demanded target chunk: its
@@ -686,7 +685,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         ? chunk
         : effectiveLevelChunk(
             chunk,
-            reducedLodSelector.selection().level,
+            (chunkId) => reducedLodSelector.levelFor(chunkId),
             reducedLodPlan,
             (meshIndexes) => progressiveResidency?.hasPinnedTargetMeshes(meshIndexes) === true,
           );
@@ -707,12 +706,24 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         errorPixels !== undefined && Number.isFinite(errorPixels)
           ? errorPixels.toFixed(4)
           : "";
+      const worstPixels = selection.worstProjectedErrorPixels;
+      dataset.lodWorstErrorPx =
+        worstPixels !== undefined && Number.isFinite(worstPixels)
+          ? worstPixels.toFixed(4)
+          : "";
       dataset.lodAdmitPx = String(thresholds.admitPixels);
       dataset.lodReplacePx = String(thresholds.replacePixels);
-      dataset.lodDeviationMeters = String(reducedLodSelector.deviationMeters());
+      // The largest deviation among the chunks actually drawn reduced, so the
+      // number a viewer reads is one the frame in front of them respects.
+      dataset.lodDeviationMeters =
+        selection.maxDeviationMeters === undefined
+          ? ""
+          : String(selection.maxDeviationMeters);
       dataset.lodMethod = hierarchy.reducedLod?.method ?? "";
       dataset.lodSubstitutes = String(reducedLodPlan.substitutes.size);
       dataset.lodExactOnly = String(reducedLodPlan.exactOnly.length);
+      dataset.lodReducedChunks = String(selection.reducedChunkCount);
+      dataset.lodSubstitutableChunks = String(selection.substitutableChunkCount);
     };
     publishLodDataset();
 
@@ -862,9 +873,10 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       // ADR-0025: a measurement taken while the declared-error level is drawn
       // carries that error, so the HUD quotes the bound rather than implying
       // the exact tessellation was measured.
+      const lodSelection = reducedLodSelector?.selection();
       const deviation =
-        state.kind === "complete" && reducedLodSelector?.selection().level === "reduced"
-          ? reducedLodSelector.deviationMeters()
+        state.kind === "complete" && lodSelection !== undefined && lodSelection.reducedChunkCount > 0
+          ? lodSelection.maxDeviationMeters
           : undefined;
       const text = formatMeasurement(state);
       measurementHud.textContent =

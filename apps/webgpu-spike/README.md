@@ -265,23 +265,28 @@ view, and 93.86% against 96.31% on a mid view
 A package compiled with `--reduced-lod <meters>` carries a third level beside
 `coarse` and `target`, and the Studio picks between them by the error that level
 would show on screen rather than by the budget
-([ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md)). The
-document declares one deviation bound and the camera is orthographic, so the
-error is `maxDeviationMeters / metresPerPixel`: the reduced level is substituted
-while that stays at or below 1.0 px and the exact level returns once it passes
-1.5 px, the gap being hysteresis so a camera resting on the threshold does not
-oscillate. `?lodAdmitPx=` and `?lodReplacePx=` move both thresholds,
-`data-lod-level` reports the level on screen (`mixed` while both are resident),
-and `data-lod-error-px`, `data-lod-deviation-meters`, `data-lod-method`, and
-`data-lod-substitutes` report what the decision was made from. A prototype
+([ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md)). Each
+reduced chunk declares its own measured deviation, so the error is that chunk's
+`maxDeviationMeters / metresPerPixel`: a chunk is substituted while that stays
+at or below 1.0 px and the exact level returns once it passes 1.5 px, the gap
+being hysteresis so a camera resting on the threshold does not oscillate. Two
+prototypes whose bounds straddle the threshold draw at different levels in the
+same frame. `?lodAdmitPx=` and `?lodReplacePx=` move both thresholds, and
+`data-lod-level` reports `reduced` only when every substitutable chunk is drawn
+reduced, so a mixed frame reads `target`. `data-lod-reduced-chunks` and
+`data-lod-substitutable-chunks` say how many were actually substituted,
+`data-lod-error-px` and `data-lod-worst-error-px` give the projected error of
+what was substituted and of the worst substitutable chunk, and
+`data-lod-deviation-meters`, `data-lod-method`, `data-lod-substitutes`, and
+`data-lod-exact-only` report what the decision was made from. A prototype
 without a reduced chunk is never substituted, and the selected object is pinned
 to `target` whatever the camera says, so the geometry being inspected,
 measured, or sectioned is always the exact one — the measurement readout says
 `(reduced level)` and carries the declared bound when a distance was taken
 against a substituted surface. Both levels of a prototype share a residency key,
 so promoting either replaces the other in place and the budget never charges a
-prototype twice. The headed record of a substituted frame against a
-`target`-only reference, in Chrome and Firefox, is under
+prototype twice. The headed record of substituted frames against a
+`target`-only reference at three camera distances, in Chrome and Firefox, is under
 [`artifacts/lod/reduced-selection/`](../../artifacts/lod/reduced-selection/README.md).
 Spatial draw clusters remain Phase 2 work.
 

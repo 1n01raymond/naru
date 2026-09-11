@@ -17,7 +17,7 @@ import { supportedSpatialDemandIndexSchema } from "./spatial-index.js";
 
 const supportedProfile = "madi.experimental.gltf.1";
 /** `extras.naru.progressive` schema a reduced-level package declares (ADR-0025). */
-export const supportedProgressivePackageSchema = "naru.progressive-package.1";
+export const supportedProgressivePackageSchema = "naru.progressive-package.2";
 const identityMatrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] as const;
 
 export type JsonRecord = Record<string, unknown>;
@@ -132,11 +132,15 @@ export interface CompiledSpatialIndexRef {
  * The error statement a package makes about its reduced level (ADR-0025).
  *
  * A level with no stated bound is not a level a viewer may draw, so this is
- * present exactly when `reducedChunks` is non-empty; a renderer divides the
- * bound by the world size of a pixel to decide whether the level is usable.
+ * present exactly when `reducedChunks` is non-empty. The bound here covers the
+ * whole package; each chunk states its own, and a renderer decides per chunk by
+ * dividing that one by the world size of a pixel.
  */
 export interface CompiledReducedLodRef {
   readonly method: string;
+  /** The tolerance the compile asked for, which bounds the sampled p95 only. */
+  readonly requestedToleranceMeters: number;
+  /** The largest deviation any reduced chunk in this package declares. */
   readonly maxDeviationMeters: number;
 }
 
@@ -152,6 +156,15 @@ export interface CompiledTargetChunk {
   readonly prototypeId: string;
   readonly occurrenceCount: number;
   readonly priority: number;
+  /**
+   * The deviation this chunk's geometry stays within (ADR-0025).
+   *
+   * Present on every reduced chunk and on no target chunk: the exact level has
+   * no error to declare. Where a byte budget coalesced several prototypes into
+   * one chunk this is the largest of their measured deviations, because a chunk
+   * is the finest thing a viewer can fetch.
+   */
+  readonly maxDeviationMeters?: number;
 }
 
 export interface CompiledHierarchy {
@@ -596,7 +609,7 @@ interface ProgressiveExtras {
 
 /**
  * A package declares its progressive layout under `extras.naru.progressive`
- * (`naru.progressive-package.1`, ADR-0025) or, for the frozen legacy family,
+ * (`naru.progressive-package.2`, ADR-0025) or, for the frozen legacy family,
  * `extras.madi.progressive` (ADR-0007). A `naru` block with any other schema
  * version fails closed; the legacy block is never consulted when it exists.
  */
@@ -677,6 +690,26 @@ function chunksFor(
     if (!Array.isArray(value.meshIndexes) || value.meshIndexes.length === 0) {
       throw new CompiledGltfError("INVALID_GLTF", `${label}.meshIndexes must not be empty.`);
     }
+    let maxDeviationMeters: number | undefined;
+    if (level === "target") {
+      if (value.maxDeviationMeters !== undefined) {
+        throw new CompiledGltfError(
+          "INVALID_GLTF",
+          `${label}.maxDeviationMeters must not be stated for the exact level.`,
+        );
+      }
+    } else if (
+      typeof value.maxDeviationMeters !== "number" ||
+      !Number.isFinite(value.maxDeviationMeters) ||
+      value.maxDeviationMeters <= 0
+    ) {
+      throw new CompiledGltfError(
+        "INVALID_GLTF",
+        `${label}.maxDeviationMeters must state a positive deviation.`,
+      );
+    } else {
+      maxDeviationMeters = value.maxDeviationMeters;
+    }
     const meshIndexes = value.meshIndexes.map((meshIndex) => {
       const result = finiteInteger(meshIndex, `${label}.meshIndexes`, document.meshes.length);
       if (claimedMeshes.has(result)) {
@@ -698,6 +731,7 @@ function chunksFor(
       prototypeId: value.prototypeId,
       occurrenceCount: finiteInteger(value.occurrenceCount, `${label}.occurrenceCount`),
       priority: finiteInteger(value.priority, `${label}.priority`),
+      ...(maxDeviationMeters === undefined ? {} : { maxDeviationMeters }),
     };
   });
   return chunks.sort(
@@ -752,19 +786,24 @@ function reducedLodRefFor(
       `${progressive?.path ?? "progressive"}.reducedLod must state the deviation its reduced chunks stay within.`,
     );
   }
+  const positive = (value: unknown): value is number =>
+    typeof value === "number" && Number.isFinite(value) && value > 0;
   if (
     typeof reducedLod.method !== "string" ||
     reducedLod.method.trim() === "" ||
-    typeof reducedLod.maxDeviationMeters !== "number" ||
-    !Number.isFinite(reducedLod.maxDeviationMeters) ||
-    reducedLod.maxDeviationMeters <= 0
+    !positive(reducedLod.maxDeviationMeters) ||
+    !positive(reducedLod.requestedToleranceMeters)
   ) {
     throw new CompiledGltfError(
       "INVALID_GLTF",
-      `${progressive?.path ?? "progressive"}.reducedLod must carry a method and a positive maxDeviationMeters.`,
+      `${progressive?.path ?? "progressive"}.reducedLod must carry a method, a positive requestedToleranceMeters, and a positive maxDeviationMeters.`,
     );
   }
-  return { method: reducedLod.method, maxDeviationMeters: reducedLod.maxDeviationMeters };
+  return {
+    method: reducedLod.method,
+    requestedToleranceMeters: reducedLod.requestedToleranceMeters,
+    maxDeviationMeters: reducedLod.maxDeviationMeters,
+  };
 }
 
 function spatialIndexRefFor(progressive: ProgressiveExtras | undefined): CompiledSpatialIndexRef | undefined {

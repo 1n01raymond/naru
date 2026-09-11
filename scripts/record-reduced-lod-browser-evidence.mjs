@@ -1,8 +1,10 @@
 /**
- * Records ADR-0025 gate 3: at two predeclared camera distances inside the
+ * Records ADR-0025 gate 3: at three predeclared camera distances inside the
  * 1.0/1.5 pixel admit-and-replace band, the Studio frame drawn with the
  * `reduced` level admitted agrees with a `target`-only reference frame, and the
- * object ids picked on a grid are identical.
+ * object ids picked on a grid are identical. One of the three is a distance at
+ * which the two reduced chunks' own declared bounds fall on opposite sides of
+ * the admit threshold, so the frame draws one chunk reduced and one exact.
  *
  * Both arms load the committed gate 1 package. The reference arm sets
  * `?lodAdmitPx=1e-9&lodReplacePx=1e-9`: the selector starts on `target` and a
@@ -46,16 +48,28 @@ const BROWSER_ENGINES = {
 };
 
 /**
- * The two camera distances this record is declared over, fixed before any
- * frame was compared. `admit-threshold` sits just inside the 1.0 pixel admit
- * threshold, which is the largest projected error the policy ever draws a
- * reduced level at, and so the worst case it permits. `half-threshold` is a
- * plainer distance further out. Both are reached by wheeling from the fitted
- * view, which is the only camera input this record uses.
+ * The three camera distances this record is declared over, fixed before any
+ * frame was compared, each with the number of chunks it is declared to draw
+ * reduced. The package declares a bound per chunk, so the distances are chosen
+ * against the largest of them:
+ *
+ * - `split-band` sits where the coarser chunk's bound projects past the admit
+ *   threshold while the finer one's does not, so the frame draws one chunk
+ *   reduced and the other exact. That case is the whole reason a package states
+ *   a bound per prototype rather than one for the scene.
+ * - `admit-threshold` sits just inside the 1.0 pixel admit threshold for the
+ *   coarser bound, which is the largest projected error the policy ever draws a
+ *   reduced level at, and so the worst case it permits.
+ * - `half-threshold` is a plainer distance further out.
+ *
+ * All three are reached by wheeling out from the fitted view, which is the only
+ * camera input this record uses. Wheeling out only lowers a projected error, so
+ * no distance depends on the order the others were visited.
  */
 const CAMERA_DISTANCES = [
-  { label: "admit-threshold", wheelDelta: 600 },
-  { label: "half-threshold", wheelDelta: 1200 },
+  { label: "split-band", wheelDelta: 150, expectedReducedChunks: 1 },
+  { label: "admit-threshold", wheelDelta: 250, expectedReducedChunks: 2 },
+  { label: "half-threshold", wheelDelta: 640, expectedReducedChunks: 2 },
 ];
 
 /** Per-channel allowance, from ADR-0025 gate 3. */
@@ -69,11 +83,18 @@ const PORT = 4179;
  * A capture of `#viewport` composites the Studio's header, view cube, buttons
  * and status bar over the canvas. Those pixels are identical in both arms, so
  * counting them as drawn geometry would flatter the ratio that matters. The
- * analysis window is the central rectangle that holds none of them; the
+ * analysis window is the largest rectangle that holds none of them; the
  * recorder asserts that the reference frame's own drawn bounding box sits
  * inside it with margin, and aborts rather than measure a clipped comparison.
+ *
+ * The bounds come from the rendered chrome rather than from the stylesheet: on
+ * this viewport the canvas is 1179x521, the tool buttons end at y=40, the view
+ * cube at x=106, and the status bar begins at y=466. The fractions below clear
+ * all three. They are deliberately wider than the fitted geometry needs,
+ * because the distance where one chunk is reduced and the other is not is the
+ * near view, where the model fills most of the frame.
  */
-const ANALYSIS_WINDOW = { x0: 0.25, y0: 0.25, x1: 0.75, y1: 0.8 };
+const ANALYSIS_WINDOW = { x0: 0.1, y0: 0.09, x1: 0.98, y1: 0.88 };
 /** Pixels of clearance required between the drawn bounding box and the window. */
 const WINDOW_MARGIN = 8;
 /** Lattice resolution the pick points are drawn from, per axis. */
@@ -128,17 +149,23 @@ function verifyServedPackage() {
 const readLevelState = (page) =>
   page.evaluate(() => {
     const root = document.documentElement.dataset;
-    const number = (value) => (value === undefined ? null : Number(value));
+    // An empty attribute means the Studio had nothing to state, which is not
+    // the same as a measurement of zero: the deviation is empty whenever no
+    // chunk is drawn reduced, so it must read back as null.
+    const number = (value) => (value === undefined || value === "" ? null : Number(value));
     return {
       available: root.lodAvailable === "true",
       level: root.lodLevel ?? null,
       projectedErrorPixels: number(root.lodErrorPx),
+      worstProjectedErrorPixels: number(root.lodWorstErrorPx),
       admitPixels: number(root.lodAdmitPx),
       replacePixels: number(root.lodReplacePx),
       maxDeviationMeters: number(root.lodDeviationMeters),
       method: root.lodMethod ?? null,
       substitutedChunks: number(root.lodSubstitutes),
       exactOnlyChunks: number(root.lodExactOnly),
+      reducedChunks: number(root.lodReducedChunks),
+      substitutableChunks: number(root.lodSubstitutableChunks),
       representation: root.geometryRepresentation ?? null,
       residentChunks: number(root.targetChunksReady),
       totalChunks: number(root.targetChunksTotal),
@@ -161,6 +188,7 @@ const readSignature = (page) =>
     const root = document.documentElement.dataset;
     return [
       root.lodLevel ?? "",
+      root.lodReducedChunks ?? "",
       root.geometryRepresentation ?? "",
       root.targetChunksReady ?? "",
       root.targetChunksTotal ?? "",
@@ -290,7 +318,7 @@ const canvasRect = (page) =>
  *
  * @param {import("playwright").Browser} browser
  * @param {string} baseUrl
- * @param {{label: string, wheelDelta: number}} distance
+ * @param {{label: string, wheelDelta: number, expectedReducedChunks: number}} distance
  * @param {{label: string, thresholds: {admit: string, replace: string} | undefined}} arm
  * @param {string[]} issues Collected console and page errors, shared across arms.
  */
@@ -360,13 +388,23 @@ try {
       const reference = opened.reference;
       const reduced = opened.reduced;
       if (reference === undefined || reduced === undefined) throw new Error("an arm produced no capture");
-      if (reference.state.level !== "target") {
-        throw new Error(`the reference arm drew ${reference.state.level}, expected target`);
+      // The level is per chunk, so the arms are checked on the chunk counts
+      // rather than on the scene-wide word: `reduced` is reported only when
+      // every substitutable chunk is reduced, which is exactly what the
+      // split-band distance is declared not to be.
+      if (reference.state.reducedChunks !== 0) {
+        throw new Error(`the reference arm drew ${reference.state.reducedChunks} chunks reduced, expected none`);
       }
-      if (reduced.state.level !== "reduced") {
+      if (reduced.state.reducedChunks !== distance.expectedReducedChunks) {
         throw new Error(
-          `the reduced arm drew ${reduced.state.level} at ${reduced.state.projectedErrorPixels} px, expected reduced`,
+          `the reduced arm drew ${reduced.state.reducedChunks} of ${reduced.state.substitutableChunks} chunks ` +
+            `reduced at a worst projected error of ${reduced.state.worstProjectedErrorPixels} px, ` +
+            `expected ${distance.expectedReducedChunks}`,
         );
+      }
+      const expectedLevel = reduced.state.reducedChunks === reduced.state.substitutableChunks ? "reduced" : "target";
+      if (reduced.state.level !== expectedLevel) {
+        throw new Error(`the reduced arm reports level ${reduced.state.level}, expected ${expectedLevel}`);
       }
       const referenceImage = decodePng(reference.frame);
       const window = resolveWindow(referenceImage, ANALYSIS_WINDOW);
@@ -380,7 +418,8 @@ try {
       );
       if (clearance < WINDOW_MARGIN) {
         throw new Error(
-          `the drawn bounding box clears the analysis window by ${clearance} px, ${WINDOW_MARGIN} required`,
+          `the drawn bounding box ${JSON.stringify(coverage.bounds)} clears the analysis window ` +
+            `${JSON.stringify(window)} by ${clearance} px, ${WINDOW_MARGIN} required`,
         );
       }
       const points = latticePoints(referenceImage, coverage.bounds, PICK_LATTICE_STEPS, CHANNEL_TOLERANCE);
@@ -406,7 +445,8 @@ try {
       distances.push({
         label: distance.label,
         wheelDelta: distance.wheelDelta,
-        fittedProjectedErrorPixels: reduced.fitted.projectedErrorPixels,
+        expectedReducedChunks: distance.expectedReducedChunks,
+        fittedWorstProjectedErrorPixels: reduced.fitted.worstProjectedErrorPixels,
         arms: {
           reference: { url: reference.url, ...reference.state },
           reduced: { url: reduced.url, ...reduced.state },
@@ -445,8 +485,8 @@ if (issues.length > 0) {
 }
 
 const record = {
-  schemaVersion: "naru.reduced-lod-browser-evidence.1",
-  mode: "headed-two-distance-level-agreement",
+  schemaVersion: "naru.reduced-lod-browser-evidence.2",
+  mode: "headed-three-distance-per-chunk-level-agreement",
   recordedAt: new Date().toISOString(),
   adr: "docs/adr/0025-shape-preserving-lod-representation.md",
   gate: "3",
@@ -481,7 +521,9 @@ writeFileSync(
 for (const distance of distances) {
   const comparison = distance.frameComparison;
   console.log(
-    `${descriptor.engine} ${distance.label}: ${distance.arms.reduced.projectedErrorPixels} px, ` +
+    `${descriptor.engine} ${distance.label}: ${distance.arms.reduced.reducedChunks} of ` +
+      `${distance.arms.reduced.substitutableChunks} chunks reduced, worst ` +
+      `${distance.arms.reduced.worstProjectedErrorPixels} px, ` +
       `frame ${(comparison.frame.agreementRatio * 100).toFixed(3)}% ` +
       `window ${(comparison.window.agreementRatio * 100).toFixed(3)}% ` +
       `geometry ${(comparison.geometry.agreementRatio * 100).toFixed(3)}% ` +

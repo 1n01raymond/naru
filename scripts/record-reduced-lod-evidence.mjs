@@ -1,7 +1,7 @@
 /**
  * Records ADR-0025 gate 1: compiling `fixtures/step/lod-corpus.step` twice with
  * `--reduced-lod <meters>` yields byte-identical packages under
- * `naru.progressive-package.1`, a `reduced` level is emitted for the admitted
+ * `naru.progressive-package.2`, a `reduced` level is emitted for the admitted
  * parts and withheld for the ones the #126 checks refuse, and the Khronos glTF
  * validator reports zero errors. The first run's package is copied beside the
  * record so the validator can re-hash committed bytes.
@@ -84,13 +84,17 @@ if (validation.issues.numErrors !== 0) {
 }
 
 const progressive = document.extras?.naru?.progressive;
-if (progressive?.schemaVersion !== "naru.progressive-package.1" || document.extras?.madi?.progressive) {
+if (progressive?.schemaVersion !== "naru.progressive-package.2" || document.extras?.madi?.progressive) {
   throw new Error("the package must carry extras.naru.progressive alone.");
 }
 const chunkSummary = (chunk) => ({
   id: chunk.id,
   prototypeId: chunk.prototypeId,
   byteLength: chunk.byteLength,
+  // Recorded per chunk, not once for the package: a chunk is the finest range
+  // a viewer can fetch, so its own declared deviation is what a level decision
+  // divides by the frame scale.
+  ...(chunk.maxDeviationMeters === undefined ? {} : { maxDeviationMeters: chunk.maxDeviationMeters }),
   triangles: chunk.meshIndexes.reduce((sum, meshIndex) => sum + document.meshes[meshIndex].primitives
     .filter((primitive) => (primitive.mode ?? 4) === 4)
     .reduce((count, primitive) => count + document.accessors[primitive.indices].count / 3, 0), 0),
@@ -111,6 +115,7 @@ const record = {
   progressive: {
     schemaVersion: progressive.schemaVersion,
     strategy: progressive.strategy,
+    reducedLod: progressive.reducedLod,
     targetChunks: progressive.targetChunks.map(chunkSummary),
     reducedChunks: progressive.reducedChunks.map(chunkSummary),
   },

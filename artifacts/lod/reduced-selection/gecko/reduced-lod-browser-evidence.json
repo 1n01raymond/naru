@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "naru.reduced-lod-browser-evidence.1",
-  "mode": "headed-two-distance-level-agreement",
-  "recordedAt": "2026-09-11T07:28:51.696Z",
+  "schemaVersion": "naru.reduced-lod-browser-evidence.2",
+  "mode": "headed-three-distance-per-chunk-level-agreement",
+  "recordedAt": "2026-09-11T09:44:40.938Z",
   "adr": "docs/adr/0025-shape-preserving-lod-representation.md",
   "gate": "3",
   "host": {
@@ -21,12 +21,12 @@
   },
   "package": {
     "sceneDirectory": "artifacts/lod/reduced-level/package",
-    "digest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+    "digest": "808c4c01ce9a43534eacf98a09a6351a36ac18c832b2456162a1678bf4a7d4f8",
     "resources": [
       {
         "path": "scene.gltf",
-        "bytes": 101850,
-        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+        "bytes": 102026,
+        "sha256": "232926fb3000220ca3ca455e5f7b02bd175d7ba42873bbc34ef3e7753cd7c7a7"
       },
       {
         "path": "scene.bin",
@@ -50,31 +50,35 @@
     "channelTolerance": 8,
     "requiredAgreement": 0.99,
     "analysisWindow": {
-      "x0": 0.25,
-      "y0": 0.25,
-      "x1": 0.75,
-      "y1": 0.8
+      "x0": 0.1,
+      "y0": 0.09,
+      "x1": 0.98,
+      "y1": 0.88
     },
     "windowMarginPixels": 8,
     "pickLatticeSteps": 24
   },
   "distances": [
     {
-      "label": "admit-threshold",
-      "wheelDelta": 600,
-      "fittedProjectedErrorPixels": 2.1962,
+      "label": "split-band",
+      "wheelDelta": 150,
+      "expectedReducedChunks": 1,
+      "fittedWorstProjectedErrorPixels": 1.3062,
       "arms": {
         "reference": {
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
           "available": true,
           "level": "target",
-          "projectedErrorPixels": 0.8929,
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 1.043,
           "admitPixels": 1e-9,
           "replacePixels": 1e-9,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": null,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
           "representation": "target",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -84,78 +88,81 @@
         "reduced": {
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
           "available": true,
-          "level": "reduced",
-          "projectedErrorPixels": 0.8929,
+          "level": "target",
+          "projectedErrorPixels": 0.7274,
+          "worstProjectedErrorPixels": 1.043,
           "admitPixels": 1,
           "replacePixels": 1.5,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": 0.00041477252029056757,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
-          "representation": "reduced",
+          "reducedChunks": 1,
+          "substitutableChunks": 2,
+          "representation": "target",
           "residentChunks": 4,
           "totalChunks": 4,
-          "triangles": 4135,
+          "triangles": 5537,
           "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
         }
       },
       "frameComparison": {
         "channelTolerance": 8,
         "backgroundColour": "#f0f5fa",
-        "backgroundShare": 0.8805060139668719,
+        "backgroundShare": 0.8599027598095604,
         "frame": {
           "pixels": 613738,
-          "differingPixels": 35,
-          "agreementRatio": 0.999943
+          "differingPixels": 162,
+          "agreementRatio": 0.999736
         },
         "window": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417,
-          "pixels": 169043,
-          "differingPixels": 35,
-          "agreementRatio": 0.999793
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458,
+          "pixels": 425796,
+          "differingPixels": 162,
+          "agreementRatio": 0.99962
         },
         "geometry": {
-          "pixels": 4556,
-          "differingPixels": 35,
-          "agreementRatio": 0.992318,
+          "pixels": 17201,
+          "differingPixels": 162,
+          "agreementRatio": 0.990582,
           "bounds": {
-            "minX": 476,
-            "maxX": 705,
-            "minY": 179,
-            "maxY": 339
+            "minX": 368,
+            "maxX": 818,
+            "minY": 101,
+            "maxY": 416
           }
         },
-        "maximumChannelDelta": 128
+        "maximumChannelDelta": 130
       },
       "analysisWindow": {
         "fractions": {
-          "x0": 0.25,
-          "y0": 0.25,
-          "x1": 0.75,
-          "y1": 0.8
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
         },
         "pixels": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458
         },
-        "clearancePixels": 49
+        "clearancePixels": 41
       },
       "pickLattice": {
         "steps": 24,
         "bounds": {
-          "minX": 476,
-          "maxX": 705,
-          "minY": 179,
-          "maxY": 339
+          "minX": 368,
+          "maxX": 818,
+          "minY": 101,
+          "maxY": 416
         },
-        "points": 57,
+        "points": 59,
         "objectsPicked": 4,
-        "backgroundPoints": 2,
+        "backgroundPoints": 0,
         "identical": true,
         "disagreements": [],
         "referenceObjectIds": [
@@ -176,6 +183,7 @@
           4,
           4,
           4,
+          4,
           5,
           5,
           5,
@@ -188,14 +196,196 @@
           5,
           5,
           5,
-          0,
           6,
           6,
           6,
-          0,
           6,
           6,
           6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      "screenshots": {
+        "reference": {
+          "file": "split-band-reference.png",
+          "bytes": 42093,
+          "sha256": "81adb7ff3256825b7ff095d943badbf8058654bf49db8927a16cfdd44c6c495b"
+        },
+        "reduced": {
+          "file": "split-band-reduced.png",
+          "bytes": 41802,
+          "sha256": "e45d9be4e83c9b2c7a1afded93bcc73f91313a5ba9183c7166260cbf99997c97"
+        }
+      }
+    },
+    {
+      "label": "admit-threshold",
+      "wheelDelta": 250,
+      "expectedReducedChunks": 2,
+      "fittedWorstProjectedErrorPixels": 1.3062,
+      "arms": {
+        "reference": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
+          "available": true,
+          "level": "target",
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 0.8978,
+          "admitPixels": 1e-9,
+          "replacePixels": 1e-9,
+          "maxDeviationMeters": null,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
+          "representation": "target",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 6159,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        },
+        "reduced": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
+          "available": true,
+          "level": "reduced",
+          "projectedErrorPixels": 0.8978,
+          "worstProjectedErrorPixels": 0.8978,
+          "admitPixels": 1,
+          "replacePixels": 1.5,
+          "maxDeviationMeters": 0.0005947672429085638,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "reducedChunks": 2,
+          "substitutableChunks": 2,
+          "representation": "reduced",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 4135,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        }
+      },
+      "frameComparison": {
+        "channelTolerance": 8,
+        "backgroundColour": "#f0f5fa",
+        "backgroundShare": 0.8671110473850405,
+        "frame": {
+          "pixels": 613738,
+          "differingPixels": 128,
+          "agreementRatio": 0.999791
+        },
+        "window": {
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458,
+          "pixels": 425796,
+          "differingPixels": 128,
+          "agreementRatio": 0.999699
+        },
+        "geometry": {
+          "pixels": 12777,
+          "differingPixels": 127,
+          "agreementRatio": 0.99006,
+          "bounds": {
+            "minX": 399,
+            "maxX": 786,
+            "minY": 123,
+            "maxY": 394
+          }
+        },
+        "maximumChannelDelta": 152
+      },
+      "analysisWindow": {
+        "fractions": {
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
+        },
+        "pixels": {
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458
+        },
+        "clearancePixels": 63
+      },
+      "pickLattice": {
+        "steps": 24,
+        "bounds": {
+          "minX": 399,
+          "maxX": 786,
+          "minY": 123,
+          "maxY": 394
+        },
+        "points": 59,
+        "objectsPicked": 4,
+        "backgroundPoints": 0,
+        "identical": true,
+        "disagreements": [],
+        "referenceObjectIds": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          3,
           6,
           6,
           6,
@@ -221,32 +411,36 @@
       "screenshots": {
         "reference": {
           "file": "admit-threshold-reference.png",
-          "bytes": 36294,
-          "sha256": "6cb638a9370115078953ca913ec9c3a0a63b8870df3a568c25429c136387b426"
+          "bytes": 40322,
+          "sha256": "c60855170aafd67ac044ac1ecbe95f798636c17ea38b0939efc125ae907cc9d6"
         },
         "reduced": {
           "file": "admit-threshold-reduced.png",
-          "bytes": 36180,
-          "sha256": "18ff194d109bcc7af037f5037e022f20bf606e9ad66aa3f7ff8100f2b0c85623"
+          "bytes": 40136,
+          "sha256": "f66ff0757498cfcc7e3585df0a7c27e6908f2502c59c9a9c4ff0bbc3ebbf301d"
         }
       }
     },
     {
       "label": "half-threshold",
-      "wheelDelta": 1200,
-      "fittedProjectedErrorPixels": 2.1962,
+      "wheelDelta": 640,
+      "expectedReducedChunks": 2,
+      "fittedWorstProjectedErrorPixels": 1.3062,
       "arms": {
         "reference": {
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
           "available": true,
           "level": "target",
-          "projectedErrorPixels": 0.363,
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 0.5001,
           "admitPixels": 1e-9,
           "replacePixels": 1e-9,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": null,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
           "representation": "target",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -257,13 +451,16 @@
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
           "available": true,
           "level": "reduced",
-          "projectedErrorPixels": 0.363,
+          "projectedErrorPixels": 0.5001,
+          "worstProjectedErrorPixels": 0.5001,
           "admitPixels": 1,
           "replacePixels": 1.5,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": 0.0005947672429085638,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 2,
+          "substitutableChunks": 2,
           "representation": "reduced",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -274,64 +471,64 @@
       "frameComparison": {
         "channelTolerance": 8,
         "backgroundColour": "#f0f5fa",
-        "backgroundShare": 0.8866210011438106,
+        "backgroundShare": 0.8813386168039131,
         "frame": {
           "pixels": 613738,
-          "differingPixels": 5,
-          "agreementRatio": 0.999992
+          "differingPixels": 31,
+          "agreementRatio": 0.999949
         },
         "window": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417,
-          "pixels": 169043,
-          "differingPixels": 5,
-          "agreementRatio": 0.99997
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458,
+          "pixels": 425796,
+          "differingPixels": 31,
+          "agreementRatio": 0.999927
         },
         "geometry": {
-          "pixels": 803,
-          "differingPixels": 5,
-          "agreementRatio": 0.993773,
+          "pixels": 4045,
+          "differingPixels": 31,
+          "agreementRatio": 0.992336,
           "bounds": {
-            "minX": 543,
-            "maxX": 636,
-            "minY": 227,
-            "maxY": 291
+            "minX": 483,
+            "maxX": 698,
+            "minY": 184,
+            "maxY": 334
           }
         },
-        "maximumChannelDelta": 158
+        "maximumChannelDelta": 95
       },
       "analysisWindow": {
         "fractions": {
-          "x0": 0.25,
-          "y0": 0.25,
-          "x1": 0.75,
-          "y1": 0.8
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
         },
         "pixels": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417
+          "x0": 118,
+          "y0": 47,
+          "x1": 1154,
+          "y1": 458
         },
-        "clearancePixels": 97
+        "clearancePixels": 123
       },
       "pickLattice": {
         "steps": 24,
         "bounds": {
-          "minX": 543,
-          "maxX": 636,
-          "minY": 227,
-          "maxY": 291
+          "minX": 483,
+          "maxX": 698,
+          "minY": 184,
+          "maxY": 334
         },
-        "points": 54,
+        "points": 58,
         "objectsPicked": 4,
-        "backgroundPoints": 3,
+        "backgroundPoints": 0,
         "identical": true,
         "disagreements": [],
         "referenceObjectIds": [
-          0,
+          4,
           4,
           4,
           4,
@@ -351,7 +548,8 @@
           4,
           5,
           5,
-          0,
+          5,
+          5,
           5,
           5,
           5,
@@ -362,7 +560,9 @@
           5,
           6,
           6,
-          0,
+          6,
+          6,
+          6,
           6,
           6,
           6,
@@ -373,6 +573,7 @@
           3,
           6,
           6,
+          3,
           3,
           3,
           3,
@@ -390,17 +591,17 @@
       "screenshots": {
         "reference": {
           "file": "half-threshold-reference.png",
-          "bytes": 33131,
-          "sha256": "e0f81562c73c021a44de2ced903bf0c766e08dabd75cc539372d5ab9a0f2922c"
+          "bytes": 36059,
+          "sha256": "9400c8ce0c6033eb3e6de46b5880a176b47826f79058a65dff581d759829e5b7"
         },
         "reduced": {
           "file": "half-threshold-reduced.png",
-          "bytes": 33119,
-          "sha256": "ddfbf4bc1089ef7bd77cc8491943373d4c060f54507930acead58acb63690fbd"
+          "bytes": 35953,
+          "sha256": "c7d41689fb4c6b6dee7fcd0240ba708157cd90305851032f4732bc46a78e4788"
         }
       }
     }
   ],
   "consoleIssues": 0,
-  "elapsedSeconds": 113.9
+  "elapsedSeconds": 179.2
 }

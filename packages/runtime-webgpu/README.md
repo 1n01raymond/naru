@@ -145,7 +145,7 @@ project-owned 0.25 mm / 10,000 km headed Chrome/Firefox record is checked by
 The current experimental decoder accepts a target-only package or a progressive
 package with separate target and coarse external buffers. A package compiled
 with `--reduced-lod` declares `extras.naru.progressive` under
-`naru.progressive-package.1` instead, adding `reducedChunks`: a third
+`naru.progressive-package.2` instead, adding `reducedChunks`: a third
 per-prototype level the decoder fetches, decodes, and prices exactly like a
 target chunk, and which shares a residency key with that prototype's target so
 promoting either replaces the other in place. Which level is asked for is the

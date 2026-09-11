@@ -2,11 +2,13 @@
  * Which geometry level the Studio draws for a shape that has both a declared
  * `reduced` level and its `target` tessellation (ADR-0025).
  *
- * The compiler states one deviation bound for the whole package, and the
- * Studio camera is orthographic, so the scale is uniform over the frame: the
- * decision is one measurement per frame for the whole scene, not per
- * prototype. Selection never invents an error bound -- it divides the bound
- * the package declares by the world size of a pixel.
+ * Every reduced chunk declares the deviation its own geometry stays within, so
+ * the decision is per chunk: a coarsely reduced shape returns to its exact
+ * tessellation while a faithfully reduced one stays reduced in the same frame.
+ * The Studio camera is orthographic, so one metres-per-pixel scale serves the
+ * whole frame, but the bound each chunk divides by it is its own. Selection
+ * never invents an error bound -- it only divides the bound the package
+ * declares by the world size of a pixel.
  */
 export type GeometryLevel = "reduced" | "target";
 
@@ -14,6 +16,8 @@ export type GeometryLevel = "reduced" | "target";
 export interface LevelChunk {
   readonly id: string;
   readonly prototypeIds: readonly string[];
+  /** The deviation a reduced chunk declares, in metres; absent on target chunks. */
+  readonly maxDeviationMeters?: number;
 }
 
 /**
@@ -28,6 +32,8 @@ export interface LevelChunk {
 export interface ReducedChunkPlan<TChunk extends LevelChunk = LevelChunk> {
   /** The reduced chunk that stands in for a target chunk, by target chunk id. */
   readonly substitutes: ReadonlyMap<string, TChunk>;
+  /** The deviation each stand-in declares, in metres, by target chunk id. */
+  readonly bounds: ReadonlyMap<string, number>;
   /** Target chunk ids that have no usable stand-in and are always drawn exactly. */
   readonly exactOnly: readonly string[];
 }
@@ -39,9 +45,12 @@ export interface ReducedChunkPlan<TChunk extends LevelChunk = LevelChunk> {
  * The match has to be the whole prototype set, not an overlap: a partial
  * stand-in would draw some of a chunk's shapes reduced and leave the rest
  * undrawn, and a stand-in carrying extra prototypes would charge the budget for
- * geometry another chunk is already accounted for. Anything short of an exact
- * pairing is reported as exact-only rather than approximated, so an unusual
- * chunking loses the reduced level instead of misdrawing the scene.
+ * geometry another chunk is already accounted for. A stand-in that declares no
+ * usable deviation is refused for the same reason: without a bound there is
+ * nothing to project, and drawing it would be exactly the assumption this level
+ * exists to avoid. Anything short of an exact, bounded pairing is reported as
+ * exact-only rather than approximated, so an unusual chunking loses the reduced
+ * level instead of misdrawing the scene.
  */
 export function planReducedChunks<TChunk extends LevelChunk>(
   targetChunks: readonly TChunk[],
@@ -60,17 +69,26 @@ export function planReducedChunks<TChunk extends LevelChunk>(
     reducedBySignature.set(signature, chunk);
   }
   const substitutes = new Map<string, TChunk>();
+  const bounds = new Map<string, number>();
   const exactOnly: string[] = [];
   for (const chunk of targetChunks) {
     const signature = prototypeSignature(chunk.prototypeIds);
     const match = reducedBySignature.get(signature);
-    if (match === undefined || ambiguous.has(signature)) {
+    const bound = match?.maxDeviationMeters;
+    if (
+      match === undefined ||
+      ambiguous.has(signature) ||
+      typeof bound !== "number" ||
+      !Number.isFinite(bound) ||
+      bound <= 0
+    ) {
       exactOnly.push(chunk.id);
       continue;
     }
     substitutes.set(chunk.id, match);
+    bounds.set(chunk.id, bound);
   }
-  return { substitutes, exactOnly };
+  return { substitutes, bounds, exactOnly };
 }
 
 function prototypeSignature(prototypeIds: readonly string[]): string {
@@ -84,7 +102,11 @@ export interface PinnableChunk extends LevelChunk {
 
 /**
  * The chunk to hold for a demanded target chunk: its reduced stand-in while the
- * selector draws the reduced level, the exact chunk otherwise.
+ * selector draws that chunk reduced, the exact chunk otherwise.
+ *
+ * The level is asked for per chunk, so two chunks in the same frame can be drawn
+ * at different levels -- which is the point of a package that declares a bound
+ * per chunk rather than one for the whole scene.
  *
  * Pinning wins over the level. A selected occurrence is promoted to `target`
  * (ADR-0025 keeps the inspected shape exact, whatever the camera says), so a
@@ -93,11 +115,11 @@ export interface PinnableChunk extends LevelChunk {
  */
 export function effectiveLevelChunk<TChunk extends PinnableChunk>(
   chunk: TChunk,
-  level: GeometryLevel,
+  levelFor: (chunkId: string) => GeometryLevel,
   plan: ReducedChunkPlan<TChunk>,
   isPinnedToTarget?: (meshIndexes: readonly number[]) => boolean,
 ): TChunk {
-  if (level === "target") return chunk;
+  if (levelFor(chunk.id) === "target") return chunk;
   if (isPinnedToTarget?.(chunk.meshIndexes) === true) return chunk;
   return plan.substitutes.get(chunk.id) ?? chunk;
 }
@@ -168,74 +190,125 @@ export function projectedErrorPixels(
 
 /** The measurement behind a level decision, for the HUD and for a record. */
 export interface ReducedLodSelection {
+  /**
+   * The scene-wide level: `reduced` only when every substitutable chunk is
+   * drawn reduced. A frame that mixes levels reports `target`, because that is
+   * the level a viewer can rely on for the frame as a whole.
+   */
   readonly level: GeometryLevel;
-  /** Pixels of error the declared bound projects to, or `undefined` before the first measurement. */
+  /** Chunks currently drawn through their reduced stand-in. */
+  readonly reducedChunkCount: number;
+  /** Chunks that have a usable stand-in at all, drawn reduced or not. */
+  readonly substitutableChunkCount: number;
+  /** The largest deviation, in metres, among the chunks drawn reduced. */
+  readonly maxDeviationMeters: number | undefined;
+  /** The largest error, in pixels, any chunk drawn reduced projects to. */
   readonly projectedErrorPixels: number | undefined;
+  /**
+   * The largest error any substitutable chunk would project to if it were drawn
+   * reduced, which is defined as soon as one measurement has landed -- so a view
+   * that draws nothing reduced still records the scale it decided at.
+   */
+  readonly worstProjectedErrorPixels: number | undefined;
   readonly metresPerPixel: number | undefined;
 }
 
 /**
- * Hysteretic level choice for a package that declares a reduced level.
+ * Hysteretic per-chunk level choice for a package that declares a reduced level.
  *
- * The selector starts on `target`: the exact tessellation is what the package
+ * Every chunk starts on `target`: the exact tessellation is what the package
  * already proves, so a reduced level is something the view has to earn by
- * measurement rather than something assumed until disproved.
+ * measurement rather than something assumed until disproved. Each chunk then
+ * crosses the band on its own declared bound, so one camera scale can leave a
+ * coarsely reduced shape exact while a faithfully reduced one is substituted.
  */
 export class ReducedLodSelector {
   /** The resolved band, exposed so the Studio can publish it in a record. */
   readonly thresholds: ReducedLodThresholds;
-  private current: GeometryLevel = "target";
-  private lastErrorPixels: number | undefined;
+  private readonly bounds: ReadonlyMap<string, number>;
+  private readonly levels = new Map<string, GeometryLevel>();
   private lastMetresPerPixel: number | undefined;
 
   constructor(
-    private readonly maxDeviationMeters: number,
+    bounds: ReadonlyMap<string, number>,
     thresholds: ReducedLodThresholds = defaultReducedLodThresholds,
   ) {
-    if (!Number.isFinite(maxDeviationMeters) || maxDeviationMeters < 0) {
-      throw new RangeError("A reduced level must declare a finite, non-negative deviation.");
+    for (const [chunkId, deviation] of bounds) {
+      if (!Number.isFinite(deviation) || deviation <= 0) {
+        throw new RangeError(`Reduced chunk ${chunkId} must declare a finite, positive deviation.`);
+      }
+      this.levels.set(chunkId, "target");
     }
-    this.thresholds = resolveReducedLodThresholds(
-      thresholds.admitPixels,
-      thresholds.replacePixels,
-    );
+    this.bounds = bounds;
+    this.thresholds = resolveReducedLodThresholds(thresholds.admitPixels, thresholds.replacePixels);
   }
 
-  /** The deviation the package declares, in metres, for the HUD to quote. */
-  deviationMeters(): number {
-    return this.maxDeviationMeters;
+  /** The level to draw one target chunk at; `target` for anything unsubstitutable. */
+  levelFor(chunkId: string): GeometryLevel {
+    return this.levels.get(chunkId) ?? "target";
+  }
+
+  /** The deviation a chunk's stand-in declares, in metres, or `undefined`. */
+  deviationMeters(chunkId: string): number | undefined {
+    return this.bounds.get(chunkId);
   }
 
   selection(): ReducedLodSelection {
+    let reducedChunkCount = 0;
+    let maxDeviationMeters: number | undefined;
+    let worstDeviation: number | undefined;
+    for (const [chunkId, deviation] of this.bounds) {
+      if (worstDeviation === undefined || deviation > worstDeviation) worstDeviation = deviation;
+      if (this.levels.get(chunkId) !== "reduced") continue;
+      reducedChunkCount += 1;
+      if (maxDeviationMeters === undefined || deviation > maxDeviationMeters) {
+        maxDeviationMeters = deviation;
+      }
+    }
+    const scale = this.lastMetresPerPixel;
     return {
-      level: this.current,
-      projectedErrorPixels: this.lastErrorPixels,
-      metresPerPixel: this.lastMetresPerPixel,
+      level: this.bounds.size > 0 && reducedChunkCount === this.bounds.size ? "reduced" : "target",
+      reducedChunkCount,
+      substitutableChunkCount: this.bounds.size,
+      maxDeviationMeters,
+      projectedErrorPixels:
+        scale === undefined || maxDeviationMeters === undefined
+          ? undefined
+          : projectedErrorPixels(maxDeviationMeters, scale),
+      worstProjectedErrorPixels:
+        scale === undefined || worstDeviation === undefined
+          ? undefined
+          : projectedErrorPixels(worstDeviation, scale),
+      metresPerPixel: scale,
     };
   }
 
   /**
-   * Folds one camera measurement in and reports whether the level changed.
+   * Folds one camera measurement in and reports whether any chunk changed level.
    *
    * A non-positive or non-finite scale is the camera's "no viewport" sentinel:
-   * nothing is drawn at that size, so it leaves both the level and the last
+   * nothing is drawn at that size, so it leaves every level and the last
    * measurement alone instead of dividing into a deceptively small error.
    */
   update(metresPerPixel: number): boolean {
     if (!Number.isFinite(metresPerPixel) || metresPerPixel <= 0) return false;
-    const errorPixels = projectedErrorPixels(this.maxDeviationMeters, metresPerPixel);
-    this.lastErrorPixels = errorPixels;
     this.lastMetresPerPixel = metresPerPixel;
-    const next: GeometryLevel =
-      this.current === "target"
-        ? errorPixels <= this.thresholds.admitPixels
-          ? "reduced"
-          : "target"
-        : errorPixels > this.thresholds.replacePixels
-          ? "target"
-          : "reduced";
-    if (next === this.current) return false;
-    this.current = next;
-    return true;
+    let changed = false;
+    for (const [chunkId, deviation] of this.bounds) {
+      const errorPixels = projectedErrorPixels(deviation, metresPerPixel);
+      const current = this.levels.get(chunkId) ?? "target";
+      const next: GeometryLevel =
+        current === "target"
+          ? errorPixels <= this.thresholds.admitPixels
+            ? "reduced"
+            : "target"
+          : errorPixels > this.thresholds.replacePixels
+            ? "target"
+            : "reduced";
+      if (next === current) continue;
+      this.levels.set(chunkId, next);
+      changed = true;
+    }
+    return changed;
   }
 }

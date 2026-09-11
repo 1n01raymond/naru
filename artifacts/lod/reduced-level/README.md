@@ -24,11 +24,11 @@ Record: `reduced-lod-evidence.json` (`naru.reduced-lod-evidence.1`, mode
 
 ## Results
 
-Both compiles produce package `de1e6bc0df2c…` (scene.gltf 101,850 B,
+Both compiles produce package `808c4c01ce9a…` (scene.gltf 102,026 B,
 scene.bin 578,988 B, coarse.bin 3,648 B, build-report.json 4,116 B,
 adapter-report.json 1,501 B), the Khronos validator reports 0 errors and 0
 warnings, and the document carries `extras.naru.progressive`
-(`naru.progressive-package.1`, strategy `prototype-aabb-reduced-v1`) with no
+(`naru.progressive-package.2`, strategy `prototype-aabb-reduced-v1`) with no
 `extras.madi.progressive` block.
 
 | Prototype | Outcome | Target tris | Reduced tris | Sampled p95 (m) | Sampled max (m) |
@@ -43,6 +43,12 @@ warnings, and the document carries `extras.naru.progressive`
 | `target` | 4 | 547,352 | 6,147 |
 | `reduced` | 2 | 31,636 | 472 |
 
+Each reduced chunk declares its **own** measured bound in the document —
+0.000595 m for `thin-plate-holes`, 0.000415 m for `fillet-bracket` — and the
+document-level `reducedLod` block states the method, the 0.001 m request, and
+the largest of the per-chunk bounds. The declared number is the measured
+sampled maximum against that prototype's own `target`, not the request.
+
 The reduced chunks follow the target payloads in `scene.bin` and are declared
 in `extras.naru.progressive.reducedChunks`, so the loader Range-fetches them
 like target chunks and prices them with the unchanged `batchResidencyCost`.
@@ -51,11 +57,12 @@ like target chunks and prices them with the unchanged `batchResidencyCost`.
 
 - Digests are host-local (the OCCT adapter differs across hosts by a few
   bytes); the validator pins them and says not to retarget.
-- No Studio selection exists yet: the loader decodes `reduced` chunks, but
-  the projected-error switch with hysteresis (ADR-0025 gate 3) is the next
-  slice, so nothing on screen changes with this record alone.
+- This record covers the compile only. What the Studio then draws is
+  [`reduced-selection/`](../reduced-selection/README.md) (ADR-0025 gate 3).
 - Explicit edge segments are carried from `target` verbatim in content but
   re-encoded into the reduced payload, so a reduced chunk is self-contained.
-- The reduced level is per prototype and its deviation statement is the
-  compile option (`maxDeviationMeters` 0.001); the sampled p95/max per
-  prototype above are the measured evidence behind that statement.
+- `build-report.json` still records `options.reducedLod.maxDeviationMeters` as
+  the 0.001 m *request*: that report belongs to the frozen
+  `madi.phase1.compiler-report.1` family (ADR-0007) and was deliberately not
+  bumped for this slice. The measured bounds live in the document, which did
+  bump.
