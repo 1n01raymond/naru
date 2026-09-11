@@ -239,6 +239,48 @@ describe("hierarchy sidecar decoding", () => {
     ]);
   });
 
+  it("keeps an omitted identity key distinguishable from an explicit null", () => {
+    const elided = compile({ elideDerivedIdentifiers: true, relocateHierarchyNodes: true });
+    const decoded = decodePackageHierarchy(elided.hierarchyJson, elided.hierarchyBinary as Uint8Array, {
+      maxEntries: 1_000,
+    });
+    const node = (occurrenceId: string) => {
+      const found = decoded.entries
+        .map(({ relocated }) => relocated)
+        .find((candidate) => candidate?.occurrenceId === occurrenceId);
+      if (!found) throw new TypeError(`${occurrenceId} did not survive relocation.`);
+      return found;
+    };
+
+    // The loader tells the two absent states apart with the `in` operator, so
+    // an omitted field has to stay an absent *own* property: a prototype
+    // accessor or an `undefined` initializer would make both states look alike.
+    const derived = node(assemblyIds.derived);
+    expect("semanticId" in derived).toBe(false);
+    expect("sourceRef" in derived).toBe(false);
+    const anonymous = node(assemblyIds.anonymous);
+    expect("semanticId" in anonymous).toBe(true);
+    expect(anonymous.semanticId).toBeNull();
+    expect(anonymous.sourceRef).toBeNull();
+    expect(node(assemblyIds.bespoke).semanticId).toBe("semantic:bespoke-frame");
+  });
+
+  it("hands every reader of a transform its own copy", () => {
+    const decoded = decodePackageHierarchy(compiled.hierarchyJson, columns, { maxEntries: 1_000 });
+    const node = decoded.entries
+      .map(({ relocated }) => relocated)
+      .find((candidate) => candidate?.occurrenceId === assemblyIds.bespoke);
+    if (!node) throw new TypeError("The bespoke assembly did not survive relocation.");
+
+    const first = node.localTransform;
+    const second = node.localTransform;
+    expect(second).not.toBe(first);
+    // The copies come out of one shared table, so a caller that writes into the
+    // one it was handed must not be able to reach any other node's transform.
+    first[12] = 42;
+    expect(node.localTransform[12]).toBe(-0.25);
+  });
+
   it("reads a sidecar handed over on an unaligned slice", () => {
     const padded = new Uint8Array(columns.byteLength + 1);
     padded.set(columns, 1);

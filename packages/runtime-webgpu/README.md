@@ -29,6 +29,17 @@ Direct WebGPU rendering and the Phase 1 compiled glTF runtime boundary.
   because the tree is read on the main thread that owns the panel. Relocation
   moves only mesh-less nodes, so renderable occurrences stay derivable from the
   document either way.
+- The sidecar decoder validates eagerly and materializes late. Every offset,
+  index, and section bound is settled before a value is handed out, but a string
+  column is decoded on the read that asks for it, and `localTransform` is a
+  prototype accessor that cuts a fresh copy out of the shared matrix table each
+  time, so a caller can neither reach nor mutate the decoded table. Identity
+  stays an own property: `semanticId` and `sourceRef` are written only when the
+  occurrence carries them, because the loader tells an omitted key from an
+  explicit `null` with the `in` operator
+  ([`package-hierarchy.test.ts`](test/package-hierarchy.test.ts)). Read a
+  transform twice and you get two arrays; a caller that needs it twice should
+  keep the first copy.
 - `decodeCompiledGltf(value, binary, { representation })` validates the selected
   external-buffer accessor ranges,
   decodes surface and explicit-edge streams, composes node transforms, preserves
