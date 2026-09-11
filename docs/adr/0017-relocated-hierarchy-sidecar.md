@@ -147,20 +147,24 @@ mesh-less nodes live -- `scene.bin`, `coarse.bin`, `properties.json`, and
 `properties.bin` byte-identical between them -- run three times each,
 interleaved, in fresh headed Chrome processes:
 
-- first coarse frame 4,408 -> 3,703 ms (-15.99%), peak JS heap 839,726,321 ->
-  669,299,303 B (-20.30%), budget-limited ready 9,687 -> 8,987 ms; the arms'
+- first coarse frame 4,702 -> 3,966 ms (-15.65%), peak JS heap 856,279,408 ->
+  697,327,573 B (-18.56%), budget-limited ready 9,953 -> 9,834 ms; the arms'
   spreads do not overlap on either headline;
-- hierarchy-ready 2,220 -> 2,191 ms: reading the tree from a fetched sidecar
+- hierarchy-ready 2,313 -> 2,290 ms: reading the tree from a fetched sidecar
   costs about what reading it from the document did, which is the honest
-  reading of a -1.31% move;
+  reading of a -0.99% move;
 - `hierarchy.bin` fetched exactly once per run, as response 3 of 118, ahead of
   `coarse.bin`, and never fetched by the in-place arm -- both derived per run
   from the response stream;
 - the same endpoint over 17 counters in all six runs (111 of 234 chunks,
   66,686,508 decoded / 66,783,808 GPU bytes, 2,255,235 triangles, the same
-  picked occurrence and its six property entries), 0 console issues.
+  picked occurrence and its 44 property entries), 0 console issues.
 
-The one deliberate difference is the picked node index (148735 -> 64079): a
+Both arms were re-captured on 2026-09-07, after the Studio camera fix and the
+view cube; every counter above reproduced and the wall-clock and heap figures
+are that capture's.
+
+The one deliberate difference is the picked node index (74387 -> 37247): a
 relocated document keeps only the nodes that draw, so they are renumbered.
 
 Both records' digests are host-local to this Windows host, as their validators

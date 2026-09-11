@@ -181,7 +181,7 @@ only what is nominally demanded. On the identical localized view -- 184 of
 chunks and 107,337,264 bytes, while `spatial-leaf-anchor-v1` demands 152 chunks
 and 78,875,544 bytes: 27.3% fewer chunks and 26.5% fewer bytes, a wider margin
 than Digital Hub's. Every window of both orders ends inside the budget, and the
-first coarse frame stayed between 4.213 s and 4.388 s across six runs. Because
+committed samples reach their first coarse frame at 4.300 s and 4.812 s. Because
 the budget evicts, the two orders hold different chunk sets and render
 different triangle counts; `sixty5-localized/README.md` records that, the
 host-local package digests, and the rest of what this does not prove.

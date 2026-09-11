@@ -42,7 +42,7 @@ disclosed cache condition. The previous record on this measure was captured in
 Chrome 152.0.7977.64; that build is not installed on the recording host, so the
 browser version is not held constant against it.
 
-| Measure | Baseline | Shared coarse | Skip-and-continue | Estimate gate | Vertex pool | This record (3 runs) |
+| Measure | Baseline | Shared coarse | Skip-and-continue | Estimate gate | Vertex pool | This record (3 runs, 2026-09-05) |
 |---|---:|---:|---:|---:|---:|---:|
 | First coarse frame | 268,013 ms | 12,553 ms | 4,340 ms | 4,471 ms | 4,283 ms | 4,495 / 4,487 / 4,422 ms |
 | First coarse frame median | 268,013 ms | 12,796 ms | 4,340 ms | 4,471 ms | 4,283 ms | 4,487 ms |
@@ -63,25 +63,49 @@ accept, not what it accepts here. Every counter below is identical to the
 preceding record. What moved is the cost of reading the 448.8 MB document -
 half the heap, for about 200 ms of first frame.
 
-The reviewed artifact is the 4,487 ms run, the median of the three on the
-first-frame measure. All three runs reach an identical resident endpoint, so
-the state below is the recorded state of every one of them:
+The three runs above were recorded on 2026-09-05. The committed
+`browser-residency.json` is a later capture: the record was re-run on
+2026-09-07 after the Studio camera fix and the view cube, because its
+screenshots still showed the mirrored from-below rendering that fix corrected.
+The endpoint reproduced exactly, so the comparison above still holds; the
+milestones, the Worker decode time, the heap sample, and the centre-canvas pick
+are the re-captured ones:
+
+| Measure | 2026-09-05 median of 3 | Committed sample, 2026-09-07 |
+|---|---:|---:|
+| Hierarchy ready | 2,272 ms | 2,478 ms |
+| First coarse frame | 4,487 ms | 4,743 ms |
+| Budget-limited ready | 9,104 ms | 9,288 ms |
+| Worker geometry decode | 1,117.5 ms | 1,089.8 ms |
+| Used JS heap at ready | 0.843 GB | 0.853 GB |
+| Centre-canvas pick | beam 148736, 6 entries | facade panel 74388, 44 entries |
+
+The re-capture was three runs per engine, and the endpoint and the pick were
+stable across them; their milestone distribution was not carried into the
+record, so the distribution rows above remain the 2026-09-05 ones and no
+median or p95 is claimed for the newer set. Against the 268,013 ms baseline the
+committed sample is a 98.23% reduction, a 56.51x speedup.
+
+All runs, on both capture dates, reach an identical resident endpoint, so the
+state below is the recorded state of every one of them:
 
 - 78,173 / 78,173 visible renderable occurrences;
 - 111 of 234 target chunks admitted, from 113 satisfied HTTP Range responses;
 - 66,686,508 decoded bytes and 66,783,808 GPU bytes under separate 64 MiB
   budgets - 325,056 bytes of GPU headroom left;
 - 2,255,235 unique resident triangles and 12 shared coarse edge segments;
-- the same center-canvas foundation beam pick and 6 IFC2X3 property entries;
+- the same centre-canvas prefab facade panel pick, object 74388, resolving 44
+  IFC2X3 property entries from the property sidecar;
 - zero console warnings, console errors, or page errors.
 
-Main-page used JS heap at the ready sample was 0.843 GB for the reviewed run
-(0.835-0.853 GB across the three), against 1.625 GB for the same resident set
-before the loader was bounded. The saving is the document read itself: the
-bounded reader fills one buffer of exactly the declared `Content-Length`,
-where `Response.arrayBuffer()` accumulated the 448.8 MB body and then
-concatenated it. The first coarse frame pays about 200 ms for that copy
-(4,487 ms against 4,283 ms), and the ready state about 160 ms. The validator
+Main-page used JS heap at the ready sample was 0.853 GB for the committed
+capture and 0.843 GB for the 2026-09-05 reviewed run (0.835-0.853 GB across
+those three), against 1.625 GB for the same resident set before the loader was
+bounded. The saving is the document read itself: the bounded reader fills one
+buffer of exactly the declared `Content-Length`, where
+`Response.arrayBuffer()` accumulated the 448.8 MB body and then concatenated
+it. The first coarse frame pays about 200 ms for that copy (4,487 ms against
+4,283 ms on the 2026-09-05 runs), and the ready state about 160 ms. The validator
 holds the heap under 1.75 GB; the exact figure depends on GC timing and is
 recorded rather than pinned.
 

@@ -94,21 +94,24 @@ Digital Hub record, where nothing is ever evicted, does assert equality.
 
 ## Query cost
 
-Localized queries stay sub-millisecond on a 2,048-leaf, 78,173-occurrence
-index: p50 0.200 ms / p95 0.250 ms (compatibility) and p50 0.170 ms / p95
-0.235 ms (leaf-anchor) over 17 samples each. The 48 navigation queries per
-order run p50 0.295 ms / p95 0.405 ms and p50 0.195 ms / p95 0.330 ms. No
-navigation sample tested all 78,173 occurrences -- the largest tested 10,415 --
-so the BVH never degenerated into the linear fallback during the trace.
+Localized query medians stay well under a millisecond on a 2,048-leaf,
+78,173-occurrence index: p50 0.265 ms (compatibility) and p50 0.305 ms
+(leaf-anchor) over 17 samples each. The compatibility p95 is 1.955 ms, its
+single slowest sample, against 0.485 ms for leaf-anchor; with 17 samples the
+p95 is one observation and is reported as such, not as a bound. The 48
+navigation queries per order run p50 0.280 ms / p95 0.390 ms and p50 0.300 ms /
+p95 0.405 ms. No navigation sample tested all 78,173 occurrences -- the largest
+tested 9,991 -- so the BVH never degenerated into the linear fallback during
+the trace.
 
 ## First frame
 
 ADR-0008 gates the payload-order option on the first coarse frame not
-regressing. Across all six runs the coarse frame landed between 4.213 s and
-4.388 s, so the three-run p95 of both orders is far inside the 15-second bound
-the decision records. The committed runs report 2.293 s hierarchy / 4.319 s
-coarse frame / 7.432 s ready (compatibility) and 2.352 / 4.384 / 7.705
-(leaf-anchor), against 4.487 s for the non-spatial sixty5 package in
+regressing. The committed samples were re-captured on 2026-09-07 after the
+Studio camera fix and the view cube; every localized count above reproduced
+unchanged, and the wall clock is that capture's: 2.222 s hierarchy / 4.300 s
+coarse frame / 7.933 s ready (compatibility) and 2.223 / 4.812 / 9.496
+(leaf-anchor) -- both far inside the 15-second bound the decision records -- against 4.743 s for the non-spatial sixty5 package in
 `../../ifc/sixty5-first-frame/`. Adding the index and reordering the payload
 costs nothing measurable at the first frame.
 

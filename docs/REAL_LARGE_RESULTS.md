@@ -6,6 +6,13 @@ names what was missing: **one coherent matrix that presents them together**,
 and a repeat on a second engine. This document is that matrix. It adds no measurement of its own; every figure below is read from a
 committed record, and every record is linked from the row that quotes it.
 
+The browser rows are the 2026-09-07 capture set, re-recorded after the Studio
+camera fix and the view cube landed; the engine-independent counters reproduced
+unchanged, and the wall-clock figures are the new capture's. The memory rows
+were not re-recorded and are the earlier set, which is why their process
+figures are quoted from their own records rather than compared with the frame
+rows.
+
 The matrix is deliberately narrow. It covers one model, sixty5, because that
 is the only real-large federation every one of these records was taken
 against. Digital Hub, the STEP fixtures, and the benchmark harness results are
@@ -27,12 +34,12 @@ occurrences, 42,435 geometric prototypes, and 234 target geometry chunks.
 | Import | Warm reopen, compiler time, median of 5 | 1.36 s | Node 22.14 CLI | [cache](../artifacts/cache/sixty5/README.md) |
 | Import | Warm reopen, whole process incl. startup | 1.43 s | Node 22.14 CLI | [cache](../artifacts/cache/sixty5/README.md) |
 | Import | Corrupt cache entry, warn and rebuild | 89.0 s | Node 22.14 CLI | [cache](../artifacts/cache/sixty5/README.md) |
-| Startup | Hierarchy and search ready | 2.272 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
-| Startup | Hierarchy and search ready | 3.396 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
-| Frame | First coarse frame, median of 3 | 4.487 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
-| Frame | First coarse frame, median of 3 | 6.801 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
-| Frame | Budget-limited ready state | 9.190 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
-| Frame | Budget-limited ready state | 13.712 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
+| Startup | Hierarchy and search ready | 2.478 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
+| Startup | Hierarchy and search ready | 3.122 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
+| Frame | First coarse frame | 4.743 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
+| Frame | First coarse frame | 6.093 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
+| Frame | Budget-limited ready state | 9.288 s | Chrome 151 / Blink | [first frame](../artifacts/ifc/sixty5-first-frame/README.md) |
+| Frame | Budget-limited ready state | 11.914 s | Firefox 150 / Gecko | [first frame, Gecko](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
 | Frame | Target chunks admitted of 234 | 111 | both engines, identical | [Gecko repeat](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
 | Frame | Resident triangles | 2,255,235 | both engines, identical | [Gecko repeat](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
 | Memory | Process working set at budget-limited state, median of 3 | 2.586 GB | Chrome 151 / Blink, OS-sampled | [envelope](../artifacts/memory/sixty5-envelope/README.md) |
@@ -43,11 +50,11 @@ occurrences, 42,435 geometric prototypes, and 234 target geometry chunks.
 | Memory | Forced-low 8 MiB budget: working set | 4.701 GB | Firefox 150 / Gecko, OS-sampled | [envelope, Gecko](../artifacts/memory/sixty5-envelope-gecko/README.md) |
 | Memory | Forced-low 8 MiB budget: chunks admitted, occurrences visible | 4 / 234, 78,173 | both engines, identical | [envelope, Gecko](../artifacts/memory/sixty5-envelope-gecko/README.md) |
 | Memory | Predeclared memory targets met | 5 of 5 / 4 of 5 | Blink / Gecko | [envelope, Gecko](../artifacts/memory/sixty5-envelope-gecko/README.md) |
-| Interaction | Navigation demand query, p50 / p95 over 48 samples | 0.295 / 0.405 ms | Chrome 151, compatibility order | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
-| Interaction | Navigation demand query, p50 / p95 over 48 samples | 0.195 / 0.330 ms | Chrome 151, leaf-anchor order | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
+| Interaction | Navigation demand query, p50 / p95 over 48 samples | 0.280 / 0.390 ms | Chrome 151, compatibility order | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
+| Interaction | Navigation demand query, p50 / p95 over 48 samples | 0.300 / 0.405 ms | Chrome 151, leaf-anchor order | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
 | Interaction | Localized view: candidate chunks, of 234 fitted | 209 / 152 | compatibility / leaf-anchor | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
 | Interaction | Localized view: demanded bytes, of 120,707,064 fitted | 107,337,264 / 78,875,544 B | compatibility / leaf-anchor | [localized](../artifacts/spatial-demand/sixty5-localized/README.md) |
-| Interaction | Selection resolves source properties | 6 IFC2X3 entries | both engines, identical | [Gecko repeat](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
+| Interaction | Selection resolves source properties | 44 IFC2X3 entries | both engines, same count | [Gecko repeat](../artifacts/ifc/sixty5-first-frame-gecko/README.md) |
 
 ## The second-engine repeat
 
@@ -56,25 +63,28 @@ same package on the same host. The comparison is the point of the repeat:
 
 | | Chrome 151 (Blink) | Firefox 150 (Gecko) |
 |---|---:|---:|
-| Hierarchy ready | 2.272 s | 3.396 s |
-| First coarse frame | 4.487 s | 6.801 s |
-| Budget-limited ready | 9.190 s | 13.712 s |
-| Worker geometry decode | 1,117.5 ms | 2,440.7 ms |
+| Hierarchy ready | 2.478 s | 3.122 s |
+| First coarse frame | 4.743 s | 6.093 s |
+| Budget-limited ready | 9.288 s | 11.914 s |
+| Worker geometry decode | 1,089.8 ms | 1,761.9 ms |
 | Target chunks admitted | 111 / 234 | 111 / 234 |
 | Chunks refused before fetch | 123 | 123 |
 | Decoded / GPU resident bytes | 66,686,508 / 66,783,808 | 66,686,508 / 66,783,808 |
 | Resident triangles | 2,255,235 | 2,255,235 |
 | Visible occurrences | 78,173 | 78,173 |
 | Satisfied Range responses | 113 | 113 |
-| Used JS heap at ready | 852,946,064 B | not exposed by the engine |
+| Used JS heap at ready | 852,514,277 B | not exposed by the engine |
 | Console and page errors | 0 | 0 |
 
-Gecko is about 1.5x slower than Blink at every milestone on this host, and
-2.18x slower at Worker geometry decode. Everything the runtime decides for
+Gecko is about 1.3x slower than Blink at every milestone on this host, and
+1.62x slower at Worker geometry decode. Everything the runtime decides for
 itself is identical: the same 111 chunks are admitted, the same 123 are refused
 before a byte moves, the same bytes are resident, the same triangles are drawn,
-the same element is picked and resolves the same six properties, and the ready
-status string matches character for character. Admission is computed from
+a centre-canvas pick resolves the same 44 property entries, and the ready
+status string matches character for character. The one figure the engines do
+not share is which element that pick lands on: from above the centre pixel sits
+on the seam between two adjacent prefab facade panels, and each engine resolves
+one of them, stably across its three runs. Admission is computed from
 measured decoded and GPU cost against a byte budget, so a second engine
 reaching a different resident set would have meant the budget was tracking
 something browser-specific. It is not.

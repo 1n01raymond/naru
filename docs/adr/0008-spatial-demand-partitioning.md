@@ -179,12 +179,12 @@ down to 889 nodes, 184 leaves, and 7,026 occurrences. On that identical view the
 compatibility package demands 209 of its 234 chunks (107,337,264 bytes) and the
 leaf-anchor package 152 (78,875,544 bytes): 27.3% fewer chunks and 26.5% fewer
 bytes, a wider margin than Digital Hub's, which is what the off-view census
-predicts as a site grows. Localized navigation costs p50 0.295 ms / p95 0.405 ms
-(compatibility) and p50 0.195 ms / p95 0.330 ms (leaf-anchor) over 48 queries,
+predicts as a site grows. Localized navigation costs p50 0.280 ms / p95 0.390 ms
+(compatibility) and p50 0.300 ms / p95 0.405 ms (leaf-anchor) over 48 queries,
 with no total-occurrence fallback. Every window of both orders ends at or under
-the residency budget, and the first coarse frame stayed between 4.213 s and
-4.388 s across six runs, so the three-run p95 of each order is far inside the
-15-second bound this decision requires. Because the budget evicts, the two
+the residency budget, and the committed samples reach their first coarse frame
+at 4.300 s (compatibility) and 4.812 s (leaf-anchor), far inside the 15-second
+bound this decision requires. Because the budget evicts, the two
 orders hold different chunk sets and render 2,180,160 against 2,182,636
 triangles from the same view; the record states that rather than asserting
 equality. Firefox and Safari reproduction of a localized trace and the
@@ -211,9 +211,9 @@ nested/ADR-0005 cross-check remain open.
   compatibility-order versus leaf-anchor requested/off-view bytes; the Digital
   Hub and sixty5 localized headed traces publish query p50/p95 and candidate
   reduction, the sixty5 trace measuring demand where the residency budget binds.
-  The sixty5 three-run first-coarse-frame p95 must remain at or below 15 seconds
-  on the same recorded host class, which it does at 4.358 s (compatibility) and
-  4.388 s (leaf-anchor).
+  The sixty5 first coarse frame must remain at or below 15 seconds on the same
+  recorded host class, which the committed samples do at 4.300 s
+  (compatibility) and 4.812 s (leaf-anchor).
 
 This evidence may accept the spatial-demand decision only. It does not by
 itself make an ADR-0003 renderer-performance claim, prove screen-space LOD, or

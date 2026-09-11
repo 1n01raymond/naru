@@ -667,7 +667,7 @@ where the 120,707,064 target bytes cannot fit the 67,108,864-byte budget, shows
 the same reduction deciding what is fetched at all: 889 of 4,095 nodes, 184 of
 2,048 leaves, 7,026 of 78,173 occurrences, and 209 of 234 chunks against 152
 under leaf-anchor ordering, with every window inside the budget and the first
-coarse frame unmoved at 4.213-4.388 s
+coarse frame unmoved at 4.300 s and 4.812 s
 (`artifacts/spatial-demand/sixty5-localized/`). A non-Blink repeat and the
 nested-view ADR-0005 cross-check are still pending, so ADR-0008 remains
 Proposed.
