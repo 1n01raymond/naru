@@ -3,8 +3,7 @@
 Phase 2 exits on four criteria ([tracker](PHASE_2.md)). The second asks for
 "cold/warm startup, frame, memory, and interaction results published", and
 names what was missing: **one coherent matrix that presents them together**,
-and a repeat on a second engine and operating system. This document is that
-matrix. It adds no measurement of its own; every figure below is read from a
+and a repeat on a second engine. This document is that matrix. It adds no measurement of its own; every figure below is read from a
 committed record, and every record is linked from the row that quotes it.
 
 The matrix is deliberately narrow. It covers one model, sixty5, because that
@@ -113,9 +112,10 @@ where it stood rather than widened to accommodate a second engine.
   with different options at different commits. Adding an import figure to a
   startup figure would describe a run nobody performed.
 - **One operating system.** Every record here is Windows x64 on one
-  discrete-GPU host. The exit criterion asks for a second operating system as
-  well as a second engine; that half is still owed and is tracked as evidence
-  debt in [the Phase 2 tracker](PHASE_2.md).
+  discrete-GPU host, so nothing in this matrix supports a cross-platform
+  statement. A second-operating-system repeat is still worth doing and is
+  tracked as evidence debt in [the Phase 2 tracker](PHASE_2.md); a 2026-09-12
+  scope decision made it non-blocking for the exit criterion, not unnecessary.
 - **Whole-process memory is engine-specific.** The resident bytes match on both
   engines, but the process around them does not, and Gecko exposes neither
   `performance.memory` nor `measureUserAgentSpecificMemory()`, so heap and
