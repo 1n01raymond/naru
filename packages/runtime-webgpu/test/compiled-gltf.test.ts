@@ -283,6 +283,38 @@ describe("compiled glTF runtime boundary", () => {
     expect(nodeReads).toBe(readsAfterPrepare);
   });
 
+  it("releases the caller's node graph once preparation finishes", async () => {
+    const [json, targetBytes, coarseBytes] = await Promise.all([
+      readFile(new URL("scene.gltf", progressiveUrl), "utf8").then(JSON.parse) as Promise<{
+        nodes: unknown[];
+        scenes: unknown[];
+      }>,
+      readFile(new URL("scene.bin", progressiveUrl)),
+      readFile(new URL("coarse.bin", progressiveUrl)),
+    ]);
+    const prepared = prepareCompiledGltfDecoder(json);
+    const chunk = prepared.hierarchy.targetChunks[0];
+    if (!chunk) throw new TypeError("Progressive fixture has no target chunk.");
+    const range = (): ArrayBuffer => Uint8Array.from(
+      targetBytes.subarray(chunk.byteOffset, chunk.byteOffset + chunk.byteLength),
+    ).buffer;
+    const before = prepared.decode(range(), { targetChunkId: chunk.id });
+
+    // The caller drops the node graph the way a Worker drops its parsed
+    // document. A decoder that kept the document itself alive would keep
+    // reading these arrays for the rest of the session.
+    json.nodes.length = 0;
+    json.scenes.length = 0;
+
+    const after = prepared.decode(range(), { targetChunkId: chunk.id });
+    expect(after.summary).toEqual(before.summary);
+    expect(after.objectEvidence).toEqual(before.objectEvidence);
+    const coarse = prepared.decode(Uint8Array.from(coarseBytes).buffer, {
+      representation: "coarse",
+    });
+    expect(coarse.summary.partOccurrences).toBe(10);
+  });
+
   it("measures each target chunk's residency cost before its range is fetched", async () => {
     const [json, targetBytes] = await Promise.all([
       readFile(new URL("scene.gltf", progressiveUrl), "utf8").then(JSON.parse),

@@ -157,6 +157,37 @@ are [ADR-0011](adr/0011-remote-package-limits.md); a consumer outside the Studio
 exercises the override axes in
 [`artifacts/security/embedder-overrides`](../artifacts/security/embedder-overrides/README.md).
 
+### Who holds the compiled document
+
+The document exists in several representations at once, and each one names an
+owner, a consumer, and a release point:
+
+| Representation | Owner | Crosses the boundary as | Released |
+|---|---|---|---|
+| Response bytes | scene loader | transferred to the Worker | at transfer; the main thread has no copy |
+| Decoded text | Worker, during initialization | never | when `JSON.parse` returns |
+| Parsed glTF object graph | Worker, during initialization | never | when preparation returns |
+| Prepared decoder state | Worker, whole session | never | when the Worker is terminated |
+| Assembly tree | main thread | structured-cloned once, then cached | with the scene |
+| Decoded geometry | Worker to main thread | transferred per chunk | on eviction |
+
+Preparation is the only step that reads `nodes` and `scenes`: it walks the
+active roots once, composes world transforms, and writes the occurrence tables
+the decoder uses from then on. Every later read is `buffers`, `bufferViews`,
+`accessors`, `meshes`, `materials`, or `extras`. The prepared state therefore
+keeps a shallow copy of the document without those two arrays, so a caller that
+drops its own reference releases the node graph for the rest of the session
+instead of paying for it until the decoder is discarded.
+
+Measured on this repository's Node harness — parse the document, prepare a
+geometry-only decoder, drop the caller's reference, collect, and read
+`heapUsed` — retained heap falls by 99.47 MiB of 455.96 (21.8%) on the 657.1 MB
+sixty5 package, 41.00 MiB of 337.65 on its relocated-hierarchy variant, and
+6.84 MiB of 37.49 on Digital Hub, with the decoded summary, object and batch
+evidence, and scene bounds identical before and after. Those are retained-heap
+figures for one process, not whole-application memory: the budgets below still
+bound admitted geometry alone.
+
 ## 6. Streaming scheduler
 
 The scheduler combines demand signals:
