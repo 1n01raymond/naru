@@ -151,9 +151,28 @@ function sectionAt(
 }
 
 /**
- * Reads one string column as a prefix-offset table over its own heap. The
- * offsets are the only bound on where a value starts and ends, so they are
- * checked for monotonicity and against the heap before any text is decoded.
+ * How many reads a column's intern table is given to prove itself, and the
+ * share of those reads that may be distinct before it is dropped. `prototypeId`
+ * repeats a handful of values across every occurrence of a package; the
+ * `occurrenceId` beside it repeats none, and a map there would be pure cost.
+ * The table drops itself once a column looks like the second kind.
+ */
+const internProbeReads = 4096;
+const internDistinctShare = 0.5;
+
+/** Reads one value of an already-validated string column. */
+type StringColumnReader = (index: number) => string;
+
+/**
+ * Validates one string column as a prefix-offset table over its own heap and
+ * returns a reader over it. The offsets are the only bound on where a value
+ * starts and ends, so monotonicity, heap containment, and complete coverage of
+ * the heap are all settled here, before the reader hands out anything.
+ *
+ * Only the text itself is deferred, and deferring it cannot move a rejection:
+ * `TextDecoder` in its default non-fatal mode never throws, so a malformed
+ * sequence decodes to U+FFFD whenever it is read, exactly as it did when every
+ * value was decoded up front.
  */
 function readStringColumn(
   bytes: Uint8Array,
@@ -162,9 +181,8 @@ function readStringColumn(
   count: number,
   decoder: TextDecoder,
   column: StringColumn,
-): readonly string[] {
+): StringColumnReader {
   const table = new Uint32Array(bytes.buffer, bytes.byteOffset + offsets.byteOffset, count + 1);
-  const values: string[] = [];
   let previous = 0;
   for (let index = 0; index < count; index += 1) {
     const start = table[index] as number;
@@ -173,14 +191,27 @@ function readStringColumn(
       invalid(`The ${column} column declares an offset outside its heap.`);
     }
     previous = end;
-    values.push(
-      decoder.decode(bytes.subarray(heap.byteOffset + start, heap.byteOffset + end)),
-    );
   }
   if (previous !== heap.byteLength) {
     invalid(`The ${column} column does not cover its heap.`);
   }
-  return values;
+  const base = heap.byteOffset;
+  let interned: Map<string, string> | null = new Map();
+  let reads = 0;
+  return (index: number): string => {
+    const start = table[index] as number;
+    const end = table[index + 1] as number;
+    const value = decoder.decode(bytes.subarray(base + start, base + end));
+    if (interned === null) return value;
+    reads += 1;
+    const existing = interned.get(value);
+    if (existing !== undefined) return existing;
+    interned.set(value, value);
+    if (reads >= internProbeReads && interned.size > reads * internDistinctShare) {
+      interned = null;
+    }
+    return value;
+  };
 }
 
 function readTagSets(value: unknown): readonly (readonly string[])[] {
@@ -191,20 +222,83 @@ function readTagSets(value: unknown): readonly (readonly string[])[] {
   });
 }
 
+/** The two identity fields, as they are written onto a node under construction. */
+interface IdentityCarrier {
+  semanticId?: string | null;
+  sourceRef?: string | null;
+}
+
 /**
- * Rebuilds one identity field from its flag pair: a present string, an omitted
+ * Restores one identity field from its flag pair: a present string, an omitted
  * key the reader resolves the way it resolves an absent key on a document node,
  * or an explicit `null` for an occurrence that carries no identity at all.
+ *
+ * The omitted state is the *absence of an own property*, which is how the
+ * loader tells it apart from the `null` (`"semanticId" in relocated`), so it
+ * must never become an inherited one. The value is read through a thunk so an
+ * omitted or null field costs no text decoding at all.
  */
-function identityOf(
+function assignIdentity(
+  node: IdentityCarrier,
   flag: number,
   presentBit: number,
   omittedBit: number,
-  value: string,
+  read: () => string,
   key: "semanticId" | "sourceRef",
-): Record<string, string | null> {
-  if ((flag & presentBit) !== 0) return { [key]: value };
-  return (flag & omittedBit) !== 0 ? {} : { [key]: null };
+): void {
+  if ((flag & presentBit) !== 0) {
+    node[key] = read();
+    return;
+  }
+  if ((flag & omittedBit) === 0) node[key] = null;
+}
+
+/**
+ * One relocated occurrence. Every field the loader and the Studio read is an
+ * own property; `localTransform` is the exception, a prototype accessor that
+ * cuts a fresh copy out of the shared matrix table on each read.
+ *
+ * Nothing outside the tests reads it, and pre-cutting one copy per node costs
+ * 20 MiB on the largest package measured, so the copy is made only if it is
+ * asked for. It is not cached: each read allocates, and a caller that wants the
+ * transform twice should keep the first copy. In exchange no caller can reach,
+ * or mutate, the table the sidecar decoded.
+ */
+class RelocatedNode implements RelocatedHierarchyNode {
+  readonly name: string;
+  readonly occurrenceId: string;
+  readonly prototypeId: string;
+  readonly initialVisibility: boolean;
+  readonly tags: readonly string[];
+  // Written by `assignIdentity` only when the occurrence carries the field,
+  // so an omitted one stays an absent own property. `declare` emits nothing.
+  declare semanticId?: string | null;
+  declare sourceRef?: string | null;
+  readonly #matrices: Float64Array;
+  readonly #transformIndex: number;
+
+  constructor(
+    name: string,
+    occurrenceId: string,
+    prototypeId: string,
+    initialVisibility: boolean,
+    tags: readonly string[],
+    matrices: Float64Array,
+    transformIndex: number,
+  ) {
+    this.name = name;
+    this.occurrenceId = occurrenceId;
+    this.prototypeId = prototypeId;
+    this.initialVisibility = initialVisibility;
+    this.tags = tags;
+    this.#matrices = matrices;
+    this.#transformIndex = transformIndex;
+  }
+
+  get localTransform(): Float64Array {
+    const start = this.#transformIndex * 16;
+    return this.#matrices.slice(start, start + 16);
+  }
 }
 
 function parseJson(text: string): unknown {
@@ -286,7 +380,7 @@ export function decodePackageHierarchy(
   }
 
   const decoder = new TextDecoder();
-  const text = {} as Record<StringColumn, readonly string[]>;
+  const text = {} as Record<StringColumn, StringColumnReader>;
   for (const column of stringColumns) {
     text[column] = readStringColumn(
       bytes,
@@ -335,34 +429,34 @@ export function decodePackageHierarchy(
     if (transformIndex >= transformCount) {
       invalid("A relocated entry names a transform the sidecar does not carry.");
     }
-    const occurrenceId = text.occurrenceId[relocatedAt] as string;
-    entries.push({
-      depth,
-      relocated: {
-        name: (flag & entryFlags.nameIsOccurrenceId) === 0
-          ? (text.name[relocatedAt] as string)
-          : occurrenceId,
-        occurrenceId,
-        prototypeId: text.prototypeId[relocatedAt] as string,
-        ...identityOf(
-          flag,
-          entryFlags.semanticId,
-          entryFlags.semanticIdOmitted,
-          text.semanticId[relocatedAt] as string,
-          "semanticId",
-        ),
-        ...identityOf(
-          flag,
-          entryFlags.sourceRef,
-          entryFlags.sourceRefOmitted,
-          text.sourceRef[relocatedAt] as string,
-          "sourceRef",
-        ),
-        initialVisibility: (flag & entryFlags.visible) !== 0,
-        tags,
-        localTransform: matrices.slice(transformIndex * 16, transformIndex * 16 + 16),
-      },
-    });
+    const occurrenceId = text.occurrenceId(relocatedAt);
+    const row = relocatedAt;
+    const relocated = new RelocatedNode(
+      (flag & entryFlags.nameIsOccurrenceId) === 0 ? text.name(row) : occurrenceId,
+      occurrenceId,
+      text.prototypeId(row),
+      (flag & entryFlags.visible) !== 0,
+      tags,
+      matrices,
+      transformIndex,
+    );
+    assignIdentity(
+      relocated,
+      flag,
+      entryFlags.semanticId,
+      entryFlags.semanticIdOmitted,
+      () => text.semanticId(row),
+      "semanticId",
+    );
+    assignIdentity(
+      relocated,
+      flag,
+      entryFlags.sourceRef,
+      entryFlags.sourceRefOmitted,
+      () => text.sourceRef(row),
+      "sourceRef",
+    );
+    entries.push({ depth, relocated });
     relocatedAt += 1;
   }
   if (relocatedAt !== relocatedCount) {
