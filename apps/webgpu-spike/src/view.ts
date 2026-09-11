@@ -261,6 +261,20 @@ export class OrthographicOrbitCamera {
     return this.projection(aspect, [0, 0, 0]).viewProjection;
   }
 
+  /**
+   * World metres covered by one viewport pixel.
+   *
+   * The projection is orthographic, so the scale is uniform over the frame and
+   * a screen-space error is simply a world deviation divided by this number.
+   * A viewport with no height reports `Infinity`: nothing is drawn at that
+   * size, and the level selector treats the sentinel as "no new measurement"
+   * rather than dividing it into a deceptively small pixel error.
+   */
+  metresPerPixel(aspect: number, viewportHeightPx: number): number {
+    if (!Number.isFinite(viewportHeightPx) || viewportHeightPx <= 0) return Infinity;
+    return (this.halfExtents(aspect).halfHeight * 2) / viewportHeightPx;
+  }
+
   /** Builds a stable f32 projection around a double-precision camera origin. */
   frame(aspect: number): CameraRelativeFrame {
     const { right, up } = orbitCameraBasis(this.yaw, this.pitch);

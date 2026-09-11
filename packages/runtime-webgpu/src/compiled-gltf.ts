@@ -128,6 +128,18 @@ export interface CompiledSpatialIndexRef {
   readonly sha256: string;
 }
 
+/**
+ * The error statement a package makes about its reduced level (ADR-0025).
+ *
+ * A level with no stated bound is not a level a viewer may draw, so this is
+ * present exactly when `reducedChunks` is non-empty; a renderer divides the
+ * bound by the world size of a pixel to decide whether the level is usable.
+ */
+export interface CompiledReducedLodRef {
+  readonly method: string;
+  readonly maxDeviationMeters: number;
+}
+
 export interface CompiledTargetChunk {
   readonly id: string;
   readonly buffer: number;
@@ -157,6 +169,8 @@ export interface CompiledHierarchy {
   readonly targetChunks: readonly CompiledTargetChunk[];
   /** Declared-error reduced level (ADR-0025); empty for legacy packages. */
   readonly reducedChunks: readonly CompiledTargetChunk[];
+  /** The error statement behind `reducedChunks`; absent when there are none. */
+  readonly reducedLod?: CompiledReducedLodRef;
   readonly entries: readonly CompiledHierarchyEntry[];
   readonly renderableOccurrences: number;
   readonly sharedMeshes: number;
@@ -718,6 +732,41 @@ function propertiesRefFor(rootMadi: JsonRecord): CompiledPropertiesRef | undefin
   };
 }
 
+/**
+ * Reads the reduced level's error statement, refusing chunks without one.
+ *
+ * The whole point of the level is that its deviation is measured rather than
+ * assumed, so a package that ships reduced chunks and no bound is malformed:
+ * accepting it would leave a viewer to invent the number the record exists to
+ * state.
+ */
+function reducedLodRefFor(
+  progressive: ProgressiveExtras | undefined,
+  reducedChunkCount: number,
+): CompiledReducedLodRef | undefined {
+  const reducedLod = progressive ? recordAt(progressive.record, "reducedLod") : undefined;
+  if (!reducedLod) {
+    if (reducedChunkCount === 0) return undefined;
+    throw new CompiledGltfError(
+      "INVALID_GLTF",
+      `${progressive?.path ?? "progressive"}.reducedLod must state the deviation its reduced chunks stay within.`,
+    );
+  }
+  if (
+    typeof reducedLod.method !== "string" ||
+    reducedLod.method.trim() === "" ||
+    typeof reducedLod.maxDeviationMeters !== "number" ||
+    !Number.isFinite(reducedLod.maxDeviationMeters) ||
+    reducedLod.maxDeviationMeters <= 0
+  ) {
+    throw new CompiledGltfError(
+      "INVALID_GLTF",
+      `${progressive?.path ?? "progressive"}.reducedLod must carry a method and a positive maxDeviationMeters.`,
+    );
+  }
+  return { method: reducedLod.method, maxDeviationMeters: reducedLod.maxDeviationMeters };
+}
+
 function spatialIndexRefFor(progressive: ProgressiveExtras | undefined): CompiledSpatialIndexRef | undefined {
   if (progressive?.record.spatialIndex === undefined) return undefined;
   const spatialIndex = recordAt(progressive.record, "spatialIndex");
@@ -955,6 +1004,7 @@ export function inspectCompiledHierarchy(
     : document.buffers[coarseBufferIndex];
   const properties = propertiesRefFor(rootMadi);
   const spatialIndex = spatialIndexRefFor(progressive);
+  const reducedLod = reducedLodRefFor(progressive, reducedChunks.length);
   if (
     targetChunks.length > 0 &&
     [...renderedMeshes].some(
@@ -990,6 +1040,7 @@ export function inspectCompiledHierarchy(
       ...(spatialIndex ? { spatialIndex } : {}),
       targetChunks,
       reducedChunks,
+      ...(reducedLod ? { reducedLod } : {}),
       entries,
       // Relocation moves only the nodes that draw nothing, so the document
       // always holds every renderable occurrence -- including when the tree

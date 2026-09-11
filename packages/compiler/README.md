@@ -239,8 +239,10 @@ chunks after the target payloads and are declared in
 a package compiled without the flag keeps `extras.madi.progressive`
 unchanged. The option is off by default, is part of the compiled-cache key,
 and changes the package digest when it is on. See
-[ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md) and the
-[reduced-level record](../../artifacts/lod/reduced-level/README.md).
+[ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md), the
+[reduced-level record](../../artifacts/lod/reduced-level/README.md), and the
+[headed selection record](../../artifacts/lod/reduced-selection/README.md) that
+compares a substituted frame against a `target`-only reference.
 
 The committed [engineering-scale qualification
 record](../../artifacts/ifc/engineering-baseline/README.md) uses this option

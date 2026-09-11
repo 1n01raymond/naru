@@ -752,6 +752,7 @@ describe("malformed mesh primitives", () => {
 describe("reduced level under naru.progressive-package.1", () => {
   type Chunk = { id: string; meshIndexes: number[]; byteOffset: number; byteLength: number };
   type Doc = {
+    meshes: Record<string, unknown>[];
     nodes: { mesh?: number; extras?: { madi?: Record<string, unknown> } }[];
     extras: { madi: Record<string, unknown>; naru?: Record<string, unknown> };
   };
@@ -769,6 +770,10 @@ describe("reduced level under naru.progressive-package.1", () => {
         schemaVersion: "naru.progressive-package.1",
         ...progressive,
         reducedChunks: [{ ...chunk, id: reducedId }],
+        reducedLod: {
+          method: "meshoptimizer-whole-shape-unlocked",
+          maxDeviationMeters: 0.001,
+        },
       },
     };
     delete json.extras.madi.progressive;
@@ -778,6 +783,36 @@ describe("reduced level under naru.progressive-package.1", () => {
       }
     }
     return { json, chunk: { ...chunk, id: reducedId }, bytes };
+  }
+
+  /**
+   * Points the reduced chunk at duplicate meshes that reuse the target's
+   * accessors. The document then carries two distinct levels of one prototype
+   * while the same chunk byte range still decodes, so a test can compare the
+   * levels without fabricating geometry the compiler never produced.
+   */
+  async function distinctMeshReducedFixture(): Promise<{
+    json: Doc;
+    chunk: Chunk;
+    bytes: Buffer;
+  }> {
+    const fixture = await reducedFixture();
+    const { json, chunk } = fixture;
+    const duplicates = new Map<number, number>();
+    for (const meshIndex of chunk.meshIndexes) {
+      duplicates.set(meshIndex, json.meshes.length);
+      json.meshes.push(structuredClone(json.meshes[meshIndex]!));
+    }
+    const progressive = json.extras.naru!.progressive as { reducedChunks: Chunk[] };
+    const reducedMeshIndexes = chunk.meshIndexes.map((meshIndex) => duplicates.get(meshIndex)!);
+    progressive.reducedChunks[0]!.meshIndexes = reducedMeshIndexes;
+    for (const node of json.nodes) {
+      const madi = node.extras?.madi;
+      if (madi === undefined || node.mesh === undefined) continue;
+      const duplicate = duplicates.get(node.mesh);
+      if (duplicate !== undefined) madi.reducedMesh = duplicate;
+    }
+    return { ...fixture, chunk: { ...chunk, meshIndexes: reducedMeshIndexes } };
   }
 
   it("decodes a reduced chunk with the target's identity and a residency cost", async () => {
@@ -799,6 +834,44 @@ describe("reduced level under naru.progressive-package.1", () => {
     );
   });
 
+  it("presents one scene at either level, so the section plane and pickPoint read the same objects", async () => {
+    const { json, chunk, bytes } = await distinctMeshReducedFixture();
+    const prepared = prepareCompiledGltfDecoder(json);
+    const targetChunkId = prepared.hierarchy.targetChunks[0]!.id;
+    const range = Uint8Array.from(
+      bytes.subarray(chunk.byteOffset, chunk.byteOffset + chunk.byteLength),
+    ).buffer;
+    const reduced = prepared.decode(range, { targetChunkId: chunk.id });
+    const target = prepared.decode(range.slice(0), { targetChunkId });
+    expect(reduced.summary.representation).toBe("reduced");
+    expect(target.summary.representation).toBe("target");
+
+    // The reduced batches decode meshes of their own level while naming the
+    // prototype the target level names.
+    expect(reduced.batchEvidence.map(({ meshIndex }) => meshIndex)).not.toEqual(
+      target.batchEvidence.map(({ meshIndex }) => meshIndex),
+    );
+    const identity = (scene: typeof reduced) =>
+      scene.batchEvidence.map(({ targetMeshIndex, surfacePrimitiveIndex, prototypeId }) => ({
+        targetMeshIndex,
+        surfacePrimitiveIndex,
+        prototypeId,
+      }));
+    expect(identity(reduced)).toEqual(identity(target));
+
+    // `pickPoint` resolves the object id an instance writes into the picking
+    // attachment, and the section plane clips the world position that same
+    // instance transform places. Both are level-independent only if the levels
+    // agree on every instance, in the same batch order.
+    const instances = (scene: typeof reduced) =>
+      scene.gpuScene.batches.map((batch) =>
+        batch.instances.map(({ objectId, transform }) => [objectId, Array.from(transform)]),
+      );
+    expect(instances(reduced)).toEqual(instances(target));
+    expect(reduced.objectEvidence).toEqual(target.objectEvidence);
+    expect(reduced.bounds).toEqual(target.bounds);
+  });
+
   it("fails closed on an unknown schema version and on a chunk id shared across levels", async () => {
     const wrongSchema = await reducedFixture();
     (wrongSchema.json.extras.naru!.progressive as Record<string, unknown>).schemaVersion =
@@ -813,5 +886,31 @@ describe("reduced level under naru.progressive-package.1", () => {
     expect(() => prepareCompiledGltfDecoder(shared.json)).toThrowError(
       /both a target and a reduced chunk/u,
     );
+  });
+
+  it("states the deviation a reduced level stays within, and refuses one that does not", async () => {
+    const stated = await reducedFixture();
+    expect(inspectCompiledHierarchy(stated.json).hierarchy.reducedLod).toEqual({
+      method: "meshoptimizer-whole-shape-unlocked",
+      maxDeviationMeters: 0.001,
+    });
+
+    const unbounded = await reducedFixture();
+    delete (unbounded.json.extras.naru!.progressive as Record<string, unknown>).reducedLod;
+    expect(() => inspectCompiledHierarchy(unbounded.json)).toThrowError(
+      /must state the deviation its reduced chunks stay within/u,
+    );
+
+    for (const reducedLod of [
+      { method: "  ", maxDeviationMeters: 0.001 },
+      { method: "meshoptimizer-whole-shape-unlocked", maxDeviationMeters: 0 },
+      { method: "meshoptimizer-whole-shape-unlocked", maxDeviationMeters: Number.NaN },
+    ]) {
+      const invalid = await reducedFixture();
+      (invalid.json.extras.naru!.progressive as Record<string, unknown>).reducedLod = reducedLod;
+      expect(() => inspectCompiledHierarchy(invalid.json)).toThrowError(
+        /must carry a method and a positive maxDeviationMeters/u,
+      );
+    }
   });
 });

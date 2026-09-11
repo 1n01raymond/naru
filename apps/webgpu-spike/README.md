@@ -260,8 +260,30 @@ screen area their leaves cover instead of by distance from the view centre;
 opt-in because the recorded outcome is view-dependent — 99.12% pixel agreement
 with an unbudgeted reference render against the default's 64.95% on a close
 view, and 93.86% against 96.31% on a mid view
-(`artifacts/spatial-demand/sixty5-demand-priority/`). Persistent cache tiers,
-spatial draw clusters, and screen-space LOD remain Phase 2 work.
+(`artifacts/spatial-demand/sixty5-demand-priority/`).
+
+A package compiled with `--reduced-lod <meters>` carries a third level beside
+`coarse` and `target`, and the Studio picks between them by the error that level
+would show on screen rather than by the budget
+([ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md)). The
+document declares one deviation bound and the camera is orthographic, so the
+error is `maxDeviationMeters / metresPerPixel`: the reduced level is substituted
+while that stays at or below 1.0 px and the exact level returns once it passes
+1.5 px, the gap being hysteresis so a camera resting on the threshold does not
+oscillate. `?lodAdmitPx=` and `?lodReplacePx=` move both thresholds,
+`data-lod-level` reports the level on screen (`mixed` while both are resident),
+and `data-lod-error-px`, `data-lod-deviation-meters`, `data-lod-method`, and
+`data-lod-substitutes` report what the decision was made from. A prototype
+without a reduced chunk is never substituted, and the selected object is pinned
+to `target` whatever the camera says, so the geometry being inspected,
+measured, or sectioned is always the exact one — the measurement readout says
+`(reduced level)` and carries the declared bound when a distance was taken
+against a substituted surface. Both levels of a prototype share a residency key,
+so promoting either replaces the other in place and the budget never charges a
+prototype twice. The headed record of a substituted frame against a
+`target`-only reference, in Chrome and Firefox, is under
+[`artifacts/lod/reduced-selection/`](../../artifacts/lod/reduced-selection/README.md).
+Spatial draw clusters remain Phase 2 work.
 
 ## Open another compiled scene
 

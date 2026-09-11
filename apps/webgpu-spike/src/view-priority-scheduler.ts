@@ -404,6 +404,23 @@ export class CameraTargetScheduler<Result> {
     this.ensureRun();
   }
 
+  /**
+   * Forget which chunks the budget rejected and re-examine the current demand.
+   *
+   * A level switch (ADR-0025) can change what `isResident` and `mayAdmit`
+   * answer without changing the ranking, and `update` returns early while the
+   * demand signature still matches the one that blocked the drain. Callers that
+   * change residency out from under the scheduler call this so the next frame
+   * is examined again.
+   */
+  invalidateResidency(): void {
+    if (this.stopped || this.paused) return;
+    this.blockedDemandSignature = undefined;
+    this.rejectedChunkIds.clear();
+    this.rankCursor = 0;
+    this.ensureRun();
+  }
+
   async whenIdle(): Promise<void> {
     while (this.running) await this.running;
   }

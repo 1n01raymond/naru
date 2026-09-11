@@ -478,4 +478,51 @@ describe("view-prioritized target scheduling", () => {
     expect(resident.has("huge")).toBe(true);
     scheduler.stop();
   });
+
+  it("re-examines an unchanged demand set after a level switch", async () => {
+    // A reduced/target switch (ADR-0025) changes what `isResident` and
+    // `mayAdmit` answer without changing the ranking, so the drain has to be
+    // told that its "nothing left to do" conclusion is stale.
+    const chunks = [chunk("near", 0, 0), chunk("far", 1, 1)];
+    const index = { rank: () => demandedRanking(chunks) };
+    const requested: string[] = [];
+    const resident = new Set<string>();
+    let admitFar = false;
+    const scheduler = new CameraTargetScheduler(index, {
+      isResident: (entry) => resident.has(entry.id),
+      load: async (entry) => {
+        requested.push(entry.id);
+        return entry.id;
+      },
+      admit: (entry) => {
+        if (entry.id === "far" && !admitFar) return false;
+        resident.add(entry.id);
+        return true;
+      },
+      onError: (error) => {
+        throw error;
+      },
+    });
+
+    scheduler.update({ viewProjection, origin: [0, 0, 0] });
+    await scheduler.whenIdle();
+    expect(requested).toEqual(["near", "far"]);
+
+    // Without the invalidation an identical frame is a no-op.
+    scheduler.update({ viewProjection, origin: [0, 0, 0] });
+    await scheduler.whenIdle();
+    expect(requested).toEqual(["near", "far"]);
+
+    admitFar = true;
+    scheduler.invalidateResidency();
+    await scheduler.whenIdle();
+    expect(requested).toEqual(["near", "far", "far"]);
+    expect(resident.has("far")).toBe(true);
+
+    // A stopped scheduler stays stopped.
+    scheduler.stop();
+    scheduler.invalidateResidency();
+    await scheduler.whenIdle();
+    expect(requested).toEqual(["near", "far", "far"]);
+  });
 });

@@ -38,7 +38,9 @@ external binary geometry, and build reports from local AP242/AP214 through the
 isolated OCCT adapter. It preserves hierarchy, prototype reuse, explicit edges,
 and source identity; expanded Scene IR is temporary. Direct STEP output now
 separates prototype AABB proxies from target geometry in two standard glTF
-buffers. Shape-preserving LOD remains pending; optional spatial-demand indexing
+buffers. Shape-preserving LOD is now implemented opt-in and recorded on a STEP corpus
+([ADR-0025](adr/0025-shape-preserving-lod-representation.md)); optional
+spatial-demand indexing
 and payload ordering were implemented after this initial slice and are tracked
 in the [Phase 2 tracker](PHASE_2.md). See the historical
 [Phase 1 tracker](PHASE_1.md).

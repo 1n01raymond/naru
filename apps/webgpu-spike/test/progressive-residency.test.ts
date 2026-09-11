@@ -48,6 +48,7 @@ function decoded(
   batches: readonly GpuPrototypeBatch[],
   targetMeshIndexes: readonly number[],
   representation: GeometryRepresentation = "target",
+  meshIndexes?: readonly number[],
 ): DecodedCompiledScene {
   const primitivesPerMesh = new Map<number, number>();
   const batchEvidence: CompiledBatchEvidence[] = batches.map((_, batchIndex) => {
@@ -58,7 +59,9 @@ function decoded(
     primitivesPerMesh.set(targetMeshIndex, surfacePrimitiveIndex + 1);
     return {
       batchIndex,
-      meshIndex: targetMeshIndex,
+      // A reduced batch decodes its own mesh while still naming the target
+      // mesh it stands in for, which is what the two residency queries split.
+      meshIndex: meshIndexes?.[batchIndex] ?? targetMeshIndex,
       targetMeshIndex,
       surfacePrimitiveIndex,
       prototypeId: `prototype:${String(targetMeshIndex)}`,
@@ -389,5 +392,112 @@ describe("progressive residency", () => {
     });
     expect(one.admitted).toBe(true);
     expect(both.decodedBytes - one.decodedBytes).toBe(24 + 96);
+  });
+});
+
+describe("level-aware residency queries", () => {
+  /**
+   * A reduced chunk decodes its own glTF mesh but carries the target mesh index
+   * of the prototype it stands in for (ADR-0025), so `hasTargetMeshes` cannot
+   * tell the exact tessellation from its stand-in. `hasMeshes` can, and that is
+   * what the Studio asks before it reports a chunk ready or skips a promotion.
+   */
+  it("separates a resident reduced stand-in from resident target detail", () => {
+    const coarse = decoded([batch(1), batch(2)], [0, 1], "coarse", [10, 11]);
+    const residency = new ProgressiveResidency(coarse, { decodedBytes: 8_000, gpuBytes: 8_000 });
+
+    const promoted = residency.promote(decoded([batch(1, 4)], [0], "reduced", [20]), {
+      priority: 0,
+    });
+    expect(promoted.admitted).toBe(true);
+
+    // Both queries see the prototype, but only one of them says at which level.
+    expect(residency.hasTargetMeshes([0])).toBe(true);
+    expect(residency.hasMeshes([20])).toBe(true);
+    expect(residency.hasMeshes([0])).toBe(false);
+
+    // Promoting the exact chunk replaces the stand-in under the same key.
+    expect(residency.promote(decoded([batch(1, 4)], [0]), { priority: 0 }).admitted).toBe(true);
+    expect(residency.hasMeshes([0])).toBe(true);
+    expect(residency.hasMeshes([20])).toBe(false);
+  });
+
+  it("reports which target groups the current selection pins", () => {
+    const coarse = decoded([batch(1), batch(2)], [0, 1], "coarse", [10, 11]);
+    const residency = new ProgressiveResidency(coarse, { decodedBytes: 8_000, gpuBytes: 8_000 });
+    residency.promote(decoded([batch(1, 4)], [0]), { priority: 0 });
+
+    expect(residency.hasPinnedTargetMeshes([0])).toBe(false);
+    residency.pinTargetMeshes([0]);
+    expect(residency.hasPinnedTargetMeshes([0])).toBe(true);
+    expect(residency.hasPinnedTargetMeshes([1])).toBe(false);
+
+    // Pinning names a single selection, so a later one releases the first.
+    residency.promote(decoded([batch(2, 4)], [1]), { priority: 1 });
+    residency.pinTargetMeshes([1]);
+    expect(residency.hasPinnedTargetMeshes([0])).toBe(false);
+    expect(residency.hasPinnedTargetMeshes([1])).toBe(true);
+  });
+
+  /**
+   * The two levels of one prototype share a residency key, so a promotion of
+   * either replaces the other in place (ADR-0025). Nothing ever holds both, and
+   * the budget therefore never carries a prototype twice.
+   */
+  it("swaps one prototype's level in place, charging a single level at a time", () => {
+    const coarse = decoded([batch(1), batch(2)], [0, 1], "coarse", [10, 11]);
+    const residency = new ProgressiveResidency(coarse, { decodedBytes: 8_000, gpuBytes: 8_000 });
+    const exact = decoded([batch(1, 8)], [0]);
+    const reduced = decoded([batch(1, 2)], [0], "reduced", [20]);
+
+    residency.promote(decoded([batch(2, 4)], [1]), { priority: 1 });
+    const withExact = residency.promote(exact, { priority: 0 });
+    const withReduced = residency.promote(reduced, { priority: 0 });
+    expect(withExact.admitted).toBe(true);
+    expect(withReduced.admitted).toBe(true);
+
+    // One entry per prototype before and after, and the totals move by exactly
+    // the difference between the levels.
+    expect(withReduced.entries).toHaveLength(withExact.entries.length);
+    expect(withExact.decodedBytes - withReduced.decodedBytes).toBe(
+      costOf(exact).decodedBytes - costOf(reduced).decodedBytes,
+    );
+    expect(withExact.gpuBytes - withReduced.gpuBytes).toBe(
+      costOf(exact).gpuBytes - costOf(reduced).gpuBytes,
+    );
+
+    // Swapping a level is not an eviction: the other prototype keeps its detail
+    // and this one stays replaced, only at the level it now draws.
+    expect(withReduced.evictedTargetMeshIndexes).toEqual([]);
+    expect(residency.hasTargetMeshes([0, 1])).toBe(true);
+    expect(residency.hasMeshes([1])).toBe(true);
+    expect(residency.hasMeshes([20])).toBe(true);
+    expect(residency.hasMeshes([0])).toBe(false);
+  });
+
+  it("evicts a colder prototype rather than the level it is swapping", () => {
+    const coarse = decoded([batch(1), batch(2)], [0, 1], "coarse", [10, 11]);
+    const exact = decoded([batch(1, 8)], [0]);
+    const reduced = decoded([batch(1, 2)], [0], "reduced", [20]);
+    const other = decoded([batch(2, 16)], [1]);
+    // Room for the reduced level beside the other prototype and no more, so
+    // asking for the exact level of the same prototype forces one eviction.
+    const residency = new ProgressiveResidency(coarse, {
+      decodedBytes:
+        costOf(coarse).decodedBytes + costOf(reduced).decodedBytes + costOf(other).decodedBytes,
+      gpuBytes: costOf(reduced).gpuBytes + costOf(other).gpuBytes,
+    });
+    expect(residency.promote(other, { priority: 1 }).admitted).toBe(true);
+    expect(residency.promote(reduced, { priority: 0 }).admitted).toBe(true);
+
+    const upgraded = residency.promote(exact, { priority: 0 });
+    expect(upgraded.admitted).toBe(true);
+    // The prototype being promoted is never its own victim, however cold it is:
+    // eviction skips the incoming groups and takes the colder prototype.
+    expect(upgraded.evictedTargetMeshIndexes).toEqual([1]);
+    expect(residency.hasMeshes([0])).toBe(true);
+    expect(residency.hasMeshes([20])).toBe(false);
+    expect(residency.hasTargetMeshes([1])).toBe(false);
+    expect(residency.hasMeshes([11])).toBe(true);
   });
 });
