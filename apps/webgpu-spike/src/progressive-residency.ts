@@ -176,6 +176,13 @@ export class ProgressiveResidency {
   private readonly coarseEntriesByTargetMesh = new Map<number, readonly ResidentBatch[]>();
   private readonly coarseDecodedBytesByTargetMesh = new Map<number, number>();
   private readonly targetMeshIndexes = new Set<number>();
+  /**
+   * Mesh indexes whose decoded batches are resident, whatever level drew
+   * them. Residency keys every group on its target mesh, but a chunk names
+   * the meshes of its own level (ADR-0025), so a reduced chunk can only ask
+   * "am I resident?" against the meshes it actually carries.
+   */
+  private readonly residentMeshIndexes = new Set<number>();
   private readonly pinnedTargetMeshIndexes = new Set<number>();
   private readonly priorityByTargetMesh = new Map<number, number>();
   private readonly lastTouchedByTargetMesh = new Map<number, number>();
@@ -295,6 +302,22 @@ export class ProgressiveResidency {
 
   hasTargetMeshes(targetMeshIndexes: readonly number[]): boolean {
     return targetMeshIndexes.every((targetMeshIndex) => this.targetMeshIndexes.has(targetMeshIndex));
+  }
+
+  /**
+   * Whether every decoded mesh of a chunk is resident, at any level. Callers
+   * that mean "this prototype has target detail" want `hasTargetMeshes`; a
+   * caller holding a chunk of an unknown level wants this.
+   */
+  hasMeshes(meshIndexes: readonly number[]): boolean {
+    return meshIndexes.every((meshIndex) => this.residentMeshIndexes.has(meshIndex));
+  }
+
+  /** Whether any of these target groups is pinned by the current selection. */
+  hasPinnedTargetMeshes(targetMeshIndexes: readonly number[]): boolean {
+    return targetMeshIndexes.some((targetMeshIndex) =>
+      this.pinnedTargetMeshIndexes.has(targetMeshIndex),
+    );
   }
 
   /** Pins already-resident target groups after selecting an object. */
@@ -420,6 +443,10 @@ export class ProgressiveResidency {
     for (const [key, entry] of candidate) this.entries.set(key, entry);
     this.totals = totals;
     this.replaceSet(this.targetMeshIndexes, candidateTargetMeshes);
+    this.residentMeshIndexes.clear();
+    for (const entry of this.entries.values()) {
+      this.residentMeshIndexes.add(entry.evidence.meshIndex);
+    }
     this.replaceSet(this.pinnedTargetMeshIndexes, candidatePins);
     this.replaceMap(this.priorityByTargetMesh, candidatePriorities);
     this.replaceMap(this.lastTouchedByTargetMesh, candidateTouches);

@@ -127,6 +127,7 @@ export type {
   CompiledObjectEvidence,
   CompiledHierarchyRef,
   CompiledPropertiesRef,
+  CompiledReducedLodRef,
   CompiledSpatialIndexRef,
   CompiledTargetChunk,
   DecodedCompiledScene,

@@ -247,7 +247,7 @@ rules for fasteners, pipes, equipment, or architectural components.
 
 The first shape-preserving level, its ownership, serialized profile, and
 selection rule are decided in
-[ADR-0025](adr/0025-shape-preserving-lod-representation.md) (Proposed).
+[ADR-0025](adr/0025-shape-preserving-lod-representation.md) (Accepted).
 `--reduced-lod <meters>` implements the representation: for each prototype
 the compiler simplifies the `target` surface with meshoptimizer (whole shape,
 unlocked boundary, absolute error = the declared deviation), runs it twice so
@@ -446,8 +446,9 @@ The project-owned four-prototype oracle changes one localized co-demand set
 from two target chunks to one while preserving one payload per prototype,
 coarse bytes, and deterministic output. The default prototype-ID order remains
 byte-identical. Digital Hub and sixty5 now reproduce lower leaf requested and
-off-view bytes; localized headed traces and shape-preserving LOD remain
-pending.
+off-view bytes; localized headed traces remain pending. Shape-preserving LOD
+is implemented behind `--reduced-lod` and recorded in
+[`artifacts/lod/reduced-selection/`](../artifacts/lod/reduced-selection/README.md).
 
 Pretty-printed `scene.gltf` remains the deterministic default, at every size:
 the compiler writes the document as a stream, so the default formatting is no

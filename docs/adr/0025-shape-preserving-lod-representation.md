@@ -1,8 +1,8 @@
 # ADR-0025: Shape-preserving LOD as a declared-error representation
 
-Status: Proposed
+Status: Accepted
 
-Reviewed: 2026-09-08
+Accepted: 2026-09-11
 
 ## Context
 
@@ -186,8 +186,8 @@ close no roadmap exit criterion are unit tests, not fresh-process records.
 |---|---|---|
 | 0 | Method and topology class settled on a project-owned fixture with predeclared checks | **Met**: [`artifacts/lod/method-comparison/`](../../artifacts/lod/method-comparison/README.md) |
 | 1 | Compiling `fixtures/step/lod-corpus.step` twice yields byte-identical packages under `naru.progressive-package.1`; `reduced` is emitted for the parts the record admits and withheld for `curved-shell` under the meshopt arm; the Khronos validator reports 0 errors; a committed validator pins the digests, per-prototype deviations, and level triangle counts | **Met** (2026-09-08): [`artifacts/lod/reduced-level/`](../../artifacts/lod/reduced-level/README.md), `pnpm lod:reduced:check` |
-| 2 | Unit tests cover projected-error hysteresis at both thresholds, selected-object pinning, section and `pickPoint` on a reduced level, edge-segment reuse, same-prototype eviction order, and unsupported-topology retention | Partial: unsupported-topology retention, determinism retention, edge reuse, and loader decoding of a reduced chunk are covered by [`reduced-lod.test.ts`](../../packages/compiler/test/reduced-lod.test.ts) and [`compiled-gltf.test.ts`](../../packages/runtime-webgpu/test/compiled-gltf.test.ts); hysteresis, pinning, section/`pickPoint`, and eviction order wait for the selection slice |
-| 3 | One headed record on the corpus: at two predeclared camera distances, the frame drawn with `reduced` admitted agrees with a `target`-only reference frame on at least 99% of viewport pixels within 8/255 per channel, and picked object ids on a predeclared grid are identical; recorded in Chrome and Firefox, divergences visible in the record | Open |
+| 2 | Unit tests cover projected-error hysteresis at both thresholds, selected-object pinning, section and `pickPoint` on a reduced level, edge-segment reuse, same-prototype eviction order, and unsupported-topology retention | **Met** (2026-09-11): hysteresis, threshold resolution, and pinning in [`lod-selection.test.ts`](../../apps/webgpu-spike/test/lod-selection.test.ts); level swap, eviction order, and pinning in [`progressive-residency.test.ts`](../../apps/webgpu-spike/test/progressive-residency.test.ts); section and `pickPoint` inputs, and loader decoding of a reduced chunk, in [`compiled-gltf.test.ts`](../../packages/runtime-webgpu/test/compiled-gltf.test.ts); edge reuse, determinism retention, and unsupported-topology retention in [`reduced-lod.test.ts`](../../packages/compiler/test/reduced-lod.test.ts) |
+| 3 | One headed record on the corpus: at two predeclared camera distances, the frame drawn with `reduced` admitted agrees with a `target`-only reference frame on at least 99% of viewport pixels within 8/255 per channel, and picked object ids on a predeclared grid are identical; recorded in Chrome and Firefox, divergences visible in the record | **Met** (2026-09-11): [`artifacts/lod/reduced-selection/`](../../artifacts/lod/reduced-selection/README.md), `pnpm lod:selection:check`. Whole-frame agreement 99.9943% and 99.9992%; drawn-geometry agreement 99.2318% (35 of 4,556) and 99.3773% (5 of 803); 111 lattice picks per engine, 0 disagreements; triangles 6,159 → 4,135. Engine divergences carried, not asserted away: Blink captures 614,259 frame pixels against Gecko's 613,738, Gecko lays the geometry out one pixel further left, and one lattice point lands on background in Gecko that does not in Blink |
 
 ### Implementation notes (2026-09-08, compiler and loader slice)
 
@@ -219,6 +219,28 @@ narrows the Decision above, the narrowing is deliberate and stated here:
   in `reducedChunks`, and are priced by the unchanged `batchResidencyCost`.
   The Studio does not select them yet; that switch, with its hysteresis and
   pinning tests and the gate-3 record, is the next slice.
+
+### Implementation notes (2026-09-11, selection slice)
+
+The second slice landed the Studio switch and the gate-3 record. Where it
+narrows the Decision above, the narrowing is deliberate and stated here:
+
+- The deviation bound is declared once for the document and the Studio camera
+  is orthographic, so the projected error is the same for every prototype and
+  the level decision is one boolean per frame:
+  `maxDeviationMeters / metresPerPixel` admitted at 1.0 px and replaced at
+  1.5 px, overridable with `?lodAdmitPx=` and `?lodReplacePx=`. A per-prototype
+  decision only becomes meaningful once a package declares per-prototype
+  bounds, which this format does not.
+- A prototype with no reduced chunk is never substituted, and the selected
+  object is pinned to `target` whatever the camera says, so the level a user is
+  inspecting is always the exact one.
+- Both levels of a prototype share a residency key, so a promotion of either
+  replaces the other in place: the budget never carries a prototype twice, and
+  the group being promoted is never its own eviction victim.
+- The record's reference arm uses the shipped selector with thresholds no
+  projected error can satisfy (`?lodAdmitPx=1e-9&lodReplacePx=1e-9`) rather
+  than a second build, so both arms run the same code over the same package.
 
 Out of scope for acceptance: any sixty5 or Digital Hub number. A real-large
 measurement, if ever taken, is its own record with its own predeclared

@@ -31,7 +31,12 @@ import {
 import { HierarchySearchIndex } from "./hierarchy-search.js";
 import type { HierarchySearchResult } from "./hierarchy-search.js";
 import { AnnotationSet } from "./annotations.js";
-import { DistanceMeasurement, formatMeasurement, projectToClient } from "./measurement.js";
+import {
+  DistanceMeasurement,
+  formatLength,
+  formatMeasurement,
+  projectToClient,
+} from "./measurement.js";
 import { AxisSectionPlane } from "./section-plane.js";
 import type { SectionAxis } from "./section-plane.js";
 import {
@@ -66,6 +71,13 @@ import type {
   RankedTargetChunk,
   TargetSchedulerEvent,
 } from "./view-priority-scheduler.js";
+import {
+  effectiveLevelChunk,
+  planReducedChunks,
+  ReducedLodSelector,
+  resolveReducedLodThresholds,
+} from "./lod-selection.js";
+import type { ReducedLodThresholds } from "./lod-selection.js";
 import {
   evaluateWorkspaceReopen,
   parseWorkspace,
@@ -165,6 +177,22 @@ function demandPriorityFromLocation(): SpatialDemandPriority {
     throw new RangeError("demandPriority must be screen-distance or screen-coverage.");
   }
   return value;
+}
+
+/**
+ * Screen-space error band that decides between the declared-error `reduced`
+ * level and the exact `target` tessellation (ADR-0025). The defaults are the
+ * ADR's 1.0 px on / 1.5 px off; the overrides exist so a record can hold one
+ * level for a whole capture without moving the camera.
+ */
+function lodThresholdsFromLocation(): ReducedLodThresholds {
+  const parameters = new URL(window.location.href).searchParams;
+  const admit = parameters.get("lodAdmitPx");
+  const replace = parameters.get("lodReplacePx");
+  return resolveReducedLodThresholds(
+    admit === null ? undefined : Number(admit),
+    replace === null ? undefined : Number(replace),
+  );
 }
 
 function binarySourceForChunk(
@@ -632,6 +660,62 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       renderer.setScene(scene.gpuScene);
     }
 
+    // ADR-0025: the declared-error `reduced` level stands in for a `target`
+    // chunk covering exactly the same prototypes. The deviation bound is
+    // document-level and the camera is orthographic, so the projected error is
+    // the same everywhere on screen and the level is one per-frame decision.
+    const reducedLodPlan = planReducedChunks(
+      hierarchy.targetChunks,
+      hierarchy.reducedChunks,
+    );
+    const reducedLodSelector =
+      hierarchy.reducedLod !== undefined && reducedLodPlan.substitutes.size > 0
+        ? new ReducedLodSelector(
+            hierarchy.reducedLod.maxDeviationMeters,
+            lodThresholdsFromLocation(),
+          )
+        : undefined;
+    /**
+     * The chunk the scheduler should hold for a demanded target chunk: its
+     * reduced stand-in while the projected error is inside the band, the exact
+     * chunk otherwise. A selected occurrence is pinned to `target`
+     * (`promoteSelectedResidency`), so a later flip never downgrades it.
+     */
+    const effectiveChunkFor = (chunk: CompiledTargetChunk): CompiledTargetChunk =>
+      reducedLodSelector === undefined
+        ? chunk
+        : effectiveLevelChunk(
+            chunk,
+            reducedLodSelector.selection().level,
+            reducedLodPlan,
+            (meshIndexes) => progressiveResidency?.hasPinnedTargetMeshes(meshIndexes) === true,
+          );
+    const selectedRepresentation = (): GeometryRepresentation =>
+      reducedLodSelector?.selection().level === "reduced" ? "reduced" : "target";
+    const publishLodDataset = (): void => {
+      const dataset = document.documentElement.dataset;
+      if (reducedLodSelector === undefined) {
+        dataset.lodAvailable = "false";
+        return;
+      }
+      const selection = reducedLodSelector.selection();
+      const thresholds = reducedLodSelector.thresholds;
+      dataset.lodAvailable = "true";
+      dataset.lodLevel = selection.level;
+      const errorPixels = selection.projectedErrorPixels;
+      dataset.lodErrorPx =
+        errorPixels !== undefined && Number.isFinite(errorPixels)
+          ? errorPixels.toFixed(4)
+          : "";
+      dataset.lodAdmitPx = String(thresholds.admitPixels);
+      dataset.lodReplacePx = String(thresholds.replacePixels);
+      dataset.lodDeviationMeters = String(reducedLodSelector.deviationMeters());
+      dataset.lodMethod = hierarchy.reducedLod?.method ?? "";
+      dataset.lodSubstitutes = String(reducedLodPlan.substitutes.size);
+      dataset.lodExactOnly = String(reducedLodPlan.exactOnly.length);
+    };
+    publishLodDataset();
+
     const camera = new OrthographicOrbitCamera(scene.bounds);
     const measurement = new DistanceMeasurement();
     const annotations = new AnnotationSet();
@@ -775,8 +859,16 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       const active = measurement.active();
       measureButton.setAttribute("aria-pressed", String(active));
       canvas.classList.toggle("is-measuring", active);
+      // ADR-0025: a measurement taken while the declared-error level is drawn
+      // carries that error, so the HUD quotes the bound rather than implying
+      // the exact tessellation was measured.
+      const deviation =
+        state.kind === "complete" && reducedLodSelector?.selection().level === "reduced"
+          ? reducedLodSelector.deviationMeters()
+          : undefined;
       const text = formatMeasurement(state);
-      measurementHud.textContent = text;
+      measurementHud.textContent =
+        deviation === undefined ? text : `${text} · ±${formatLength(deviation)} (reduced level)`;
       measurementHud.hidden = text === "";
       document.documentElement.dataset.measureState = state.kind;
       if (state.kind === "complete") {
@@ -786,6 +878,8 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         delete document.documentElement.dataset.measureDistance;
         delete document.documentElement.dataset.measureDelta;
       }
+      if (deviation === undefined) delete document.documentElement.dataset.measureDeviation;
+      else document.documentElement.dataset.measureDeviation = String(deviation);
       scheduleRender();
     };
     const toggleMeasurement = (): void => {
@@ -1143,10 +1237,15 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     // "loading selected detail" message with a ready state.
     let selectionPromotionInFlight = false;
     let spatialViewIndex: SpatialTargetChunkViewIndex | undefined;
+    // A chunk counts as ready when the level the selector currently demands for
+    // it is resident: its reduced stand-in inside the error band, its exact
+    // tessellation otherwise. `hasMeshes` keys on decoded mesh indexes rather
+    // than target ones, because a reduced entry carries its prototype's target
+    // mesh index for residency bookkeeping.
     const residentChunkCount = (): number => {
       if (!progressiveResidency) return 0;
       return hierarchy.targetChunks.filter((chunk) =>
-        progressiveResidency.hasTargetMeshes(chunk.meshIndexes),
+        progressiveResidency.hasMeshes(effectiveChunkFor(chunk).meshIndexes),
       ).length;
     };
     const applyPromotion = (
@@ -1168,7 +1267,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
           prototypeBatches: promotion.entries.length,
           triangles: promotion.triangles,
           edgeSegments: promotion.edgeSegments,
-          representation: "target",
+          representation: selectedRepresentation(),
         },
       };
       renderer.reconcileBatches(
@@ -1196,7 +1295,7 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       document.documentElement.dataset.residentGpuBytes = String(renderer.residentGpuBytes);
       publishMemoryDataset(rendererMemoryDataset(renderer.resourceStats()));
       document.documentElement.dataset.geometryRepresentation =
-        readyChunks === hierarchy.targetChunks.length ? "target" : "mixed";
+        readyChunks === hierarchy.targetChunks.length ? selectedRepresentation() : "mixed";
       document.documentElement.dataset.targetReady =
         readyChunks === hierarchy.targetChunks.length ? "true" : "loading";
       status.textContent =
@@ -1231,7 +1330,9 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       document.documentElement.dataset.residentDecodedBytes = String(current.decodedBytes);
       document.documentElement.dataset.residentGpuBytes = String(renderer.residentGpuBytes);
       publishMemoryDataset(rendererMemoryDataset(renderer.resourceStats()));
-      document.documentElement.dataset.geometryRepresentation = complete ? "target" : "mixed";
+      document.documentElement.dataset.geometryRepresentation = complete
+        ? selectedRepresentation()
+        : "mixed";
       const spatialStats = spatialViewIndex?.queryStats();
       const spatialDemandSatisfied =
         spatialStats !== undefined && !(sessionResources.targetScheduler?.blocked ?? false);
@@ -1339,19 +1440,25 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         );
       }
       const scheduler = new CameraTargetScheduler(viewIndex, {
-        isResident: (chunk) => progressiveResidency.hasTargetMeshes(chunk.meshIndexes),
+        isResident: (chunk) =>
+          progressiveResidency.hasMeshes(effectiveChunkFor(chunk).meshIndexes),
         mayAdmit: (chunk, viewPriority) => {
-          const cost = geometryDecoder.targetChunkResidencyCosts.get(chunk.id);
+          const effective = effectiveChunkFor(chunk);
+          const cost = geometryDecoder.targetChunkResidencyCosts.get(effective.id);
           // An unmeasured chunk stays admissible: the budget still decides.
           return cost === undefined || progressiveResidency.mayAdmit(cost, viewPriority);
         },
-        load: (chunk, signal) =>
-          geometryDecoder.decode(
-            binarySourceForChunk(loaded.targetBinary, chunk),
+        load: (chunk, signal) => {
+          // A chunk id names its level, so the decoder needs no second
+          // argument beyond the substituted range and id.
+          const effective = effectiveChunkFor(chunk);
+          return geometryDecoder.decode(
+            binarySourceForChunk(loaded.targetBinary, effective),
             "target",
-            chunk.id,
+            effective.id,
             signal,
-          ),
+          );
+        },
         admit: (_chunk, target, viewPriority) => {
           const promotion = progressiveResidency.promote(target.scene, {
             priority: viewPriority,
@@ -1401,7 +1508,22 @@ async function loadScene(source: SceneSource): Promise<boolean> {
         },
       });
       sessionResources.targetScheduler = scheduler;
-      updateTargetView = (frame): void => scheduler.update(frame);
+      updateTargetView = (frame): void => {
+        if (reducedLodSelector !== undefined) {
+          const height = canvas.clientHeight;
+          const flipped = reducedLodSelector.update(
+            camera.metresPerPixel(height > 0 ? canvas.clientWidth / height : 1, height),
+          );
+          publishLodDataset();
+          if (flipped) {
+            // The demanded chunk ids change without the ranking changing, so
+            // the scheduler has to be told its "nothing new to do" conclusion
+            // is stale.
+            scheduler.invalidateResidency();
+          }
+        }
+        scheduler.update(frame);
+      };
     }
 
     let selectionRequest = 0;
@@ -1410,7 +1532,10 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       const chunk = chunksByPrototype.get(picked.prototypeId);
       if (!chunk) return;
       const request = ++selectionRequest;
-      if (progressiveResidency.hasTargetMeshes(chunk.meshIndexes)) {
+      // Only the exact tessellation counts as retained: a reduced stand-in
+      // shares the chunk's target mesh index, so `hasTargetMeshes` would
+      // report a reduced-only prototype as already at target detail.
+      if (progressiveResidency.hasMeshes(chunk.meshIndexes)) {
         progressiveResidency.pinTargetMeshes(chunk.meshIndexes);
         document.documentElement.dataset.selectionResidency = "retained";
         return;

@@ -147,7 +147,10 @@ package with separate target and coarse external buffers. A package compiled
 with `--reduced-lod` declares `extras.naru.progressive` under
 `naru.progressive-package.1` instead, adding `reducedChunks`: a third
 per-prototype level the decoder fetches, decodes, and prices exactly like a
-target chunk. Nothing selects it yet
+target chunk, and which shares a residency key with that prototype's target so
+promoting either replaces the other in place. Which level is asked for is the
+embedder's decision; the Studio makes it from the declared deviation's
+projected size on screen
 ([ADR-0025](../../docs/adr/0025-shape-preserving-lod-representation.md)). The progressive slice
 uses `extras.madi.coarseMesh` and preserves node-derived object IDs while the
 renderer replaces prototype AABBs with target meshes. A batch handed to

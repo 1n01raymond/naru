@@ -1,0 +1,406 @@
+{
+  "schemaVersion": "naru.reduced-lod-browser-evidence.1",
+  "mode": "headed-two-distance-level-agreement",
+  "recordedAt": "2026-09-11T07:28:51.696Z",
+  "adr": "docs/adr/0025-shape-preserving-lod-representation.md",
+  "gate": "3",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "node": "v22.14.0"
+  },
+  "browser": {
+    "key": "firefox",
+    "engine": "Gecko",
+    "version": "150.0.2",
+    "headless": false
+  },
+  "viewport": {
+    "width": 1320,
+    "height": 1000
+  },
+  "package": {
+    "sceneDirectory": "artifacts/lod/reduced-level/package",
+    "digest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+    "resources": [
+      {
+        "path": "scene.gltf",
+        "bytes": 101850,
+        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+      },
+      {
+        "path": "scene.bin",
+        "bytes": 578988,
+        "sha256": "605a834d17258bf2bbd65e8d8dd157c149653ff4c6c00b67814825b88708affb"
+      },
+      {
+        "path": "coarse.bin",
+        "bytes": 3648,
+        "sha256": "4ed33c1be1ddeea9ffcdbe38155b054f2a2fe63b6bbfcb7703799df496cb3cfa"
+      }
+    ]
+  },
+  "policy": {
+    "admitPixels": 1,
+    "replacePixels": 1.5,
+    "referenceArmThresholds": {
+      "admitPixels": 1e-9,
+      "replacePixels": 1e-9
+    },
+    "channelTolerance": 8,
+    "requiredAgreement": 0.99,
+    "analysisWindow": {
+      "x0": 0.25,
+      "y0": 0.25,
+      "x1": 0.75,
+      "y1": 0.8
+    },
+    "windowMarginPixels": 8,
+    "pickLatticeSteps": 24
+  },
+  "distances": [
+    {
+      "label": "admit-threshold",
+      "wheelDelta": 600,
+      "fittedProjectedErrorPixels": 2.1962,
+      "arms": {
+        "reference": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
+          "available": true,
+          "level": "target",
+          "projectedErrorPixels": 0.8929,
+          "admitPixels": 1e-9,
+          "replacePixels": 1e-9,
+          "maxDeviationMeters": 0.001,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "representation": "target",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 6159,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        },
+        "reduced": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
+          "available": true,
+          "level": "reduced",
+          "projectedErrorPixels": 0.8929,
+          "admitPixels": 1,
+          "replacePixels": 1.5,
+          "maxDeviationMeters": 0.001,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "representation": "reduced",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 4135,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        }
+      },
+      "frameComparison": {
+        "channelTolerance": 8,
+        "backgroundColour": "#f0f5fa",
+        "backgroundShare": 0.8805060139668719,
+        "frame": {
+          "pixels": 613738,
+          "differingPixels": 35,
+          "agreementRatio": 0.999943
+        },
+        "window": {
+          "x0": 295,
+          "y0": 130,
+          "x1": 884,
+          "y1": 417,
+          "pixels": 169043,
+          "differingPixels": 35,
+          "agreementRatio": 0.999793
+        },
+        "geometry": {
+          "pixels": 4556,
+          "differingPixels": 35,
+          "agreementRatio": 0.992318,
+          "bounds": {
+            "minX": 476,
+            "maxX": 705,
+            "minY": 179,
+            "maxY": 339
+          }
+        },
+        "maximumChannelDelta": 128
+      },
+      "analysisWindow": {
+        "fractions": {
+          "x0": 0.25,
+          "y0": 0.25,
+          "x1": 0.75,
+          "y1": 0.8
+        },
+        "pixels": {
+          "x0": 295,
+          "y0": 130,
+          "x1": 884,
+          "y1": 417
+        },
+        "clearancePixels": 49
+      },
+      "pickLattice": {
+        "steps": 24,
+        "bounds": {
+          "minX": 476,
+          "maxX": 705,
+          "minY": 179,
+          "maxY": 339
+        },
+        "points": 57,
+        "objectsPicked": 4,
+        "backgroundPoints": 2,
+        "identical": true,
+        "disagreements": [],
+        "referenceObjectIds": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          0,
+          6,
+          6,
+          6,
+          0,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      "screenshots": {
+        "reference": {
+          "file": "admit-threshold-reference.png",
+          "bytes": 36294,
+          "sha256": "6cb638a9370115078953ca913ec9c3a0a63b8870df3a568c25429c136387b426"
+        },
+        "reduced": {
+          "file": "admit-threshold-reduced.png",
+          "bytes": 36180,
+          "sha256": "18ff194d109bcc7af037f5037e022f20bf606e9ad66aa3f7ff8100f2b0c85623"
+        }
+      }
+    },
+    {
+      "label": "half-threshold",
+      "wheelDelta": 1200,
+      "fittedProjectedErrorPixels": 2.1962,
+      "arms": {
+        "reference": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
+          "available": true,
+          "level": "target",
+          "projectedErrorPixels": 0.363,
+          "admitPixels": 1e-9,
+          "replacePixels": 1e-9,
+          "maxDeviationMeters": 0.001,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "representation": "target",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 6159,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        },
+        "reduced": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
+          "available": true,
+          "level": "reduced",
+          "projectedErrorPixels": 0.363,
+          "admitPixels": 1,
+          "replacePixels": 1.5,
+          "maxDeviationMeters": 0.001,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "representation": "reduced",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 4135,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        }
+      },
+      "frameComparison": {
+        "channelTolerance": 8,
+        "backgroundColour": "#f0f5fa",
+        "backgroundShare": 0.8866210011438106,
+        "frame": {
+          "pixels": 613738,
+          "differingPixels": 5,
+          "agreementRatio": 0.999992
+        },
+        "window": {
+          "x0": 295,
+          "y0": 130,
+          "x1": 884,
+          "y1": 417,
+          "pixels": 169043,
+          "differingPixels": 5,
+          "agreementRatio": 0.99997
+        },
+        "geometry": {
+          "pixels": 803,
+          "differingPixels": 5,
+          "agreementRatio": 0.993773,
+          "bounds": {
+            "minX": 543,
+            "maxX": 636,
+            "minY": 227,
+            "maxY": 291
+          }
+        },
+        "maximumChannelDelta": 158
+      },
+      "analysisWindow": {
+        "fractions": {
+          "x0": 0.25,
+          "y0": 0.25,
+          "x1": 0.75,
+          "y1": 0.8
+        },
+        "pixels": {
+          "x0": 295,
+          "y0": 130,
+          "x1": 884,
+          "y1": 417
+        },
+        "clearancePixels": 97
+      },
+      "pickLattice": {
+        "steps": 24,
+        "bounds": {
+          "minX": 543,
+          "maxX": 636,
+          "minY": 227,
+          "maxY": 291
+        },
+        "points": 54,
+        "objectsPicked": 4,
+        "backgroundPoints": 3,
+        "identical": true,
+        "disagreements": [],
+        "referenceObjectIds": [
+          0,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          0,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          0,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      "screenshots": {
+        "reference": {
+          "file": "half-threshold-reference.png",
+          "bytes": 33131,
+          "sha256": "e0f81562c73c021a44de2ced903bf0c766e08dabd75cc539372d5ab9a0f2922c"
+        },
+        "reduced": {
+          "file": "half-threshold-reduced.png",
+          "bytes": 33119,
+          "sha256": "ddfbf4bc1089ef7bd77cc8491943373d4c060f54507930acead58acb63690fbd"
+        }
+      }
+    }
+  ],
+  "consoleIssues": 0,
+  "elapsedSeconds": 113.9
+}

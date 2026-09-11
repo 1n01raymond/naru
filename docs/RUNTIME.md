@@ -186,6 +186,27 @@ Cancellation is cooperative at every boundary. A camera move can demote or
 cancel work before decode/upload, while partially useful shared prototype data
 may remain requested.
 
+### Choosing a geometry level
+
+A package compiled with `--reduced-lod <meters>` carries a third per-prototype
+level beside `coarse` and `target`, and the level a prototype draws at is a
+projected-error decision rather than a budget one
+([ADR-0025](adr/0025-shape-preserving-lod-representation.md)). The document
+declares one deviation bound, the Studio camera is orthographic, so the error on
+screen is `maxDeviationMeters / metresPerPixel` and the decision is one boolean
+per frame: the `reduced` level is substituted while that error stays at or below
+1.0 px and is replaced by `target` once it exceeds 1.5 px. The gap is
+hysteresis, so a camera resting near the threshold does not oscillate between
+levels; both thresholds are overridable per session with `?lodAdmitPx=` and
+`?lodReplacePx=`.
+
+Two rules bound what substitution can affect. A prototype with no reduced chunk
+is never substituted, and the selected object is pinned to `target` whatever the
+camera says, so the geometry a user is inspecting, measuring, or sectioning is
+always the exact one. Both levels of a prototype share a residency key, so
+promoting either replaces the other in place: the budget never charges a
+prototype twice, and a level swap is not an eviction.
+
 ## 7. Cache tiers
 
 ```text
@@ -530,9 +551,10 @@ may be added later behind a reviewed unsafe/experimental capability.
 - direct WebGPU surface and explicit edge rendering;
 - fixed chunk layout with simple allocators;
 - manifest/hierarchy load followed by coarse and display chunks;
-- a decodable `reduced` level in packages compiled with `--reduced-lod`,
-  Range-fetched and priced by the same `batchResidencyCost` as a target chunk
-  and not yet selected for display
+- a `reduced` level in packages compiled with `--reduced-lod`, Range-fetched
+  and priced by the same `batchResidencyCost` as a target chunk, substituted
+  while its declared deviation projects to 1.0 px or less and replaced by
+  `target` past 1.5 px
   ([ADR-0025](adr/0025-shape-preserving-lod-representation.md));
 - Worker decode;
 - CPU coarse culling and prototype instancing;
