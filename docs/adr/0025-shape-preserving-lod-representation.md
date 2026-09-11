@@ -92,7 +92,7 @@ screen-space selection" COMPILER §11 requires.
 
 Because `extras.madi.progressive` is frozen, adding a level is the schema bump
 ADR-0007 reserved for this family: the progressive block becomes
-`extras.naru.progressive` under a `naru.progressive-package.1` identifier,
+`extras.naru.progressive` under a `naru.progressive-package.2` identifier,
 readers refuse the old key by identifier as every other bump has, and the
 validators and evidence that pin the frozen block are re-recorded in the same
 slice. A package without any reduced prototype still serialises the new
@@ -185,9 +185,9 @@ close no roadmap exit criterion are unit tests, not fresh-process records.
 | Gate | What must hold | State |
 |---|---|---|
 | 0 | Method and topology class settled on a project-owned fixture with predeclared checks | **Met**: [`artifacts/lod/method-comparison/`](../../artifacts/lod/method-comparison/README.md) |
-| 1 | Compiling `fixtures/step/lod-corpus.step` twice yields byte-identical packages under `naru.progressive-package.1`; `reduced` is emitted for the parts the record admits and withheld for `curved-shell` under the meshopt arm; the Khronos validator reports 0 errors; a committed validator pins the digests, per-prototype deviations, and level triangle counts | **Met** (2026-09-08): [`artifacts/lod/reduced-level/`](../../artifacts/lod/reduced-level/README.md), `pnpm lod:reduced:check` |
+| 1 | Compiling `fixtures/step/lod-corpus.step` twice yields byte-identical packages under `naru.progressive-package.2`; `reduced` is emitted for the parts the record admits and withheld for `curved-shell` under the meshopt arm; the Khronos validator reports 0 errors; a committed validator pins the digests, per-prototype deviations, and level triangle counts | **Met** (2026-09-08): [`artifacts/lod/reduced-level/`](../../artifacts/lod/reduced-level/README.md), `pnpm lod:reduced:check` |
 | 2 | Unit tests cover projected-error hysteresis at both thresholds, selected-object pinning, section and `pickPoint` on a reduced level, edge-segment reuse, same-prototype eviction order, and unsupported-topology retention | **Met** (2026-09-11): hysteresis, threshold resolution, and pinning in [`lod-selection.test.ts`](../../apps/webgpu-spike/test/lod-selection.test.ts); level swap, eviction order, and pinning in [`progressive-residency.test.ts`](../../apps/webgpu-spike/test/progressive-residency.test.ts); section and `pickPoint` inputs, and loader decoding of a reduced chunk, in [`compiled-gltf.test.ts`](../../packages/runtime-webgpu/test/compiled-gltf.test.ts); edge reuse, determinism retention, and unsupported-topology retention in [`reduced-lod.test.ts`](../../packages/compiler/test/reduced-lod.test.ts) |
-| 3 | One headed record on the corpus: at two predeclared camera distances, the frame drawn with `reduced` admitted agrees with a `target`-only reference frame on at least 99% of viewport pixels within 8/255 per channel, and picked object ids on a predeclared grid are identical; recorded in Chrome and Firefox, divergences visible in the record | **Met** (2026-09-11): [`artifacts/lod/reduced-selection/`](../../artifacts/lod/reduced-selection/README.md), `pnpm lod:selection:check`. Whole-frame agreement 99.9943% and 99.9992%; drawn-geometry agreement 99.2318% (35 of 4,556) and 99.3773% (5 of 803); 111 lattice picks per engine, 0 disagreements; triangles 6,159 → 4,135. Engine divergences carried, not asserted away: Blink captures 614,259 frame pixels against Gecko's 613,738, Gecko lays the geometry out one pixel further left, and one lattice point lands on background in Gecko that does not in Blink |
+| 3 | One headed record on the corpus: at two predeclared camera distances, the frame drawn with `reduced` admitted agrees with a `target`-only reference frame on at least 99% of viewport pixels within 8/255 per channel, and picked object ids on a predeclared grid are identical; recorded in Chrome and Firefox, divergences visible in the record | **Met** (2026-09-11): [`artifacts/lod/reduced-selection/`](../../artifacts/lod/reduced-selection/README.md), `pnpm lod:selection:check`. Re-recorded at **three** camera distances once the package began declaring per-prototype bounds. Drawn-geometry agreement 99.0582%, 99.0060%, and 99.2336%; whole-frame agreement 99.9736%, 99.9792%, and 99.9950%; picked ids identical per engine at every distance, 0 disagreements; triangles 6,159 → 4,135 where both chunks are substituted. The nearest distance sits inside the band where the corpus's two bounds straddle the threshold, so `fillet-bracket` (0.7274 px) is drawn reduced while `thin-plate-holes` (1.043 px) stays exact in the same frame, and the validator asserts that mixed case explicitly. Engine divergences carried, not asserted away: Blink captures 614,259 frame pixels against Gecko's 613,738, Gecko lays the geometry out one pixel further left, and Blink's lattice lands one background point at two distances where Gecko's lands none |
 
 ### Implementation notes (2026-09-08, compiler and loader slice)
 
@@ -196,7 +196,7 @@ narrows the Decision above, the narrowing is deliberate and stated here:
 
 - The level is opt-in: `--reduced-lod <meters>` (`reducedLodMeters`, part of
   the compiled-cache key). Only a package compiled with it carries
-  `extras.naru.progressive` (`naru.progressive-package.1`); every other
+  `extras.naru.progressive` (`naru.progressive-package.2`); every other
   package keeps `extras.madi.progressive`, so no committed digest moved. The
   loader accepts both blocks, prefers `naru`, and fails closed on any other
   `schemaVersion`.
@@ -225,13 +225,12 @@ narrows the Decision above, the narrowing is deliberate and stated here:
 The second slice landed the Studio switch and the gate-3 record. Where it
 narrows the Decision above, the narrowing is deliberate and stated here:
 
-- The deviation bound is declared once for the document and the Studio camera
-  is orthographic, so the projected error is the same for every prototype and
-  the level decision is one boolean per frame:
-  `maxDeviationMeters / metresPerPixel` admitted at 1.0 px and replaced at
-  1.5 px, overridable with `?lodAdmitPx=` and `?lodReplacePx=`. A per-prototype
-  decision only becomes meaningful once a package declares per-prototype
-  bounds, which this format does not.
+- The deviation bound was declared once for the document, so the projected
+  error was the same for every prototype and the level decision was one boolean
+  per frame: `maxDeviationMeters / metresPerPixel` admitted at 1.0 px and
+  replaced at 1.5 px, overridable with `?lodAdmitPx=` and `?lodReplacePx=`.
+  **Superseded by the third slice below**, which moved the bound onto each
+  chunk; the thresholds and the override parameters are unchanged.
 - A prototype with no reduced chunk is never substituted, and the selected
   object is pinned to `target` whatever the camera says, so the level a user is
   inspecting is always the exact one.
@@ -241,6 +240,29 @@ narrows the Decision above, the narrowing is deliberate and stated here:
 - The record's reference arm uses the shipped selector with thresholds no
   projected error can satisfy (`?lodAdmitPx=1e-9&lodReplacePx=1e-9`) rather
   than a second build, so both arms run the same code over the same package.
+
+### Implementation notes (2026-09-11, per-prototype bounds slice)
+
+The third slice moved the bound from the document onto each chunk, which is
+what makes the level decision per prototype rather than one boolean per frame:
+
+- Every reduced chunk in `extras.naru.progressive` now carries its own
+  `maxDeviationMeters`, measured against that prototype's own `target`. The
+  document-level `reducedLod` block states the method, the requested tolerance,
+  and the largest of the per-chunk bounds, so the package still answers "how
+  wrong can this package be" in one place. A chunk that coalesces several
+  prototypes declares the maximum over its members.
+- The declared number is the measured sampled maximum, not the request and not
+  the p95. `build-report.json` keeps `options.reducedLod.maxDeviationMeters`
+  meaning the request: that report belongs to the frozen
+  `madi.phase1.compiler-report.1` family ([ADR-0007](0007-rebrand-naru.md)) and
+  was deliberately not bumped. The document did bump, from
+  `naru.progressive-package.1` to `.2`.
+- The Studio evaluates each substitutable chunk against its own bound at the
+  same 1.0 px / 1.5 px thresholds, so a frame can draw one prototype reduced
+  and another exact. The aggregate `level` a frame reports reads `reduced` only
+  when every substitutable chunk is drawn reduced, which is why the mixed frame
+  in the record reports `target` while one chunk is substituted.
 
 Out of scope for acceptance: any sixty5 or Digital Hub number. A real-large
 measurement, if ever taken, is its own record with its own predeclared

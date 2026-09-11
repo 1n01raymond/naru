@@ -191,11 +191,12 @@ may remain requested.
 A package compiled with `--reduced-lod <meters>` carries a third per-prototype
 level beside `coarse` and `target`, and the level a prototype draws at is a
 projected-error decision rather than a budget one
-([ADR-0025](adr/0025-shape-preserving-lod-representation.md)). The document
-declares one deviation bound, the Studio camera is orthographic, so the error on
-screen is `maxDeviationMeters / metresPerPixel` and the decision is one boolean
-per frame: the `reduced` level is substituted while that error stays at or below
-1.0 px and is replaced by `target` once it exceeds 1.5 px. The gap is
+([ADR-0025](adr/0025-shape-preserving-lod-representation.md)). Every reduced
+chunk declares its own measured `maxDeviationMeters`, so the error on screen is
+that chunk's bound over `metresPerPixel` and the decision is made per chunk: a
+chunk is substituted while its own error stays at or below 1.0 px and is
+replaced by `target` once it exceeds 1.5 px. Two chunks whose bounds straddle
+the threshold therefore draw at different levels in the same frame. The gap is
 hysteresis, so a camera resting near the threshold does not oscillate between
 levels; both thresholds are overridable per session with `?lodAdmitPx=` and
 `?lodReplacePx=`.

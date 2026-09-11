@@ -118,7 +118,13 @@ export interface CompilerBuildReport {
     /** Optional size policy that moves mesh-less nodes into a sidecar. */
     readonly hierarchyNodes?: "relocated";
     readonly progressiveRepresentation?: "prototype-aabb-v1" | "prototype-aabb-reduced-v1";
-    /** Present when a declared-error `reduced` level was requested (ADR-0025). */
+    /**
+     * Present when a declared-error `reduced` level was requested (ADR-0025).
+     * Like every other entry here this echoes the request, not a measurement:
+     * the deviation each prototype was measured at is `reducedLod[]` below, and
+     * the bound a viewer may rely on is the one each chunk declares in the
+     * document.
+     */
     readonly reducedLod?: {
       readonly method: string;
       readonly maxDeviationMeters: number;
@@ -257,9 +263,12 @@ export interface CompileGltfOptions {
   readonly hierarchyBinaryUri?: string;
   /**
    * Emit a third per-prototype level, `reduced`, whose measured deviation
-   * from `target` stays within `maxDeviationMeters` (ADR-0025). Requires
-   * `coarseBounds`. The package then declares `extras.naru.progressive`
-   * (`naru.progressive-package.1`) instead of `extras.madi.progressive`.
+   * from `target` stays within `maxDeviationMeters` (ADR-0025). This is the
+   * tolerance admission is run against, not the bound the package declares:
+   * each chunk states the deviation its own geometry was measured at, which is
+   * what a viewer decides against. Requires `coarseBounds`. The package then
+   * declares `extras.naru.progressive` (`naru.progressive-package.2`) instead
+   * of `extras.madi.progressive`.
    * `prepareReducedLod()` must have resolved before the compile.
    */
   readonly reducedLod?: {

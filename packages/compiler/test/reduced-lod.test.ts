@@ -222,7 +222,7 @@ describe("reduced LOD level", () => {
     }
   });
 
-  it("packages a reduced level under naru.progressive-package.1 deterministically", () => {
+  it("packages a reduced level under naru.progressive-package.2 deterministically", () => {
     const options = {
       coarseBounds: true,
       reducedLod: { maxDeviationMeters: deviation },
@@ -244,16 +244,34 @@ describe("reduced LOD level", () => {
       strategy: "prototype-aabb-reduced-v1",
       targetBuffer: 0,
       coarseBuffer: 1,
-      reducedLod: { method: reducedLodProtocol.method, maxDeviationMeters: deviation },
+      reducedLod: {
+        method: reducedLodProtocol.method,
+        requestedToleranceMeters: deviation,
+      },
     });
+    // The package states what it measured, not what it was asked for: the
+    // admission protocol bounds the sampled maximum at twice the tolerance, so
+    // the request alone is not a bound a viewer may rely on.
+    const stated = progressive!.reducedLod as { maxDeviationMeters: number };
+    expect(stated.maxDeviationMeters).toBeGreaterThan(0);
+    expect(stated.maxDeviationMeters).toBeLessThanOrEqual(2 * deviation);
     const targetChunks = progressive!.targetChunks as { id: string; byteOffset: number; byteLength: number }[];
-    const reducedChunks = progressive!.reducedChunks as { id: string; byteOffset: number; byteLength: number }[];
+    const reducedChunks = progressive!.reducedChunks as {
+      id: string;
+      byteOffset: number;
+      byteLength: number;
+      maxDeviationMeters: number;
+    }[];
     expect(targetChunks.map((chunk) => chunk.id)).toEqual(["target:0000:prototype:triangle"]);
     expect(reducedChunks.map((chunk) => chunk.id)).toEqual(["reduced:0000:prototype:triangle"]);
     expect(reducedChunks[0]!.byteOffset).toBeGreaterThanOrEqual(
       targetChunks[0]!.byteOffset + targetChunks[0]!.byteLength,
     );
     expect(reducedChunks[0]!.byteLength).toBeLessThan(targetChunks[0]!.byteLength);
+    // Every reduced chunk carries its own bound, and the document-level number
+    // is the largest of them rather than a separate claim.
+    expect(reducedChunks[0]!.maxDeviationMeters).toBe(stated.maxDeviationMeters);
+    expect(targetChunks[0]).not.toHaveProperty("maxDeviationMeters");
 
     const meshNodes = document.nodes.filter((node) => node.extras?.madi?.coarseMesh !== undefined);
     expect(meshNodes).toHaveLength(2);

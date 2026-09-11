@@ -749,7 +749,7 @@ describe("malformed mesh primitives", () => {
   });
 });
 
-describe("reduced level under naru.progressive-package.1", () => {
+describe("reduced level under naru.progressive-package.2", () => {
   type Chunk = { id: string; meshIndexes: number[]; byteOffset: number; byteLength: number };
   type Doc = {
     meshes: Record<string, unknown>[];
@@ -767,12 +767,13 @@ describe("reduced level under naru.progressive-package.1", () => {
     const reducedId = chunk.id.replace(/^target:/u, "reduced:");
     json.extras.naru = {
       progressive: {
-        schemaVersion: "naru.progressive-package.1",
+        schemaVersion: "naru.progressive-package.2",
         ...progressive,
-        reducedChunks: [{ ...chunk, id: reducedId }],
+        reducedChunks: [{ ...chunk, id: reducedId, maxDeviationMeters: 0.0004 }],
         reducedLod: {
           method: "meshoptimizer-whole-shape-unlocked",
-          maxDeviationMeters: 0.001,
+          requestedToleranceMeters: 0.001,
+          maxDeviationMeters: 0.0004,
         },
       },
     };
@@ -875,9 +876,9 @@ describe("reduced level under naru.progressive-package.1", () => {
   it("fails closed on an unknown schema version and on a chunk id shared across levels", async () => {
     const wrongSchema = await reducedFixture();
     (wrongSchema.json.extras.naru!.progressive as Record<string, unknown>).schemaVersion =
-      "naru.progressive-package.2";
+      "naru.progressive-package.1";
     expect(() => inspectCompiledHierarchy(wrongSchema.json)).toThrowError(
-      /schemaVersion must be naru\.progressive-package\.1/u,
+      /schemaVersion must be naru\.progressive-package\.2/u,
     );
 
     const shared = await reducedFixture();
@@ -892,8 +893,14 @@ describe("reduced level under naru.progressive-package.1", () => {
     const stated = await reducedFixture();
     expect(inspectCompiledHierarchy(stated.json).hierarchy.reducedLod).toEqual({
       method: "meshoptimizer-whole-shape-unlocked",
-      maxDeviationMeters: 0.001,
+      requestedToleranceMeters: 0.001,
+      maxDeviationMeters: 0.0004,
     });
+    expect(
+      inspectCompiledHierarchy(stated.json).hierarchy.reducedChunks.map(
+        ({ maxDeviationMeters }) => maxDeviationMeters,
+      ),
+    ).toEqual([0.0004]);
 
     const unbounded = await reducedFixture();
     delete (unbounded.json.extras.naru!.progressive as Record<string, unknown>).reducedLod;
@@ -902,15 +909,28 @@ describe("reduced level under naru.progressive-package.1", () => {
     );
 
     for (const reducedLod of [
-      { method: "  ", maxDeviationMeters: 0.001 },
-      { method: "meshoptimizer-whole-shape-unlocked", maxDeviationMeters: 0 },
-      { method: "meshoptimizer-whole-shape-unlocked", maxDeviationMeters: Number.NaN },
+      { method: "  ", requestedToleranceMeters: 0.001, maxDeviationMeters: 0.0004 },
+      { method: "meshopt", requestedToleranceMeters: 0, maxDeviationMeters: 0.0004 },
+      { method: "meshopt", requestedToleranceMeters: 0.001, maxDeviationMeters: 0 },
+      { method: "meshopt", requestedToleranceMeters: 0.001, maxDeviationMeters: Number.NaN },
     ]) {
       const invalid = await reducedFixture();
       (invalid.json.extras.naru!.progressive as Record<string, unknown>).reducedLod = reducedLod;
       expect(() => inspectCompiledHierarchy(invalid.json)).toThrowError(
-        /must carry a method and a positive maxDeviationMeters/u,
+        /must carry a method, a positive requestedToleranceMeters, and a positive maxDeviationMeters/u,
       );
     }
+
+    // A chunk is the finest range a viewer can fetch, so its own bound is what
+    // the selector divides by the frame scale; a reduced chunk that states none
+    // is refused rather than drawn against the package-wide number.
+    const unboundedChunk = await reducedFixture();
+    delete (
+      (unboundedChunk.json.extras.naru!.progressive as { reducedChunks: Record<string, unknown>[] })
+        .reducedChunks[0] as Record<string, unknown>
+    ).maxDeviationMeters;
+    expect(() => inspectCompiledHierarchy(unboundedChunk.json)).toThrowError(
+      /maxDeviationMeters must state a positive deviation/u,
+    );
   });
 });

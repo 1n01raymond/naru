@@ -1,9 +1,10 @@
 /**
  * Validates the committed ADR-0025 gate-1 record (issue #76): compiling
  * `fixtures/step/lod-corpus.step` twice with `--reduced-lod 0.001` yields
- * byte-identical packages under `naru.progressive-package.1`, the `reduced`
+ * byte-identical packages under `naru.progressive-package.2`, the `reduced`
  * level is emitted for the two admitted parts and withheld for the two the
- * checks refuse, and the Khronos validator reports zero errors.
+ * checks refuse, every reduced chunk declares the deviation its own geometry
+ * was measured at, and the Khronos validator reports zero errors.
  *
  * The validator re-hashes the committed package beside the record and parses
  * its document, so the pins below are checked against bytes, not against the
@@ -40,19 +41,25 @@ const SOURCE = {
   sha256: "02c78ff73b23eb0ceab0c73cf0af43a75bdf1877db0d2425131b30766450129c",
 };
 const OPTIONS = {
+  // What the compile was asked for, as the build report echoes it back. It is
+  // not the bound the package declares: admission only holds the sampled
+  // maximum at twice this number, so each chunk states the deviation its own
+  // geometry was measured at instead.
   reducedLod: { method: "meshoptimizer-whole-shape-unlocked", maxDeviationMeters: 0.001 },
   progressiveRepresentation: "prototype-aabb-reduced-v1",
 };
-const PROGRESSIVE_SCHEMA = "naru.progressive-package.1";
+const REQUESTED_TOLERANCE_METERS = OPTIONS.reducedLod.maxDeviationMeters;
+const REDUCED_LOD_METHOD = OPTIONS.reducedLod.method;
+const PROGRESSIVE_SCHEMA = "naru.progressive-package.2";
 // Host-local package identity (Windows, Node 22, OCCT adapter of this host).
 // Do not retarget; a differing digest on another host is a determinism
 // finding to record beside this one, not a pin to move.
-const EXPECTED_PACKAGE_DIGEST = "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19";
+const EXPECTED_PACKAGE_DIGEST = "808c4c01ce9a43534eacf98a09a6351a36ac18c832b2456162a1678bf4a7d4f8";
 const EXPECTED_FILES = {
-  "scene.gltf": { bytes: 101850, sha256: "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032" },
+  "scene.gltf": { bytes: 102026, sha256: "232926fb3000220ca3ca455e5f7b02bd175d7ba42873bbc34ef3e7753cd7c7a7" },
   "scene.bin": { bytes: 578988, sha256: "605a834d17258bf2bbd65e8d8dd157c149653ff4c6c00b67814825b88708affb" },
   "coarse.bin": { bytes: 3648, sha256: "4ed33c1be1ddeea9ffcdbe38155b054f2a2fe63b6bbfcb7703799df496cb3cfa" },
-  "build-report.json": { bytes: 4116, sha256: "960a86661763c02466f858e3db76888f9ce652cea6baa5aeb12884acb917c695" },
+  "build-report.json": { bytes: 4116, sha256: "159320c25ab595f85ebab132f50c55b8a1ed560c524582f64e97f81d47e4d707" },
   "adapter-report.json": { bytes: 1501, sha256: "cee2ce28e76650997e746d2809d3f1904f2e52fff1e5bf5e6da508b14610eed2" },
 };
 const EXPECTED_TARGET_CHUNKS = [
@@ -61,9 +68,23 @@ const EXPECTED_TARGET_CHUNKS = [
   { id: "target:0002:prototype:part:fillet-bracket", byteLength: 70892, triangles: 784 },
   { id: "target:0003:prototype:part:planar-control", byteLength: 3352, triangles: 28 },
 ];
+// A chunk is the finest range a viewer can fetch, so each one declares the
+// deviation its own geometry was measured at rather than borrowing a
+// package-wide number. Both sit well under the 0.001 m the compile requested,
+// which is the whole point of stating the measurement.
 const EXPECTED_REDUCED_CHUNKS = [
-  { id: "reduced:0000:prototype:part:thin-plate-holes", byteLength: 19992, triangles: 310 },
-  { id: "reduced:0001:prototype:part:fillet-bracket", byteLength: 11644, triangles: 162 },
+  {
+    id: "reduced:0000:prototype:part:thin-plate-holes",
+    byteLength: 19992,
+    triangles: 310,
+    maxDeviationMeters: 0.0005947672429085638,
+  },
+  {
+    id: "reduced:0001:prototype:part:fillet-bracket",
+    byteLength: 11644,
+    triangles: 162,
+    maxDeviationMeters: 0.00041477252029056757,
+  },
 ];
 const EXPECTED_PROTOTYPES = {
   "prototype:part:curved-shell": { outcome: "retained", reason: "checks-failed", inputTriangles: 3623, outputTriangles: 0 },
@@ -112,8 +133,12 @@ const progressive = document.extras?.naru?.progressive;
 assert(progressive?.schemaVersion === PROGRESSIVE_SCHEMA, `document must carry ${PROGRESSIVE_SCHEMA}`);
 assert(document.extras?.madi?.progressive === undefined, "document must not carry extras.madi.progressive");
 assert(progressive.strategy === OPTIONS.progressiveRepresentation, "progressive strategy changed");
-assert(JSON.stringify(progressive.reducedLod) === JSON.stringify(OPTIONS.reducedLod),
-  "progressive.reducedLod must repeat the compile options");
+assert(progressive.reducedLod?.method === REDUCED_LOD_METHOD
+  && progressive.reducedLod.requestedToleranceMeters === REQUESTED_TOLERANCE_METERS,
+  "progressive.reducedLod must repeat the method and tolerance the compile was given");
+assert(progressive.reducedLod.maxDeviationMeters
+  === Math.max(...EXPECTED_REDUCED_CHUNKS.map((chunk) => chunk.maxDeviationMeters)),
+  "the document-level deviation must be the largest of the reduced chunks, not a separate claim");
 assert(record.progressive?.schemaVersion === PROGRESSIVE_SCHEMA && record.progressive.strategy === progressive.strategy,
   "record.progressive disagrees with the document");
 
@@ -133,7 +158,10 @@ const checkChunks = (level, expectedList) => {
     assert(chunk.id === expected.id && chunk.byteLength === expected.byteLength,
       `${level} chunk ${index} is ${chunk.id}/${chunk.byteLength}, expected ${expected.id}/${expected.byteLength}`);
     assert(trianglesOf(chunk) === expected.triangles, `${chunk.id} carries ${trianglesOf(chunk)} triangles, expected ${expected.triangles}`);
-    assert(recorded.id === chunk.id && recorded.byteLength === chunk.byteLength && recorded.triangles === expected.triangles,
+    assert(chunk.maxDeviationMeters === expected.maxDeviationMeters,
+      `${chunk.id} declares deviation ${chunk.maxDeviationMeters}, expected ${expected.maxDeviationMeters ?? "none"}`);
+    assert(recorded.id === chunk.id && recorded.byteLength === chunk.byteLength && recorded.triangles === expected.triangles
+      && recorded.maxDeviationMeters === expected.maxDeviationMeters,
       `record.progressive.${level}Chunks[${index}] disagrees with the document`);
   });
 };
@@ -162,12 +190,15 @@ for (const entry of record.prototypes) {
   assert((reducedIds.has(entry.prototypeId)) === (entry.outcome === "reduced"),
     `${entry.prototypeId} outcome disagrees with the document's reduced chunks`);
   if (entry.outcome === "reduced") {
-    assert(entry.sampledTwoSidedP95Meters <= OPTIONS.reducedLod.maxDeviationMeters,
-      `${entry.prototypeId} was admitted above the declared deviation`);
+    assert(entry.sampledTwoSidedP95Meters <= REQUESTED_TOLERANCE_METERS,
+      `${entry.prototypeId} was admitted above the requested tolerance`);
+    const chunk = progressive.reducedChunks.find((candidate) => candidate.prototypeId === entry.prototypeId);
+    assert(chunk.maxDeviationMeters === entry.sampledTwoSidedMaxMeters,
+      `${entry.prototypeId} declares ${chunk.maxDeviationMeters} but was measured at ${entry.sampledTwoSidedMaxMeters}`);
   }
 }
 assert(record.prototypes.find((entry) => entry.prototypeId === "prototype:part:curved-shell").sampledTwoSidedP95Meters
-  > OPTIONS.reducedLod.maxDeviationMeters, "curved-shell must be retained because its p95 exceeds the bound");
+  > REQUESTED_TOLERANCE_METERS, "curved-shell must be retained because its p95 exceeds the requested tolerance");
 
 for (const [key, value] of Object.entries(EXPECTED_COUNTS)) {
   assert(record.counts?.[key] === value, `counts.${key} is ${record.counts?.[key]}, expected ${value}`);
@@ -176,5 +207,7 @@ const report = JSON.parse(readFileSync(resolve(recordDirectory, "package/build-r
 assert(report.output?.packageDigest === EXPECTED_PACKAGE_DIGEST, "committed build-report digest disagrees with the record");
 assert(JSON.stringify(report.reducedLod) === JSON.stringify(record.prototypes), "record.prototypes must equal the build report's reducedLod");
 
-console.log(`[reduced-lod] ${progressive.reducedChunks.length} reduced / ${progressive.targetChunks.length} target chunks, `
+const declared = progressive.reducedChunks.map((chunk) => `${(chunk.maxDeviationMeters * 1000).toFixed(3)} mm`).join(" / ");
+console.log(`[reduced-lod] ${progressive.reducedChunks.length} reduced / ${progressive.targetChunks.length} target chunks `
+  + `declaring ${declared} against a ${REQUESTED_TOLERANCE_METERS * 1000} mm request, `
   + `package ${record.packageDigest.slice(0, 12)} identical over ${record.determinism.repeats} runs, 0 glTF errors`);

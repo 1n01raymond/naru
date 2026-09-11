@@ -1,7 +1,7 @@
 {
   "schemaVersion": "naru.reduced-lod-evidence.1",
   "mode": "fresh-process-double-compile-reduced-level",
-  "recordedAt": "2026-09-08T13:39:59.737Z",
+  "recordedAt": "2026-09-11T09:25:19.908Z",
   "adr": "docs/adr/0025-shape-preserving-lod-representation.md",
   "source": {
     "path": "fixtures/step/lod-corpus.step",
@@ -31,8 +31,8 @@
     "identical": true,
     "files": {
       "scene.gltf": {
-        "bytes": 101850,
-        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+        "bytes": 102026,
+        "sha256": "232926fb3000220ca3ca455e5f7b02bd175d7ba42873bbc34ef3e7753cd7c7a7"
       },
       "scene.bin": {
         "bytes": 578988,
@@ -44,7 +44,7 @@
       },
       "build-report.json": {
         "bytes": 4116,
-        "sha256": "960a86661763c02466f858e3db76888f9ce652cea6baa5aeb12884acb917c695"
+        "sha256": "159320c25ab595f85ebab132f50c55b8a1ed560c524582f64e97f81d47e4d707"
       },
       "adapter-report.json": {
         "bytes": 1501,
@@ -52,14 +52,19 @@
       }
     }
   },
-  "packageDigest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+  "packageDigest": "808c4c01ce9a43534eacf98a09a6351a36ac18c832b2456162a1678bf4a7d4f8",
   "gltfValidation": {
     "errors": 0,
     "warnings": 0
   },
   "progressive": {
-    "schemaVersion": "naru.progressive-package.1",
+    "schemaVersion": "naru.progressive-package.2",
     "strategy": "prototype-aabb-reduced-v1",
+    "reducedLod": {
+      "method": "meshoptimizer-whole-shape-unlocked",
+      "requestedToleranceMeters": 0.001,
+      "maxDeviationMeters": 0.0005947672429085638
+    },
     "targetChunks": [
       {
         "id": "target:0000:prototype:part:curved-shell",
@@ -91,12 +96,14 @@
         "id": "reduced:0000:prototype:part:thin-plate-holes",
         "prototypeId": "prototype:part:thin-plate-holes",
         "byteLength": 19992,
+        "maxDeviationMeters": 0.0005947672429085638,
         "triangles": 310
       },
       {
         "id": "reduced:0001:prototype:part:fillet-bracket",
         "prototypeId": "prototype:part:fillet-bracket",
         "byteLength": 11644,
+        "maxDeviationMeters": 0.00041477252029056757,
         "triangles": 162
       }
     ]
@@ -152,5 +159,5 @@
       "sampledTwoSidedMaxMeters": 0.0005947672429085638
     }
   ],
-  "elapsedSeconds": 5.2
+  "elapsedSeconds": 10.2
 }

@@ -3,7 +3,7 @@ import { buildReducedRepresentation, reducedLodProtocol } from "./lod/reduce.js"
 import type { ReducedLodPrototypeRecord } from "./types.js";
 
 /** Schema identifier of the `extras.naru.progressive` block (ADR-0025). */
-export const progressivePackageSchema = "naru.progressive-package.1";
+export const progressivePackageSchema = "naru.progressive-package.2";
 import { createHash } from "node:crypto";
 
 import {
@@ -896,6 +896,11 @@ export function compileSceneToGltf(
   // stay contiguous; each prototype is admitted only by its own checks.
   const reducedGeometryByPrototype = new Map<string, GeometryResource>();
   const reducedRangesByPrototype = new Map<string, TargetGeometryRange>();
+  // The bound a prototype's reduced payload actually earned, which is what the
+  // package declares per chunk. The requested tolerance only bounds the p95;
+  // admission lets the sampled maximum reach twice it, so quoting the request
+  // would understate the error for one prototype and overstate it for another.
+  const reducedDeviationByPrototype = new Map<string, number>();
   const reducedLodRecords: ReducedLodPrototypeRecord[] = [];
   let reducedTriangleCount = 0;
   if (reducedLod !== undefined) {
@@ -922,6 +927,13 @@ export function compileSceneToGltf(
         sampledTwoSidedMaxMeters: meters("sampled-two-sided-max"),
       });
       if (outcome.outcome !== "reduced") continue;
+      const declaredDeviation = meters("sampled-two-sided-max");
+      if (declaredDeviation === null || !Number.isFinite(declaredDeviation)) {
+        throw new Error(
+          `Prototype ${prototype.id} passed the reduced-level checks without a measured deviation.`,
+        );
+      }
+      reducedDeviationByPrototype.set(prototype.id, declaredDeviation);
       const byteOffset = builder.byteLength;
       const compiled = appendGeometry(builder, prototype, outcome.representation, scaleToMeters);
       reducedGeometryByPrototype.set(prototype.id, compiled.resource);
@@ -1321,6 +1333,7 @@ export function compileSceneToGltf(
     level: "target" | "reduced",
     rangesByPrototype: ReadonlyMap<string, TargetGeometryRange>,
     meshesByPrototype: ReadonlyMap<string, ReadonlySet<number>>,
+    deviationByPrototype?: ReadonlyMap<string, number>,
   ) =>
     [...targetChunkGroups(
         [...rangesByPrototype.values()]
@@ -1350,13 +1363,39 @@ export function compileSceneToGltf(
           prototypeIds: chunk.prototypeIds,
           occurrenceCount: chunk.occurrenceCount,
           priority,
+          // A chunk is the finest thing a viewer can fetch, so the bound it
+          // declares has to hold for every prototype the budget coalesced into
+          // it: the largest of their measured deviations.
+          ...(deviationByPrototype === undefined
+            ? {}
+            : {
+                maxDeviationMeters: chunk.prototypeIds.reduce(
+                  (largest, prototypeId) =>
+                    Math.max(largest, deviationByPrototype.get(prototypeId) ?? 0),
+                  0,
+                ),
+              }),
         }));
   const targetChunks = coarseBinary
     ? chunkTable("target", targetRangesByPrototype, targetMeshesByPrototype)
     : [];
   const reducedChunks = coarseBinary && reducedLod !== undefined
-    ? chunkTable("reduced", reducedRangesByPrototype, reducedMeshesByPrototype)
+    ? chunkTable(
+        "reduced",
+        reducedRangesByPrototype,
+        reducedMeshesByPrototype,
+        reducedDeviationByPrototype,
+      )
     : [];
+  // The package-wide bound is the largest a chunk declares, not the tolerance
+  // that was asked for: admission bounds the sampled p95 by the tolerance and
+  // the sampled maximum by twice it, so the request is not a bound a viewer may
+  // rely on. With no admitted prototype there is nothing to bound and the
+  // request stands in.
+  const reducedMaxDeviationMeters = reducedChunks.reduce(
+    (largest, chunk) => Math.max(largest, chunk.maxDeviationMeters ?? 0),
+    reducedChunks.length === 0 ? (reducedLod?.maxDeviationMeters ?? 0) : 0,
+  );
   const spatialIndex = options.spatialIndex === true
     ? (() => {
         const chunkByPrototype = new Map<string, number>();
@@ -1506,7 +1545,8 @@ export function compileSceneToGltf(
                 reducedChunks,
                 reducedLod: {
                   method: reducedLodProtocol.method,
-                  maxDeviationMeters: reducedLod.maxDeviationMeters,
+                  requestedToleranceMeters: reducedLod.maxDeviationMeters,
+                  maxDeviationMeters: reducedMaxDeviationMeters,
                 },
                 ...(options.spatialPayloadOrder === true
                   ? { targetPayloadOrder: "spatial-leaf-anchor-v1" }

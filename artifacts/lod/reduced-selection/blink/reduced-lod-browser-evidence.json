@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "naru.reduced-lod-browser-evidence.1",
-  "mode": "headed-two-distance-level-agreement",
-  "recordedAt": "2026-09-11T07:26:54.738Z",
+  "schemaVersion": "naru.reduced-lod-browser-evidence.2",
+  "mode": "headed-three-distance-per-chunk-level-agreement",
+  "recordedAt": "2026-09-11T09:41:35.163Z",
   "adr": "docs/adr/0025-shape-preserving-lod-representation.md",
   "gate": "3",
   "host": {
@@ -21,12 +21,12 @@
   },
   "package": {
     "sceneDirectory": "artifacts/lod/reduced-level/package",
-    "digest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+    "digest": "808c4c01ce9a43534eacf98a09a6351a36ac18c832b2456162a1678bf4a7d4f8",
     "resources": [
       {
         "path": "scene.gltf",
-        "bytes": 101850,
-        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+        "bytes": 102026,
+        "sha256": "232926fb3000220ca3ca455e5f7b02bd175d7ba42873bbc34ef3e7753cd7c7a7"
       },
       {
         "path": "scene.bin",
@@ -50,31 +50,216 @@
     "channelTolerance": 8,
     "requiredAgreement": 0.99,
     "analysisWindow": {
-      "x0": 0.25,
-      "y0": 0.25,
-      "x1": 0.75,
-      "y1": 0.8
+      "x0": 0.1,
+      "y0": 0.09,
+      "x1": 0.98,
+      "y1": 0.88
     },
     "windowMarginPixels": 8,
     "pickLatticeSteps": 24
   },
   "distances": [
     {
-      "label": "admit-threshold",
-      "wheelDelta": 600,
-      "fittedProjectedErrorPixels": 2.1962,
+      "label": "split-band",
+      "wheelDelta": 150,
+      "expectedReducedChunks": 1,
+      "fittedWorstProjectedErrorPixels": 1.3062,
       "arms": {
         "reference": {
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
           "available": true,
           "level": "target",
-          "projectedErrorPixels": 0.8929,
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 1.043,
           "admitPixels": 1e-9,
           "replacePixels": 1e-9,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": null,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
+          "representation": "target",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 6159,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        },
+        "reduced": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
+          "available": true,
+          "level": "target",
+          "projectedErrorPixels": 0.7274,
+          "worstProjectedErrorPixels": 1.043,
+          "admitPixels": 1,
+          "replacePixels": 1.5,
+          "maxDeviationMeters": 0.00041477252029056757,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "reducedChunks": 1,
+          "substitutableChunks": 2,
+          "representation": "target",
+          "residentChunks": 4,
+          "totalChunks": 4,
+          "triangles": 5537,
+          "status": "Compiled glTF ready · 5 surface batches · 4 renderable occurrences"
+        }
+      },
+      "frameComparison": {
+        "channelTolerance": 8,
+        "backgroundColour": "#f0f5fa",
+        "backgroundShare": 0.8588071155652583,
+        "frame": {
+          "pixels": 614259,
+          "differingPixels": 162,
+          "agreementRatio": 0.999736
+        },
+        "window": {
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458,
+          "pixels": 426207,
+          "differingPixels": 162,
+          "agreementRatio": 0.99962
+        },
+        "geometry": {
+          "pixels": 17201,
+          "differingPixels": 162,
+          "agreementRatio": 0.990582,
+          "bounds": {
+            "minX": 369,
+            "maxX": 819,
+            "minY": 101,
+            "maxY": 416
+          }
+        },
+        "maximumChannelDelta": 130
+      },
+      "analysisWindow": {
+        "fractions": {
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
+        },
+        "pixels": {
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458
+        },
+        "clearancePixels": 41
+      },
+      "pickLattice": {
+        "steps": 24,
+        "bounds": {
+          "minX": 369,
+          "maxX": 819,
+          "minY": 101,
+          "maxY": 416
+        },
+        "points": 59,
+        "objectsPicked": 4,
+        "backgroundPoints": 0,
+        "identical": true,
+        "disagreements": [],
+        "referenceObjectIds": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          6,
+          6,
+          3,
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3
+        ]
+      },
+      "screenshots": {
+        "reference": {
+          "file": "split-band-reference.png",
+          "bytes": 31239,
+          "sha256": "43bab51fddeaf5ac647ecadb55c7fdea81b7f26b0221a3adeea1e5f33e509624"
+        },
+        "reduced": {
+          "file": "split-band-reduced.png",
+          "bytes": 30964,
+          "sha256": "bc36c996ed2159142c982fa09055630c57a40353529a98e248346044a74960b6"
+        }
+      }
+    },
+    {
+      "label": "admit-threshold",
+      "wheelDelta": 250,
+      "expectedReducedChunks": 2,
+      "fittedWorstProjectedErrorPixels": 1.3062,
+      "arms": {
+        "reference": {
+          "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
+          "available": true,
+          "level": "target",
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 0.8978,
+          "admitPixels": 1e-9,
+          "replacePixels": 1e-9,
+          "maxDeviationMeters": null,
+          "method": "meshoptimizer-whole-shape-unlocked",
+          "substitutedChunks": 2,
+          "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
           "representation": "target",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -85,13 +270,16 @@
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
           "available": true,
           "level": "reduced",
-          "projectedErrorPixels": 0.8929,
+          "projectedErrorPixels": 0.8978,
+          "worstProjectedErrorPixels": 0.8978,
           "admitPixels": 1,
           "replacePixels": 1.5,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": 0.0005947672429085638,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 2,
+          "substitutableChunks": 2,
           "representation": "reduced",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -102,58 +290,58 @@
       "frameComparison": {
         "channelTolerance": 8,
         "backgroundColour": "#f0f5fa",
-        "backgroundShare": 0.8793928945282039,
+        "backgroundShare": 0.8660092892411833,
         "frame": {
           "pixels": 614259,
-          "differingPixels": 35,
-          "agreementRatio": 0.999943
+          "differingPixels": 128,
+          "agreementRatio": 0.999792
         },
         "window": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417,
-          "pixels": 169043,
-          "differingPixels": 35,
-          "agreementRatio": 0.999793
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458,
+          "pixels": 426207,
+          "differingPixels": 128,
+          "agreementRatio": 0.9997
         },
         "geometry": {
-          "pixels": 4556,
-          "differingPixels": 35,
-          "agreementRatio": 0.992318,
+          "pixels": 12777,
+          "differingPixels": 127,
+          "agreementRatio": 0.99006,
           "bounds": {
-            "minX": 477,
-            "maxX": 706,
-            "minY": 179,
-            "maxY": 339
+            "minX": 400,
+            "maxX": 787,
+            "minY": 123,
+            "maxY": 394
           }
         },
-        "maximumChannelDelta": 128
+        "maximumChannelDelta": 152
       },
       "analysisWindow": {
         "fractions": {
-          "x0": 0.25,
-          "y0": 0.25,
-          "x1": 0.75,
-          "y1": 0.8
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
         },
         "pixels": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458
         },
-        "clearancePixels": 49
+        "clearancePixels": 63
       },
       "pickLattice": {
         "steps": 24,
         "bounds": {
-          "minX": 477,
-          "maxX": 706,
-          "minY": 179,
-          "maxY": 339
+          "minX": 400,
+          "maxX": 787,
+          "minY": 123,
+          "maxY": 394
         },
-        "points": 57,
+        "points": 59,
         "objectsPicked": 4,
         "backgroundPoints": 1,
         "identical": true,
@@ -176,19 +364,19 @@
           4,
           4,
           4,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
-          5,
+          4,
           0,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
+          5,
           6,
           6,
           6,
@@ -196,6 +384,8 @@
           6,
           6,
           6,
+          6,
+          3,
           6,
           6,
           6,
@@ -221,32 +411,36 @@
       "screenshots": {
         "reference": {
           "file": "admit-threshold-reference.png",
-          "bytes": 26973,
-          "sha256": "c1f961323820b64b0d0411940528eda5da2400aa9a37d414a75703c9e2d28b93"
+          "bytes": 30064,
+          "sha256": "781d446cb8d77aa9db413197c996a63b7c70e8f90c30ffc3db48a389ca89067c"
         },
         "reduced": {
           "file": "admit-threshold-reduced.png",
-          "bytes": 26847,
-          "sha256": "819c16603764a43cfe9caa27056d7ac419ee20c5093ffad56d68c6efa7b55b0f"
+          "bytes": 29903,
+          "sha256": "98570f7d5fe9c5414d55eca4bdcaed4a9200bde6d2b692b633158ac731e65209"
         }
       }
     },
     {
       "label": "half-threshold",
-      "wheelDelta": 1200,
-      "fittedProjectedErrorPixels": 2.1962,
+      "wheelDelta": 640,
+      "expectedReducedChunks": 2,
+      "fittedWorstProjectedErrorPixels": 1.3062,
       "arms": {
         "reference": {
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf&lodAdmitPx=1e-9&lodReplacePx=1e-9",
           "available": true,
           "level": "target",
-          "projectedErrorPixels": 0.363,
+          "projectedErrorPixels": null,
+          "worstProjectedErrorPixels": 0.5001,
           "admitPixels": 1e-9,
           "replacePixels": 1e-9,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": null,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 0,
+          "substitutableChunks": 2,
           "representation": "target",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -257,13 +451,16 @@
           "url": "http://127.0.0.1:4179/?scene=http%3A%2F%2F127.0.0.1%3A4179%2Fscene.gltf",
           "available": true,
           "level": "reduced",
-          "projectedErrorPixels": 0.363,
+          "projectedErrorPixels": 0.5001,
+          "worstProjectedErrorPixels": 0.5001,
           "admitPixels": 1,
           "replacePixels": 1.5,
-          "maxDeviationMeters": 0.001,
+          "maxDeviationMeters": 0.0005947672429085638,
           "method": "meshoptimizer-whole-shape-unlocked",
           "substitutedChunks": 2,
           "exactOnlyChunks": 2,
+          "reducedChunks": 2,
+          "substitutableChunks": 2,
           "representation": "reduced",
           "residentChunks": 4,
           "totalChunks": 4,
@@ -274,60 +471,60 @@
       "frameComparison": {
         "channelTolerance": 8,
         "backgroundColour": "#f0f5fa",
-        "backgroundShare": 0.8855026951172063,
+        "backgroundShare": 0.8802247911711509,
         "frame": {
           "pixels": 614259,
-          "differingPixels": 5,
-          "agreementRatio": 0.999992
+          "differingPixels": 31,
+          "agreementRatio": 0.99995
         },
         "window": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417,
-          "pixels": 169043,
-          "differingPixels": 5,
-          "agreementRatio": 0.99997
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458,
+          "pixels": 426207,
+          "differingPixels": 31,
+          "agreementRatio": 0.999927
         },
         "geometry": {
-          "pixels": 803,
-          "differingPixels": 5,
-          "agreementRatio": 0.993773,
+          "pixels": 4045,
+          "differingPixels": 31,
+          "agreementRatio": 0.992336,
           "bounds": {
-            "minX": 544,
-            "maxX": 637,
-            "minY": 227,
-            "maxY": 291
+            "minX": 484,
+            "maxX": 699,
+            "minY": 184,
+            "maxY": 334
           }
         },
-        "maximumChannelDelta": 158
+        "maximumChannelDelta": 95
       },
       "analysisWindow": {
         "fractions": {
-          "x0": 0.25,
-          "y0": 0.25,
-          "x1": 0.75,
-          "y1": 0.8
+          "x0": 0.1,
+          "y0": 0.09,
+          "x1": 0.98,
+          "y1": 0.88
         },
         "pixels": {
-          "x0": 295,
-          "y0": 130,
-          "x1": 884,
-          "y1": 417
+          "x0": 118,
+          "y0": 47,
+          "x1": 1155,
+          "y1": 458
         },
-        "clearancePixels": 97
+        "clearancePixels": 123
       },
       "pickLattice": {
         "steps": 24,
         "bounds": {
-          "minX": 544,
-          "maxX": 637,
-          "minY": 227,
-          "maxY": 291
+          "minX": 484,
+          "maxX": 699,
+          "minY": 184,
+          "maxY": 334
         },
-        "points": 54,
+        "points": 58,
         "objectsPicked": 4,
-        "backgroundPoints": 3,
+        "backgroundPoints": 1,
         "identical": true,
         "disagreements": [],
         "referenceObjectIds": [
@@ -342,16 +539,17 @@
           4,
           4,
           4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
           0,
-          4,
-          4,
-          4,
-          4,
-          4,
-          4,
           5,
           5,
-          0,
+          5,
           5,
           5,
           5,
@@ -362,7 +560,9 @@
           5,
           6,
           6,
-          0,
+          6,
+          6,
+          6,
           6,
           6,
           6,
@@ -373,6 +573,7 @@
           3,
           6,
           6,
+          3,
           3,
           3,
           3,
@@ -390,17 +591,17 @@
       "screenshots": {
         "reference": {
           "file": "half-threshold-reference.png",
-          "bytes": 24599,
-          "sha256": "0f69d867f4d82448596c0fe163d57b3a759c71529c2770e7353ff6a5020650bb"
+          "bytes": 26745,
+          "sha256": "dd2a4112923d21197c5fe21acefd80a36a5d2e1063ea7dada117a86126f8bc47"
         },
         "reduced": {
           "file": "half-threshold-reduced.png",
-          "bytes": 24580,
-          "sha256": "b2586469d0d5a38c9fe46d2ce91532efb22f057e774b287150633252e8eeb88e"
+          "bytes": 26648,
+          "sha256": "f2e6b62dc060fffdfb13e38c771f1f898f8a357637d608f85c8e85db63f7b493"
         }
       }
     }
   ],
   "consoleIssues": 0,
-  "elapsedSeconds": 109.6
+  "elapsedSeconds": 172.8
 }

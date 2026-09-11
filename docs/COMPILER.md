@@ -257,7 +257,7 @@ the prototype retains `target` with a reason in `build-report.json`
 `reducedLod`. Admitted levels are welded, carry the explicit edge segments,
 and follow the target payloads in `scene.bin` as `reduced:NNNN:<prototype>`
 chunks declared in `extras.naru.progressive.reducedChunks`
-(`naru.progressive-package.1`); a package compiled without the flag keeps
+(`naru.progressive-package.2`); a package compiled without the flag keeps
 `extras.madi.progressive`. Gate 1 is recorded in
 [`artifacts/lod/reduced-level/`](../artifacts/lod/reduced-level/README.md).
 

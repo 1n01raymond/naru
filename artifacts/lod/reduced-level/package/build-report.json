@@ -27,13 +27,13 @@
     "optionsDigest": "sha256:14b35fda584ddfbfe5614edd5a32be03938610e8b3ffbd51acdc8c8cc9df9abd"
   },
   "output": {
-    "packageDigest": "de1e6bc0df2cf6cecf91cf0068c7930602da6e0574a9480c8f3d0b59104c0e19",
+    "packageDigest": "808c4c01ce9a43534eacf98a09a6351a36ac18c832b2456162a1678bf4a7d4f8",
     "resources": [
       {
         "path": "scene.gltf",
         "mediaType": "model/gltf+json",
-        "bytes": 101850,
-        "sha256": "bbeb7e7ff2a3034ca6c8a7980386aca353d378fef7d3c39276d0a2408afa1032"
+        "bytes": 102026,
+        "sha256": "232926fb3000220ca3ca455e5f7b02bd175d7ba42873bbc34ef3e7753cd7c7a7"
       },
       {
         "path": "scene.bin",
