@@ -33,15 +33,21 @@ lower median of three, so every figure below is one of the runs.
 
 | Median of 3 | In place | Relocated | Change |
 |---|---:|---:|---:|
-| Hierarchy ready | 2,220 ms | 2,191 ms | −29 ms (−1.31%) |
-| **First coarse frame** | **4,408 ms** | **3,703 ms** | **−705 ms (−15.99%)** |
-| Budget-limited ready | 9,687 ms | 8,987 ms | −700 ms (−7.23%) |
-| Peak JS heap | 839,726,321 B | 669,299,303 B | −170,427,018 B (−20.30%) |
+| Hierarchy ready | 2,313 ms | 2,290 ms | −23 ms (−0.99%) |
+| **First coarse frame** | **4,702 ms** | **3,966 ms** | **−736 ms (−15.65%)** |
+| Budget-limited ready | 9,953 ms | 9,834 ms | −119 ms (−1.20%) |
+| Peak JS heap | 856,279,408 B | 697,327,573 B | −158,951,835 B (−18.56%) |
 
 Per run (hierarchy / first frame / ready, ms):
 
-- in place — 2,254 / 4,408 / 9,774 · 2,220 / 4,431 / 9,621 · 2,182 / 4,369 / 9,687
-- relocated — 2,198 / 3,703 / 8,511 · 2,168 / 3,695 / 8,987 · 2,191 / 3,790 / 9,086
+- in place — 2,365 / 4,702 / 10,427 · 2,313 / 4,808 / 9,953 · 2,261 / 4,586 / 9,243
+- relocated — 2,270 / 3,966 / 9,834 · 2,341 / 4,045 / 9,868 · 2,290 / 3,915 / 8,383
+
+Both arms were re-captured on 2026-09-07, after the Studio camera fix and the
+view cube, because the committed screenshots still showed the mirrored
+from-below rendering. Every counter in *What it must not change* reproduced;
+the wall-clock figures above are the new capture's, and the first-frame
+conclusion is unchanged.
 
 The two arms' spreads do not overlap on first frame or on heap. Hierarchy-ready
 barely moves, which is the honest reading: the tree still has to be read before
@@ -62,7 +68,7 @@ the comparison.
 
 `hierarchy.bin` is fetched **once per run**, as response 3 of 118, ahead of
 `coarse.bin` — the Studio reads the tree on the main thread while the Worker is
-still decoding geometry, which is why a 46 MB extra fetch costs 29 ms rather
+still decoding geometry, which is why a 46 MB extra fetch costs 23 ms rather
 than a round trip. The in-place arm requests no sidecar at all. Both facts are
 derived per run from the response stream, not asserted.
 
@@ -73,10 +79,11 @@ text (`Residency budget reached · 24326 surface batches retained · 78173
 renderable occurrences`), 42,435 prototypes, 78,173 occurrences, 2,255,235
 triangles, 12 edges, 111 of 234 chunks resident, 66,686,508 decoded /
 66,783,808 GPU bytes against the 67,108,864 B budget, 111 scheduler requests +
-123 skips, 113 ranged `scene.bin` responses, the same picked occurrence and its
-six IFC2X3 property entries. Zero console issues in all six runs.
+123 skips, 113 ranged `scene.bin` responses, the same picked occurrence
+(`occurrence:ifc:facade-a9a1b20214da:52355`) and its 44 IFC2X3 property
+entries. Zero console issues in all six runs.
 
-One thing deliberately differs: the picked node **index** (148735 → 64079). A
+One thing deliberately differs: the picked node **index** (74387 → 37247). A
 relocated document keeps only the nodes that draw, so they are renumbered. The
 occurrence, its identity, and its properties are unchanged.
 

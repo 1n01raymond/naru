@@ -49,16 +49,18 @@ are a controlled comparison of packing alone. On that identical view
 counterpart of the offline off-view-byte census in `../digital-hub-packing.json`.
 
 Query cost stayed far below a frame: across the 48 navigation queries the
-compatibility run measured p50 0.035 ms and p95 0.085 ms, the leaf-anchor run
-p50 0.035 ms and p95 0.080 ms, and no navigation frame ever fell back to
+compatibility run measured p50 0.040 ms and p95 0.085 ms, the leaf-anchor run
+p50 0.035 ms and p95 0.085 ms, and no navigation frame ever fell back to
 testing all 5,152 occurrences. Residency did not move while the camera did
 (48,494,280 decoded / 48,495,284 GPU bytes in every window of both runs), and
 neither run emitted a console warning or error.
 
 First-frame milestones are reported for context only, not as a claim about
-packing: hierarchy 0.38 s, first coarse frame 0.55 s / 0.60 s, ready 1.13 s /
-1.11 s. Digital Hub is small enough that the residency budget is never the
-constraint here.
+packing: hierarchy 0.42 s / 0.43 s, first coarse frame 0.66 s / 0.67 s, ready
+1.25 s / 1.23 s. Digital Hub is small enough that the residency budget is never
+the constraint here. These are the 2026-09-07 re-capture after the Studio
+camera fix and the view cube; every chunk, byte, and occurrence count above
+reproduced unchanged from the original capture.
 
 ## Repeatability
 

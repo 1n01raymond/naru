@@ -22,27 +22,37 @@ Recorded in headed Firefox 150.0.2 at 1320x1000 on the same Windows x64,
 16-CPU, NVIDIA host as the Blink record, each run from a fresh browser and
 context against a warm OS file cache.
 
+Both committed samples were re-captured on 2026-09-07, after the Studio camera
+fix and the view cube, because their screenshots still showed the mirrored
+from-below rendering. The endpoint reproduced on both engines; the milestones,
+decode times, and the centre-canvas pick below are the re-captured ones, and
+the 2026-09-05 distribution that established this comparison is kept further
+down.
+
 | Measure | Blink (Chrome 151) | Gecko (Firefox 150) | Gecko / Blink |
 |---|---:|---:|---:|
-| Hierarchy ready | 2,272 ms | 3,396 ms | 1.49x |
-| First coarse frame | 4,487 ms | 6,801 ms | 1.52x |
-| Budget-limited ready | 9,190 ms | 13,712 ms | 1.49x |
-| Worker geometry decode | 1,117.5 ms | 2,440.7 ms | 2.18x |
+| Hierarchy ready | 2,478 ms | 3,122 ms | 1.26x |
+| First coarse frame | 4,743 ms | 6,093 ms | 1.28x |
+| Budget-limited ready | 9,288 ms | 11,914 ms | 1.28x |
+| Worker geometry decode | 1,089.8 ms | 1,761.9 ms | 1.62x |
 | Target chunks admitted | 111 / 234 | 111 / 234 | identical |
 | Decoded resident bytes | 66,686,508 | 66,686,508 | identical |
 | GPU resident bytes | 66,783,808 | 66,783,808 | identical |
 | Resident triangles | 2,255,235 | 2,255,235 | identical |
 | Visible occurrences | 78,173 | 78,173 | identical |
 | Satisfied Range responses | 113 | 113 | identical |
-| Used JS heap at ready | 852,946,064 B | not exposed | - |
+| Used JS heap at ready | 852,514,277 B | not exposed | - |
 | Console and page errors | 0 | 0 | identical |
 
 **The two engines settle on a byte-identical endpoint.** Every figure the
 runtime decides for itself - which 111 of the 234 target chunks are admitted,
 which 123 are refused before a byte moves, how many bytes they occupy in memory
-and on the GPU, how many triangles are resident, which element a centre-canvas
-pick resolves and which six IFC2X3 properties it carries, and the exact ready
-status string - is the same value in both records. What differs is wall-clock
+and on the GPU, how many triangles are resident, how many IFC2X3 properties a
+centre-canvas pick resolves, and the exact ready status string - is the same
+value in both records. The one figure the two engines do not share is which
+element that pick lands on: from above the centre pixel sits on the seam
+between two adjacent prefab facade wall panels, and each engine resolves one
+of them, stably over three runs. What differs is wall-clock
 time and what each browser is willing to report about itself.
 
 That is the result the criterion asks for. Admission is decided from measured
@@ -50,8 +60,9 @@ decoded and GPU cost against a byte budget, so a second engine reaching a
 different resident set would have meant the budget was tracking something
 browser-specific. It does not.
 
-The reviewed artifact is the 6,801 ms run - the median of three on all three
-milestones, not only on the headline one:
+The 2026-09-05 capture set was three runs per engine, and its reviewed
+artifact was the 6,801 ms run - the median of three on all three milestones,
+not only on the headline one:
 
 | Run | Hierarchy ready | First coarse frame | Budget-limited ready |
 |---|---:|---:|---:|
@@ -60,6 +71,11 @@ milestones, not only on the headline one:
 | 3 | 3,332 ms | 6,348 ms | 12,729 ms |
 | Median | 3,396 ms | 6,801 ms | 13,712 ms |
 | Observed p95 (nearest-rank, n=3) | 3,977 ms | 7,413 ms | 13,977 ms |
+
+The 2026-09-07 re-capture was three runs per engine as well; the endpoint and
+the pick were stable across them, but their milestone distribution was not
+carried into the record, so no median or p95 is claimed for the newer set and
+the distribution above stays the recorded one.
 
 All three runs reach the identical endpoint recorded above, so the resident
 state below is the recorded state of every one of them:
@@ -70,8 +86,9 @@ state below is the recorded state of every one of them:
 - 66,686,508 decoded bytes and 66,783,808 GPU bytes under separate 64 MiB
   budgets - 325,056 bytes of GPU headroom left;
 - 2,255,235 unique resident triangles and 12 shared coarse edge segments;
-- the same centre-canvas foundation beam pick, object 148736, resolving the
-  same 6 IFC2X3 property entries from the property sidecar;
+- a centre-canvas prefab facade panel pick resolving the same 44 IFC2X3
+  property entries from the property sidecar - Gecko lands on object 74387 and
+  Blink on its neighbour 74388;
 - zero console warnings, console errors, or page errors.
 
 ## What Gecko does not report
@@ -122,9 +139,10 @@ uses.
   records are Windows x64 on one discrete-GPU host; the operating-system half
   needs a second host and remains outstanding.
 - Timings are a two-engine comparison on one host, not a browser benchmark and
-  not an ADR-0003 renderer decision. Gecko is about 1.5x slower than Blink at
-  every milestone here and 2.18x slower at Worker geometry decode; three runs
-  on one machine do not establish why.
+  not an ADR-0003 renderer decision. On the committed samples Gecko is about
+  1.3x slower than Blink at every milestone and 1.62x slower at Worker geometry
+  decode, against about 1.5x and 2.18x on the 2026-09-05 distribution; runs on
+  one machine do not establish why.
 - Memory is not compared. Gecko exposes no heap estimator, so the memory half
   of the exit criterion is untouched by this record.
 - The screenshots are not compared across engines. Text rasterization and

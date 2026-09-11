@@ -90,14 +90,14 @@ all 78,173 renderable occurrences render, the separate fixed 64 MiB target
 decoded/GPU admission budgets hold, and picking
 resolves the selected occurrence's lazily fetched property sets. The original
 268.0 s first coarse frame (`artifacts/ifc/sixty5-browser/`) is reduced to a
-4.487 s three-run median by shared coarse residency, a persistent document
+4.743 s first coarse frame by shared coarse residency, a persistent document
 Worker, a virtualized assembly list, skip-and-continue residency admission,
 estimate-gated prefetch that skips the chunks the budget cannot hold, and a
 vertex pool shared across a prototype's material groups, which raises the
 resident endpoint to 111 of 234 chunks
 (`artifacts/ifc/sixty5-first-frame/`).
 Headed Firefox consumes the same package and settles on a byte-identical
-resident set at 1.52x the median first frame, so the residency budget tracks
+resident set at about 1.28x the first frame, so the residency budget tracks
 measured bytes rather than one engine’s behaviour
 (`artifacts/ifc/sixty5-first-frame-gecko/`). Every real-large figure the phase
 has recorded is presented together in `docs/REAL_LARGE_RESULTS.md`.
