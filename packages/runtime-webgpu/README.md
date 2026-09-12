@@ -25,10 +25,11 @@ Direct WebGPU rendering and the Phase 1 compiled glTF runtime boundary.
   one it throws `PackageHierarchyError("INVALID_HIERARCHY", ...)` rather than
   returning the drawing nodes as though they were the whole assembly. A caller
   that wants geometry and no tree passes the `"geometry-only"` sentinel in the
-  same field and gets an empty tree — the Studio's geometry Worker does this,
-  because the tree is read on the main thread that owns the panel. Relocation
-  moves only mesh-less nodes, so renderable occurrences stay derivable from the
-  document either way.
+  same field and gets an empty tree rather than a short one. The Studio does not
+  use it: its geometry Worker owns the only parsed copy of the document, so it
+  reads the sidecar there and posts the tree to the thread that owns the panel.
+  Relocation moves only mesh-less nodes, so renderable occurrences stay
+  derivable from the document either way.
 - The sidecar decoder validates eagerly and materializes late. Every offset,
   index, and section bound is settled before a value is handed out, but a string
   column is decoded on the read that asks for it, and `localTransform` is a

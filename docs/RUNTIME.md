@@ -113,10 +113,10 @@ short trees are the failure this option would otherwise introduce. Callers
 supply the sidecar through `CompiledPackageOptions.hierarchy`.
 
 A caller that wants geometry and no tree at all says so explicitly, by passing
-the `"geometry-only"` sentinel in the same field. The Studio's geometry Worker
-does exactly that: it decodes on a thread that never renders the tree, so it
-declines the tree instead of fetching a sidecar it would discard. The tree is
-read once, on the main thread that owns the panel.
+the `"geometry-only"` sentinel in the same field, and gets an empty tree
+instead of a short one. The Studio does not use it: its geometry Worker parses
+the document, so it reads the sidecar there and posts the tree back to the
+thread that owns the panel. The tree is built once either way.
 
 Relocation moves only mesh-less nodes, so a document's renderable occurrence
 count is still derivable from the document itself either way.
@@ -169,21 +169,26 @@ engine measurement, never an estimate stated here.
 | Representation | Owner and lifetime | Consumer | Crosses the boundary as | Released |
 |---|---|---|---|---|
 | Response bytes of a remote document | scene loader, peak | the geometry Worker | transferred, so the main thread keeps no copy | at transfer |
-| Document text and parsed glTF, main thread | scene loader, peak | `inspectCompiledHierarchy` | never | when the loader returns; only freshly built entry and chunk objects survive |
 | Document text, Worker | Worker initialization, peak | `JSON.parse` | never | when parsing returns |
 | Parsed glTF object graph, Worker | Worker initialization, peak | `prepareCompiledGltfDecoder` | never | when preparation returns |
 | Prepared decoder state | Worker, whole session | every decode request | never | when the Worker is terminated |
-| Assembly tree | main thread, whole session | hierarchy, search, picking, properties | structured-cloned once with the first hierarchy-bearing response, then cached in the decoder | with the scene |
-| Relocated hierarchy sidecar, JSON header and columns | scene loader, peak | the sidecar tree reader | never; it is read on the main thread and not sent to the Worker | when the loader returns; only the decoded tree survives |
+| Assembly tree | main thread, whole session | hierarchy, search, picking, properties | structured-cloned once with the Worker's initialization response, then held by the decoder | with the scene |
+| Relocated hierarchy sidecar, JSON header and columns | Worker initialization, peak | the sidecar tree reader | never; it is read beside the document it belongs to | when initialization returns; only the decoded tree crosses back |
 | Property sidecar store | main thread, whole session | the properties panel | never; opened lazily on the first request, then memoized | with the scene |
 | Spatial demand index | main thread, whole session | the demand query | copied into fresh typed arrays, so the fetched buffer is not aliased | with the scene |
 | Decoded geometry | Worker to main thread | renderer residency | transferred per chunk | on eviction |
 
-A remote document is therefore decoded and parsed twice, once per thread, and
-the two peaks do not overlap: the main thread transfers its bytes away before
-the Worker begins. A local document is instead read from disk twice, because
-the Worker receives the `File` handle rather than bytes. Neither parse is
-retained on the main thread.
+A remote document is therefore parsed once, in the Worker. The main thread
+fetches the bytes and transfers them away without parsing them, and the Worker
+reads the assembly tree out of the graph it already has rather than have the
+same bytes parsed again beside it. A local document is read from disk once, by
+the Worker, which receives the `File` handle rather than bytes. No parse of a
+compiled document is ever retained on the main thread.
+
+The loader still settles the package's transfer policy, and the budget that
+policy declares is asserted against the document length and the declared
+resources before any geometry byte is requested. What moved into the Worker is
+the parse and the sidecar read, not the policy.
 
 Preparation is the only step that reads `nodes` and `scenes`: it walks the
 active roots once, composes world transforms, and writes the occurrence tables

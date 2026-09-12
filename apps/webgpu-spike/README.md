@@ -195,16 +195,20 @@ surface batches. One session Worker validates the glTF document, composes its
 float64 world transforms, and indexes target-chunk occurrence membership once.
 Every later Range decode reuses that state and visits only the selected chunk's
 renderable occurrences; transferred results clone only their occurrence
-transforms so the prepared state remains attached. Chunk decode responses omit
-the document hierarchy — it crosses the Worker boundary once and the decoder
-reattaches its cached copy, so per-admission messages carry only the chunk's
-own batches. A package compiled with `--relocate-hierarchy-nodes` (ADR-0017)
+transforms so the prepared state remains attached. Every decode response omits
+the document hierarchy — it crosses the Worker boundary once, with the Worker's
+initialization response, and the decoder reattaches its cached copy, so
+per-admission messages carry only the chunk's own batches. That is also the only
+parse of the document: the main thread transfers the bytes away without parsing
+them, so the assembly tree is built once and no second copy of the graph is
+retained beside it. A package compiled with `--relocate-hierarchy-nodes` (ADR-0017)
 carries its assembly tree in a sidecar rather than the document: both load
 paths fetch or require `hierarchy.json` before the tree is read — the URL path
 holds each of its two resources to the single-resource ceiling and the local
-path names the missing file — and the Worker declines the tree outright with
-the `"geometry-only"` option, because it decodes on a thread that never renders
-the panel. Reading the tree that way costs one 46 MB fetch and 29 ms of
+path names the missing file, which for a local package means the files selected
+beside the glTF are handed to the Worker. The sidecar is read in the Worker,
+beside the document it belongs to, under the same transfer policy, and only the
+decoded tree crosses back. Reading the tree that way costs one 46 MB fetch and 29 ms of
 hierarchy-ready on the sixty5 federation, and buys a 15.99% faster first frame
 against a 100 MB smaller document
 ([record](../../artifacts/ifc/relocated-hierarchy-browser/README.md)). Prototype-local surface
@@ -409,12 +413,15 @@ recordings: `data-workspace-state`, `data-workspace-geometry-current`,
 One headed browser record exercises all of that end to end:
 [`artifacts/workspace/reopen/`](../../artifacts/workspace/reopen/README.md)
 
-**Persistent package cache.** Digest-declared sidecars (properties, relocated
-hierarchy, spatial index) are kept across sessions in a verified Cache Storage
+**Persistent package cache.** Digest-declared sidecars read on the main thread
+(properties, spatial index) are kept across sessions in a verified Cache Storage
 tier ([ADR-0024](../../docs/adr/0024-persistent-package-cache.md)) under a
 256 MiB quota; `?persistentCacheMiB=` changes it and `0` disables the tier.
 Every hit is re-hashed against the package's declared digest before decode, and
-the document and geometry buffers stay network-only until they declare one.
+the document and geometry buffers stay network-only until they declare one. The
+relocated hierarchy sidecar is read in the geometry Worker, beside the document
+it belongs to, which is outside this tier: a policy descriptor crossing the
+Worker boundary carries resolved limits and origins, not a cache handle.
 **Clear cache** deletes every entry. Recordings read `data-persistent-cache`
 (`off`, `unavailable`, `closed`, `ready`, `reset`),
 `data-persistent-cache-hits`, `data-persistent-cache-misses`,

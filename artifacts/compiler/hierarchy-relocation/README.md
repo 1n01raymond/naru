@@ -85,7 +85,9 @@ fails closed if the pointer is declared and no sidecar is supplied, and a
 caller that only decodes geometry says so (`hierarchy: "geometry-only"`) and
 gets an empty tree rather than the handful of nodes that stayed behind — a
 partial tree presented as a whole one is the failure the option exists to keep
-visible.
+visible. The Studio is not that caller: since 2026-09-12 its geometry Worker
+owns the only parsed copy of the document, so it reads the sidecar there and
+posts the decoded tree to the thread that renders the panel.
 
 ## Determinism
 
