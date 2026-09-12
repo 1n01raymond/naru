@@ -613,16 +613,24 @@ async function settleOrDiscard(page, phase, quietChecks, intervalMs, timeoutMs) 
   return quiescence;
 }
 
-// Residency is published only on the progressive path. When the open package
-// declares no target chunks the sample says why the figure is missing; it never
-// substitutes the renderer's buffer totals or the recorder's budget constant.
+// Residency is published only on the progressive path, and in two stages: the
+// Studio declares the budget and the chunk totals when the scheduler starts, and
+// publishes admitted bytes only once a chunk has been promoted. The measurement
+// is therefore the decoded and GPU pair. A phase that reads the dataset before
+// the first promotion keeps whatever the page did publish and says why the
+// measurement is missing; one of the pair without the other is a partial read
+// and still fails. Nothing here substitutes the renderer's buffer totals or the
+// recorder's own budget constant for a figure the page never published.
 function normalizeResidency(residency, absentReason) {
-  const read = ["budgetBytes", "decodedBytes", "gpuBytes"].filter((key) =>
-    Number.isInteger(residency?.[key]) && residency[key] >= 0,
+  const published = residency ?? {};
+  const measured = ["decodedBytes", "gpuBytes"].filter((key) =>
+    Number.isInteger(published[key]) && published[key] >= 0,
   );
-  if (read.length === 3) return residency;
-  if (read.length === 0) return { unavailableReason: absentReason };
-  throw new Error(`The page published a partial residency dataset: ${JSON.stringify(residency)}.`);
+  if (measured.length === 2) return published;
+  if (measured.length === 1) {
+    throw new Error(`The page published a partial residency dataset: ${JSON.stringify(published)}.`);
+  }
+  return { ...published, unavailableReason: absentReason };
 }
 
 const launchArguments = ["--enable-precise-memory-info"];
@@ -743,7 +751,12 @@ async function driveRun({
   // collection that blocks for seconds, and a capture queued behind it would
   // file a later frame under the coarse phase.
   await screenshot("coarse-frame.png");
-  await sample("coarse-frame");
+  await sample("coarse-frame", {
+    residencyAbsentReason:
+      "The coarse frame is the first frame of the whole model, and the Studio publishes admitted bytes " +
+      "only after the progressive scheduler promotes its first target chunk, so a sample taken before " +
+      "that promotion reads the declared budget and no measurement.",
+  });
 
   await settleOrDiscard(page, "budget-limited", 3, 1_000, 1_800_000);
   milestones.readyMs = Date.now() - startedAt;

@@ -238,6 +238,32 @@ describe("sampleFailures", () => {
     expect(sampleFailures("s", partial).join("\n")).toContain("partial");
   });
 
+  it("accepts the declared budget before the first promotion when the absence carries a reason", () => {
+    // The Studio publishes the budget and the chunk totals when the progressive
+    // scheduler starts, and the admitted byte counts only once it promotes a
+    // chunk. A coarse-frame sample can land inside that window; keeping what the
+    // page did publish is not a partial measurement, and it is not zero either.
+    const declared = sample({
+      phase: "coarse-frame",
+      residency: {
+        budgetBytes,
+        chunksReady: 0,
+        chunksTotal: 234,
+        decodedBytes: null,
+        gpuBytes: null,
+        unavailableReason: "the scheduler has admitted no chunk yet",
+      },
+    });
+    expect(sampleFailures("s", declared)).toEqual([]);
+  });
+
+  it("refuses a residency measurement that carries no budget", () => {
+    const unbounded = sample({ residency: residency({ budgetBytes: null }) });
+    expect(sampleFailures("s", unbounded).join("\n")).toContain(
+      "must carry the budget it was admitted under",
+    );
+  });
+
   it("refuses residency that is both measured and declared unavailable", () => {
     const both = sample({ residency: residency({ unavailableReason: "unclear" }) });
     expect(sampleFailures("s", both).join("\n")).toContain("unavailableReason");

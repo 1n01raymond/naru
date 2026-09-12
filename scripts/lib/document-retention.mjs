@@ -91,15 +91,20 @@ export function sampleFailures(label, sample) {
     );
   }
 
-  // Residency is absent, with its reason, whenever the open package declares no
-  // target chunks: the Studio publishes the residency datasets only on the
-  // progressive path, and the disposed phase reaches a replacement package that
-  // has none. Substituting the renderer's buffer totals, or the recorder's own
-  // budget constant, would report a figure the page never published, so a sample
-  // says why residency is missing instead. A settled phase may not do that.
+  // Residency is published only on the progressive path, and in two stages: the
+  // Studio declares the budget and the chunk totals when the scheduler starts,
+  // and publishes admitted bytes only once a chunk has been promoted. The
+  // measurement is therefore the decoded and GPU pair. It is absent, with its
+  // reason, whenever the open package declares no target chunks -- the disposed
+  // phase reaches a replacement package that has none -- and whenever a phase
+  // reads the dataset before that first promotion. Substituting the renderer's
+  // buffer totals, or the recorder's own budget constant, would report a figure
+  // the page never published, so a sample says why the measurement is missing
+  // instead. A settled phase may not do that, and a measurement must carry the
+  // budget it was admitted under.
   const residency = sample.residency ?? {};
-  const residencyKeys = ["budgetBytes", "decodedBytes", "gpuBytes"];
-  const residencyRead = residencyKeys.filter((key) => isByteValue(residency[key]));
+  const measuredKeys = ["decodedBytes", "gpuBytes"];
+  const residencyRead = measuredKeys.filter((key) => isByteValue(residency[key]));
   if (residencyRead.length === 0) {
     if (typeof residency.unavailableReason !== "string" || residency.unavailableReason.length === 0) {
       failures.push(at("residency is absent and must carry residency.unavailableReason"));
@@ -107,11 +112,16 @@ export function sampleFailures(label, sample) {
     if (settledPhases.includes(sample.phase)) {
       failures.push(at(`residency must be measured in the settled phase ${sample.phase}`));
     }
-  } else if (residencyRead.length < residencyKeys.length) {
-    const missing = residencyKeys.filter((key) => !residencyRead.includes(key));
+  } else if (residencyRead.length < measuredKeys.length) {
+    const missing = measuredKeys.filter((key) => !residencyRead.includes(key));
     failures.push(at(`residency is partial: ${missing.join(", ")} must be byte counts beside the rest`));
-  } else if (residency.unavailableReason !== undefined) {
-    failures.push(at("residency carries a measurement and must not carry unavailableReason"));
+  } else {
+    if (residency.unavailableReason !== undefined) {
+      failures.push(at("residency carries a measurement and must not carry unavailableReason"));
+    }
+    if (!isByteValue(residency.budgetBytes)) {
+      failures.push(at("residency carries a measurement and must carry the budget it was admitted under"));
+    }
   }
   if (isByteValue(residency.decodedBytes) && isByteValue(residency.budgetBytes)) {
     if (residency.decodedBytes > residency.budgetBytes) {
