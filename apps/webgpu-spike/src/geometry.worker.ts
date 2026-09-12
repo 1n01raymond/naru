@@ -5,6 +5,7 @@ import {
   prepareCompiledGltfDecoder,
 } from "@naru3d/runtime-webgpu";
 import type {
+  CompiledHierarchy,
   GeometryRepresentation,
   PackageTransportDescriptor,
   PreparedCompiledGltfDecoder,
@@ -14,6 +15,8 @@ import type {
 import { aggregateCoarseScene } from "./coarse-aggregation.js";
 import { transitSceneForResponse } from "./geometry-transfer.js";
 import type { GeometryTransitScene } from "./geometry-transfer.js";
+import { loadDocumentHierarchySidecar } from "./hierarchy-sidecar.js";
+import type { DocumentHierarchyResources } from "./hierarchy-sidecar.js";
 import type { GeometryBinarySource, GeometryDocumentSource } from "./scene-source.js";
 
 export type GeometryWorkerRequest =
@@ -23,6 +26,10 @@ export type GeometryWorkerRequest =
       readonly source: GeometryDocumentSource;
       /** Transfer policy the scene loader settled; defaults are used without it. */
       readonly transport?: PackageTransportDescriptor;
+      /** `.json` files selected beside a local glTF, for a relocated hierarchy. */
+      readonly localSidecarFiles?: readonly File[];
+      /** `.bin` files selected beside a local glTF, for that sidecar's columns. */
+      readonly localBinaryFiles?: readonly File[];
     }
   | {
       readonly type: "decode";
@@ -41,8 +48,15 @@ export type GeometryWorkerResponse =
   | {
       readonly type: "initialized";
       readonly requestId: number;
+      /**
+       * The assembly tree this Worker read while parsing the document. It is
+       * posted rather than rebuilt so the document is parsed once per scene.
+       */
+      readonly hierarchy: CompiledHierarchy;
       /** Per-chunk residency cost, so the scheduler can refuse before fetching. */
       readonly targetChunkResidencyCosts: ReadonlyMap<string, ResidencyCost>;
+      /** Sidecar bytes a relocated hierarchy cost, for the retention ledger. */
+      readonly relocatedHierarchyBytes?: number;
     }
   | {
       readonly type: "ready";
@@ -88,18 +102,24 @@ async function handleRequest(
       packageTransport = request.transport
         ? PackageTransport.fromDescriptor(request.transport)
         : undefined;
-      const text = request.source.kind === "bytes"
-        ? new TextDecoder().decode(request.source.bytes)
-        : await request.source.file.text();
-      // The Worker decodes geometry; the assembly tree is read on the main
-      // thread, which is where a relocated package's sidecar is fetched.
-      compiledDecoder = prepareCompiledGltfDecoder(JSON.parse(text) as unknown, {
-        hierarchy: "geometry-only",
-      });
+      const document = await parseDocument(request.source);
+      const sidecar = await loadDocumentHierarchySidecar(
+        document,
+        hierarchyResources(request),
+      );
+      // One parse per scene: this Worker owns the only copy of the document, so
+      // it reads the assembly tree as it walks it and posts the tree back
+      // rather than have the main thread parse the same bytes again.
+      compiledDecoder = prepareCompiledGltfDecoder(
+        document,
+        sidecar ? { hierarchy: sidecar.sidecar } : {},
+      );
       worker.postMessage({
         type: "initialized",
         requestId: request.requestId,
+        hierarchy: compiledDecoder.hierarchy,
         targetChunkResidencyCosts: compiledDecoder.targetChunkResidencyCosts,
+        ...(sidecar ? { relocatedHierarchyBytes: sidecar.byteLength } : {}),
       });
       return;
     }
@@ -112,6 +132,38 @@ async function handleRequest(
       ...(error instanceof Error ? { name: error.name } : {}),
     });
   }
+}
+
+/**
+ * Parses the compiled document from the bytes the loader handed over. The
+ * decoded text is scoped to this call so it becomes collectable as soon as the
+ * object graph exists, instead of staying alive beside it for the session.
+ */
+async function parseDocument(source: GeometryDocumentSource): Promise<unknown> {
+  const text = source.kind === "bytes"
+    ? new TextDecoder().decode(source.bytes)
+    : await source.file.text();
+  return JSON.parse(text) as unknown;
+}
+
+/**
+ * Where a relocated hierarchy sidecar is read from. A URL scene resolves it
+ * under the policy the loader settled; a local scene has to find it among the
+ * files the user selected beside the glTF.
+ */
+function hierarchyResources(
+  request: Extract<GeometryWorkerRequest, { readonly type: "initialize" }>,
+): DocumentHierarchyResources {
+  if (request.source.kind === "file") {
+    return {
+      kind: "file",
+      sidecarFiles: request.localSidecarFiles ?? [],
+      binaryFiles: request.localBinaryFiles ?? [],
+    };
+  }
+  return packageTransport
+    ? { kind: "url", transport: packageTransport }
+    : { kind: "url" };
 }
 
 function throwIfAborted(signal: AbortSignal): void {
@@ -218,7 +270,7 @@ async function decode(
       {
         type: "ready",
         requestId: request.requestId,
-        scene: transitSceneForResponse(scene, request.targetChunkId !== undefined),
+        scene: transitSceneForResponse(scene),
         ...(coarseInstanceTargetMeshIndexes ? { coarseInstanceTargetMeshIndexes } : {}),
         decodeMilliseconds: performance.now() - startedAt,
       },

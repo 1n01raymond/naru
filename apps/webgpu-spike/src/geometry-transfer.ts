@@ -2,39 +2,34 @@ import type { CompiledHierarchy, DecodedCompiledScene } from "@naru3d/runtime-we
 
 /**
  * A decoded scene as it crosses the Worker boundary. The compiled hierarchy is
- * document-scoped and identical for every decode of one scene session, so
- * per-chunk responses omit it instead of structured-cloning it again (the
- * sixty5 hierarchy serializes to ~71 MB and dominated per-admission latency).
+ * document-scoped and identical for every decode of one scene session, so the
+ * Worker posts it once with its initialization response and every decode omits
+ * it instead of structured-cloning it again (the sixty5 hierarchy serializes to
+ * ~71 MB and dominated per-admission latency).
  */
 export type GeometryTransitScene = Omit<DecodedCompiledScene, "hierarchy"> &
   Partial<Pick<DecodedCompiledScene, "hierarchy">>;
 
-/** Prepares a scene for postMessage, omitting the hierarchy for chunk decodes. */
-export function transitSceneForResponse(
-  scene: DecodedCompiledScene,
-  omitHierarchy: boolean,
-): GeometryTransitScene {
-  if (!omitHierarchy) return scene;
-  const { hierarchy: _hierarchy, ...chunkScene } = scene;
-  return chunkScene;
+/** Prepares a scene for postMessage, leaving the session hierarchy behind. */
+export function transitSceneForResponse(scene: DecodedCompiledScene): GeometryTransitScene {
+  const { hierarchy: _hierarchy, ...transit } = scene;
+  return transit;
 }
 
 /**
- * Restores a full scene from a transit scene, caching the hierarchy from any
- * response that carries one. Throws when a chunk response arrives before a
- * hierarchy-bearing response has been seen.
+ * Restores a full scene from a transit scene, using the hierarchy the Worker
+ * posted when it parsed the document. Throws when a decode response arrives
+ * before that hierarchy has been received.
  */
 export function adoptTransitScene(
   transit: GeometryTransitScene,
-  cachedHierarchy: CompiledHierarchy | undefined,
-): { readonly scene: DecodedCompiledScene; readonly hierarchy: CompiledHierarchy } {
-  if (transit.hierarchy) {
-    return { scene: transit as DecodedCompiledScene, hierarchy: transit.hierarchy };
-  }
-  if (!cachedHierarchy) {
+  sessionHierarchy: CompiledHierarchy | undefined,
+): DecodedCompiledScene {
+  const hierarchy = transit.hierarchy ?? sessionHierarchy;
+  if (!hierarchy) {
     throw new Error(
       "The geometry Worker omitted the scene hierarchy before it was cached.",
     );
   }
-  return { scene: { ...transit, hierarchy: cachedHierarchy }, hierarchy: cachedHierarchy };
+  return { ...transit, hierarchy };
 }

@@ -16,6 +16,8 @@ import {
 } from "@naru3d/runtime-webgpu";
 import type { CompiledPropertiesRef, PackageTransport } from "@naru3d/runtime-webgpu";
 
+import { resourceFileName } from "./resource-name.js";
+
 /**
  * Where a scene's `madi.package-properties.1` sidecar can be loaded from. URL
  * scenes resolve both sidecar resources relative to the sidecar JSON; local
@@ -62,10 +64,6 @@ export function formatPropertyValue(value: PropertyValue): string {
     case "array":
       return value.values.map(formatPropertyValue).join(", ");
   }
-}
-
-export function resourceFileName(uri: string): string {
-  return decodeURIComponent(new URL(uri, "https://naru.local/").pathname.split("/").pop() ?? "");
 }
 
 /**

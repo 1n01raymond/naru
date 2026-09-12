@@ -1,11 +1,15 @@
-import { openPackageTransport, packageResourceDigest } from "@naru3d/runtime-webgpu";
+import {
+  openPackageTransport,
+  packageResourceDigest,
+  readCompiledHierarchyRef,
+} from "@naru3d/runtime-webgpu";
 import type {
   CompiledHierarchyRef,
   CompiledHierarchySidecar,
   PackageTransport,
 } from "@naru3d/runtime-webgpu";
 
-import { resourceFileName } from "./property-sidecar.js";
+import { resourceFileName } from "./resource-name.js";
 
 /**
  * Where a package's `naru.package-hierarchy.1` sidecar can be loaded from. It
@@ -145,4 +149,66 @@ async function readLocalColumns(
   const file = resourceFiles.find(({ name }) => name === expectedName);
   if (!file) throw new TypeError(`Select ${expectedName} with the glTF file.`);
   return new Uint8Array(await file.arrayBuffer());
+}
+
+/**
+ * Where the sidecar a parsed document points at can be read from. A URL package
+ * reads it under the policy the scene loader settled; a local package reads it
+ * from the files selected beside the glTF.
+ */
+export type DocumentHierarchyResources =
+  | { readonly kind: "url"; readonly transport?: PackageTransport }
+  | {
+      readonly kind: "file";
+      readonly sidecarFiles: readonly File[];
+      readonly binaryFiles: readonly File[];
+    };
+
+export interface DocumentHierarchySidecar {
+  readonly sidecar: CompiledHierarchySidecar;
+  /** JSON header plus columns as transferred, for the retention ledger. */
+  readonly byteLength: number;
+}
+
+/**
+ * Reads the sidecar a parsed document points at, when it relocates its assembly
+ * tree. Shared by the geometry Worker, which owns the only parsed copy of the
+ * document, and by the tests that exercise the same path without a Worker.
+ */
+export async function loadDocumentHierarchySidecar(
+  document: unknown,
+  resources: DocumentHierarchyResources,
+  signal?: AbortSignal,
+): Promise<DocumentHierarchySidecar | undefined> {
+  const ref = readCompiledHierarchyRef(document);
+  if (!ref) return undefined;
+  const source: HierarchySidecarSource = resources.kind === "url"
+    ? {
+        kind: "url",
+        ref,
+        jsonUrl: urlTransport(resources.transport).resolveResourceUrl(ref.uri),
+        transport: urlTransport(resources.transport),
+      }
+    : {
+        kind: "file",
+        ref,
+        jsonFile: localSidecarJson(ref.uri, resources.sidecarFiles),
+        resourceFiles: resources.binaryFiles,
+      };
+  const sidecar = await loadHierarchySidecar(source, signal);
+  return { sidecar, byteLength: ref.byteLength + sidecar.columns.byteLength };
+}
+
+function urlTransport(transport: PackageTransport | undefined): PackageTransport {
+  if (!transport) {
+    throw new TypeError("A relocated hierarchy needs the package transfer policy.");
+  }
+  return transport;
+}
+
+function localSidecarJson(uri: string, sidecarFiles: readonly File[]): File {
+  const expectedName = resourceFileName(uri);
+  const file = sidecarFiles.find(({ name }) => name === expectedName);
+  if (!file) throw new TypeError(`Select ${uri} with the glTF file.`);
+  return file;
 }

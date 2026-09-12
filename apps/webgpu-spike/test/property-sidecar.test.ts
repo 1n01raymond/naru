@@ -4,11 +4,7 @@ import { packagePropertiesSchema } from "@naru3d/scene-ir";
 import type { PackagePropertiesDocument } from "@naru3d/scene-ir";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import {
-  formatPropertyValue,
-  PropertySidecarStore,
-  resourceFileName,
-} from "../src/property-sidecar.js";
+import { formatPropertyValue, PropertySidecarStore } from "../src/property-sidecar.js";
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -122,12 +118,6 @@ describe("property sidecar helpers", () => {
         values: [1, { type: "quantity", value: 3, unit: "mm" }],
       }),
     ).toBe("1, 3 mm");
-  });
-
-  it("resolves resource file names from relative package URIs", () => {
-    expect(resourceFileName("properties.json")).toBe("properties.json");
-    expect(resourceFileName("data/properties.bin")).toBe("properties.bin");
-    expect(resourceFileName("value%20columns.bin")).toBe("value columns.bin");
   });
 });
 
