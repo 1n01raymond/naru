@@ -27,6 +27,15 @@ Re-record with `pnpm memory:envelope:evidence` (Blink) or
 `pnpm memory:envelope:gecko:evidence` (Gecko). Both need a headed browser and
 the compiled package named in each record README.
 
+A third directory holds no record yet.
+[`document-retention/`](document-retention/README.md) predeclares the
+measurement contract for the retention experiment that follows these two:
+the pinned package and options, the two candidates admitted from the runtime
+ownership map, paired baseline and candidate runs with memory and timing kept
+in separate sets, the sampling phases, how a failed run is handled, and the
+threshold below which nothing is landed. It exists before the measurement so
+that a result cannot be produced by choosing a threshold afterwards.
+
 What neither record settles: a second operating system, and the graphics
 driver's device-side allocation, which no browser exposes and which both
 records mark unsupported rather than zero.

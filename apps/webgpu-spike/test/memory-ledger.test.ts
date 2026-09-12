@@ -36,10 +36,15 @@ function loadedScene(
     readonly documentBytes?: number;
     readonly properties?: CompiledPropertiesRef;
     readonly spatialIndex?: CompiledSpatialIndexRef;
+    readonly coarseBytes?: number;
+    readonly relocatedHierarchyBytes?: number;
   } = {},
 ): LoadedSceneHierarchy {
   const hierarchy = {
     binaryByteLength: 120_707_064,
+    ...(overrides.coarseBytes === undefined
+      ? {}
+      : { coarseBinaryByteLength: overrides.coarseBytes }),
     ...(overrides.properties ? { properties: overrides.properties } : {}),
     ...(overrides.spatialIndex ? { spatialIndex: overrides.spatialIndex } : {}),
   } as unknown as CompiledHierarchy;
@@ -47,6 +52,9 @@ function loadedScene(
     documentSource: { kind: "bytes", bytes: { byteLength: 0 } },
     documentByteLength: overrides.documentBytes ?? 448_800_000,
     hierarchy,
+    ...(overrides.relocatedHierarchyBytes === undefined
+      ? {}
+      : { relocatedHierarchyBytes: overrides.relocatedHierarchyBytes }),
   } as unknown as LoadedSceneHierarchy;
 }
 
@@ -64,12 +72,19 @@ describe("package retention bytes", () => {
   it("reports every declared resource size, with sidecars present", () => {
     expect(
       packageRetentionBytes(
-        loadedScene({ properties: propertiesRef, spatialIndex: spatialIndexRef }),
+        loadedScene({
+          properties: propertiesRef,
+          spatialIndex: spatialIndexRef,
+          coarseBytes: 5_878_260,
+          relocatedHierarchyBytes: 3_021_299,
+        }),
       ),
     ).toEqual({
       documentBytes: 448_800_000,
       propertyIndexBytes: 2_260_991,
       spatialIndexBytes: 7_403,
+      relocatedHierarchyBytes: 3_021_299,
+      coarseGeometryBytes: 5_878_260,
       declaredGeometryBytes: 120_707_064,
     });
   });
@@ -79,6 +94,17 @@ describe("package retention bytes", () => {
 
     expect(retention.propertyIndexBytes).toBe(0);
     expect(retention.spatialIndexBytes).toBe(0);
+    expect(retention.relocatedHierarchyBytes).toBe(0);
+    expect(retention.coarseGeometryBytes).toBe(0);
+  });
+
+  it("counts a relocated assembly tree even though nothing retains its bytes", () => {
+    // The sidecar is fetched, verified, decoded, and dropped on the main
+    // thread. The ledger records what crossed the network so a sample can
+    // separate transferred bytes from what the session goes on holding.
+    const relocated = loadedScene({ relocatedHierarchyBytes: 64_825_238 });
+
+    expect(packageRetentionBytes(relocated).relocatedHierarchyBytes).toBe(64_825_238);
   });
 
   it("survives the transfer that detaches the document buffer", () => {
@@ -101,15 +127,19 @@ describe("package retention bytes", () => {
 });
 
 describe("memory ledger dataset", () => {
-  it("publishes package retention under its four keys", () => {
+  it("publishes package retention under its six keys", () => {
     expect(
       packageRetentionDataset(
-        packageRetentionBytes(loadedScene({ properties: propertiesRef })),
+        packageRetentionBytes(
+          loadedScene({ properties: propertiesRef, coarseBytes: 5_878_260 }),
+        ),
       ),
     ).toEqual({
       packageDocumentBytes: "448800000",
       packagePropertyIndexBytes: "2260991",
       packageSpatialIndexBytes: "0",
+      packageRelocatedHierarchyBytes: "0",
+      packageCoarseGeometryBytes: "5878260",
       packageDeclaredGeometryBytes: "120707064",
     });
   });

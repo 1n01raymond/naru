@@ -159,17 +159,31 @@ exercises the override axes in
 
 ### Who holds the compiled document
 
-The document exists in several representations at once, and each one names an
-owner, a consumer, and a release point:
+The document exists in several representations at once. Each row below names
+the owner that allocates a representation, how long that owner keeps it, the
+consumer it exists for, how it crosses a thread boundary, and where it is
+released. Every size this section or the ledger reports is a declared or
+measured transfer size; what a parsed form costs in a JavaScript heap is an
+engine measurement, never an estimate stated here.
 
-| Representation | Owner | Crosses the boundary as | Released |
-|---|---|---|---|
-| Response bytes | scene loader | transferred to the Worker | at transfer; the main thread has no copy |
-| Decoded text | Worker, during initialization | never | when `JSON.parse` returns |
-| Parsed glTF object graph | Worker, during initialization | never | when preparation returns |
-| Prepared decoder state | Worker, whole session | never | when the Worker is terminated |
-| Assembly tree | main thread | structured-cloned once, then cached | with the scene |
-| Decoded geometry | Worker to main thread | transferred per chunk | on eviction |
+| Representation | Owner and lifetime | Consumer | Crosses the boundary as | Released |
+|---|---|---|---|---|
+| Response bytes of a remote document | scene loader, peak | the geometry Worker | transferred, so the main thread keeps no copy | at transfer |
+| Document text and parsed glTF, main thread | scene loader, peak | `inspectCompiledHierarchy` | never | when the loader returns; only freshly built entry and chunk objects survive |
+| Document text, Worker | Worker initialization, peak | `JSON.parse` | never | when parsing returns |
+| Parsed glTF object graph, Worker | Worker initialization, peak | `prepareCompiledGltfDecoder` | never | when preparation returns |
+| Prepared decoder state | Worker, whole session | every decode request | never | when the Worker is terminated |
+| Assembly tree | main thread, whole session | hierarchy, search, picking, properties | structured-cloned once with the first hierarchy-bearing response, then cached in the decoder | with the scene |
+| Relocated hierarchy sidecar, JSON header and columns | scene loader, peak | the sidecar tree reader | never; it is read on the main thread and not sent to the Worker | when the loader returns; only the decoded tree survives |
+| Property sidecar store | main thread, whole session | the properties panel | never; opened lazily on the first request, then memoized | with the scene |
+| Spatial demand index | main thread, whole session | the demand query | copied into fresh typed arrays, so the fetched buffer is not aliased | with the scene |
+| Decoded geometry | Worker to main thread | renderer residency | transferred per chunk | on eviction |
+
+A remote document is therefore decoded and parsed twice, once per thread, and
+the two peaks do not overlap: the main thread transfers its bytes away before
+the Worker begins. A local document is instead read from disk twice, because
+the Worker receives the `File` handle rather than bytes. Neither parse is
+retained on the main thread.
 
 Preparation is the only step that reads `nodes` and `scenes`: it walks the
 active roots once, composes world transforms, and writes the occurrence tables
@@ -187,6 +201,14 @@ sixty5 package, 41.00 MiB of 337.65 on its relocated-hierarchy variant, and
 evidence, and scene bounds identical before and after. Those are retained-heap
 figures for one process, not whole-application memory: the budgets below still
 bound admitted geometry alone.
+
+Replacing a scene overlaps two sessions deliberately. The open scene — its
+Worker, prepared decoder state, assembly tree, and GPU buffers — is disposed
+only after the replacement document has been fetched, decoded, parsed, and its
+tree built, so a load that fails leaves the previous scene on screen instead of
+blanking the viewport. The cost is one interval in which a whole previous
+session coexists with the replacement's main-thread parse peak. That interval
+is a sampling phase for a retention experiment, not a leak.
 
 ## 6. Streaming scheduler
 

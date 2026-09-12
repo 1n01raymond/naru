@@ -22,6 +22,18 @@ export interface PackageRetentionBytes {
   /** The spatial demand index, retained so navigation can be answered. */
   readonly spatialIndexBytes: number;
   /**
+   * The relocated hierarchy sidecar, JSON header plus columns, for a package
+   * that carries its assembly tree outside the document. Zero when the tree is
+   * in the document. These bytes are read once on the main thread and dropped:
+   * the figure is what crossed the network, not what the decoded tree costs.
+   */
+  readonly relocatedHierarchyBytes: number;
+  /**
+   * Coarse geometry declared by the document, zero when the package carries no
+   * coarse level. Like the target binary this bounds the range requests.
+   */
+  readonly coarseGeometryBytes: number;
+  /**
    * Geometry declared by the document. Only the admitted part is ever resident,
    * so this bounds the range requests, not the memory.
    */
@@ -35,6 +47,8 @@ export function packageRetentionBytes(loaded: LoadedSceneHierarchy): PackageRete
     documentBytes: documentByteLength,
     propertyIndexBytes: hierarchy.properties?.byteLength ?? 0,
     spatialIndexBytes: hierarchy.spatialIndex?.byteLength ?? 0,
+    relocatedHierarchyBytes: loaded.relocatedHierarchyBytes ?? 0,
+    coarseGeometryBytes: hierarchy.coarseBinaryByteLength ?? 0,
     declaredGeometryBytes: hierarchy.binaryByteLength,
   };
 }
@@ -48,6 +62,8 @@ export const memoryLedgerDatasetKeys = [
   "packageDocumentBytes",
   "packagePropertyIndexBytes",
   "packageSpatialIndexBytes",
+  "packageRelocatedHierarchyBytes",
+  "packageCoarseGeometryBytes",
   "packageDeclaredGeometryBytes",
   "rendererGpuVertexPoolBytes",
   "rendererGpuBatchBufferBytes",
@@ -66,6 +82,8 @@ export function packageRetentionDataset(
     packageDocumentBytes: String(retention.documentBytes),
     packagePropertyIndexBytes: String(retention.propertyIndexBytes),
     packageSpatialIndexBytes: String(retention.spatialIndexBytes),
+    packageRelocatedHierarchyBytes: String(retention.relocatedHierarchyBytes),
+    packageCoarseGeometryBytes: String(retention.coarseGeometryBytes),
     packageDeclaredGeometryBytes: String(retention.declaredGeometryBytes),
   };
 }
