@@ -27,15 +27,25 @@ Re-record with `pnpm memory:envelope:evidence` (Blink) or
 `pnpm memory:envelope:gecko:evidence` (Gecko). Both need a headed browser and
 the compiled package named in each record README.
 
-A third directory holds no record yet.
-[`document-retention/`](document-retention/README.md) predeclares the
-measurement contract for the retention experiment that follows these two:
-the pinned package and options, the two candidates admitted from the runtime
-ownership map, paired baseline and candidate runs with memory and timing kept
-in separate sets, the sampling phases, how a failed run is handled, and the
-threshold below which nothing is landed. It exists before the measurement so
-that a result cannot be produced by choosing a threshold afterwards.
+A third directory holds a paired experiment rather than an envelope.
+[`document-retention/`](document-retention/README.md) predeclares its
+measurement contract — the pinned package and options, the two candidates
+admitted from the runtime ownership map, paired baseline and candidate runs with
+memory and timing kept in separate sets, the sampling phases, how a failed run is
+handled, and the threshold below which nothing is landed — and then records the
+result underneath it, so a result cannot have been produced by choosing a
+threshold afterwards. Validate with `pnpm memory:retention:check`; re-record with
+`pnpm memory:retention:evidence`, which needs a headed browser and a baseline
+worktree of the commit the candidate is measured against.
 
-What neither record settles: a second operating system, and the graphics
-driver's device-side allocation, which no browser exposes and which both
-records mark unsupported rather than zero.
+The first of its two candidates, the redundant main-thread document parse, is
+measured and landed: peak main-thread used JS heap falls 54.67% on the pinned
+sixty5 package and 50.45% on its relocated variant, at the same resident
+endpoint and with the first coarse frame faster rather than slower. The second,
+the scene-replacement overlap, is untouched.
+
+What none of the three records settles: a second operating system, and the
+graphics driver's device-side allocation, which no browser exposes and which all
+three mark unsupported rather than zero. The retention experiment adds one
+boundary of its own — it measures main-thread retention, and the whole-process
+figures it reports alongside are context, not a bound.

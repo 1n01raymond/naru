@@ -207,13 +207,30 @@ evidence, and scene bounds identical before and after. Those are retained-heap
 figures for one process, not whole-application memory: the budgets below still
 bound admitted geometry alone.
 
+Measured in a browser under the predeclared protocol in
+[`artifacts/memory/document-retention/`](../artifacts/memory/document-retention/README.md)
+(`pnpm memory:retention:check`), the same single-parse ownership cuts the peak
+main-thread used JS heap of a sixty5 session from 2,122,989,603 to 962,369,086 B
+(−54.67%), and from 1,745,846,014 to 865,013,123 B (−50.45%) on the relocated
+variant, over three interleaved fresh-process pairs per package at the unchanged
+64 MiB residency budget and the same resident endpoint. The whole-cluster figure
+moves far less — 632.2 to 560.0 MiB at the budget-limited phase on the pinned
+package, and slightly up on the relocated one — because the parse moved threads
+rather than disappearing. That is the boundary of the claim: main-thread
+retention, one engine, one host, not a process bound.
+
 Replacing a scene overlaps two sessions deliberately. The open scene — its
 Worker, prepared decoder state, assembly tree, and GPU buffers — is disposed
 only after the replacement document has been fetched, decoded, parsed, and its
 tree built, so a load that fails leaves the previous scene on screen instead of
 blanking the viewport. The cost is one interval in which a whole previous
-session coexists with the replacement's main-thread parse peak. That interval
-is a sampling phase for a retention experiment, not a leak.
+session coexists with the replacement's own parse peak, which the replacement
+pays in its Worker. The retention record's `replace-overlap` phase samples that
+interval on the pinned sixty5 package and reports a median 984.8 MiB of
+main-thread heap with the previous session still resident, against 917.8 MiB
+once the parse moved off that thread; the record states how few polls fall
+inside so short a window. The interval is a sampling phase, not a leak, and
+narrowing it is the second admitted candidate, which has not been measured.
 
 ## 6. Streaming scheduler
 
