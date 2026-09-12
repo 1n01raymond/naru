@@ -2,7 +2,6 @@ import type {
   CompiledHierarchy,
   DecodedCompiledScene,
   GeometryRepresentation,
-  PackageTransportDescriptor,
   ResidencyCost,
 } from "@naru3d/runtime-webgpu";
 
@@ -11,7 +10,11 @@ import type {
   GeometryWorkerRequest,
   GeometryWorkerResponse,
 } from "./geometry.worker.js";
-import type { GeometryBinarySource, GeometryDocumentSource } from "./scene-source.js";
+import type {
+  GeometryBinarySource,
+  OpenedSceneDocument,
+  PreparedSceneHierarchy,
+} from "./scene-source.js";
 
 export interface GeometryDecodeResult {
   readonly scene: DecodedCompiledScene;
@@ -25,7 +28,12 @@ interface PendingRequest {
   readonly cleanup: () => void;
 }
 
-/** Owns one parsed glTF document in one Worker for the full scene session. */
+/**
+ * Owns the only parsed copy of one glTF document, in one Worker, for the full
+ * scene session. The document is parsed on the Worker thread and the assembly
+ * tree it reads is posted back, so the main thread never holds a second parse
+ * of the same bytes.
+ */
 export class GeometryDecoder {
   private readonly worker = new Worker(new URL("./geometry.worker.ts", import.meta.url), {
     type: "module",
@@ -33,18 +41,14 @@ export class GeometryDecoder {
   });
   private readonly pending = new Map<number, PendingRequest>();
   private readonly signal: AbortSignal;
-  private readonly initialized: Promise<void>;
+  private readonly prepared: Promise<PreparedSceneHierarchy>;
   private nextRequestId = 0;
   private disposed = false;
-  /** Document hierarchy cached from the first hierarchy-bearing response. */
+  /** Assembly tree the Worker read while parsing, cached for every decode. */
   private hierarchy: CompiledHierarchy | undefined;
   private chunkCosts: ReadonlyMap<string, ResidencyCost> = new Map();
 
-  constructor(
-    source: GeometryDocumentSource,
-    signal: AbortSignal,
-    transport?: PackageTransportDescriptor,
-  ) {
+  constructor(document: OpenedSceneDocument, signal: AbortSignal) {
     this.signal = signal;
     this.worker.addEventListener("message", this.receive);
     this.worker.addEventListener("error", this.failWorker);
@@ -52,19 +56,25 @@ export class GeometryDecoder {
     if (signal.aborted) {
       const error = new DOMException("Scene load cancelled.", "AbortError");
       this.dispose(error);
-      this.initialized = Promise.reject(error);
-      void this.initialized.catch(() => undefined);
+      this.prepared = Promise.reject(error);
+      void this.prepared.catch(() => undefined);
       return;
     }
-    const transfer = source.kind === "bytes" ? [source.bytes] : [];
-    this.initialized = this.request(
+    const { documentSource } = document;
+    const transfer = documentSource.kind === "bytes" ? [documentSource.bytes] : [];
+    this.prepared = this.request(
       {
         type: "initialize",
         requestId: this.requestId(),
-        source,
+        source: documentSource,
         // The policy the scene loader settled travels with the document, so the
-        // ranges this Worker fetches are held to the same ceilings and origins.
-        ...(transport ? { transport } : {}),
+        // ranges and sidecars this Worker fetches are held to the same ceilings
+        // and origins.
+        ...(document.transport ? { transport: document.transport.describe() } : {}),
+        // A local package hands over the files beside the glTF, because a
+        // relocated assembly tree is read where the document is parsed.
+        ...(document.sidecarFiles ? { localSidecarFiles: document.sidecarFiles } : {}),
+        ...(document.binaryFiles ? { localBinaryFiles: document.binaryFiles } : {}),
       },
       transfer,
     ).then((response) => {
@@ -72,10 +82,25 @@ export class GeometryDecoder {
         throw new Error("The geometry Worker returned an invalid initialization response.");
       }
       this.chunkCosts = response.targetChunkResidencyCosts;
+      this.hierarchy = response.hierarchy;
+      return {
+        hierarchy: response.hierarchy,
+        ...(response.relocatedHierarchyBytes === undefined
+          ? {}
+          : { relocatedHierarchyBytes: response.relocatedHierarchyBytes }),
+      };
     });
-    // Initialization starts in parallel with WebGPU adapter/device creation.
-    // Keep the rejection observed until decode() forwards it to the load path.
-    void this.initialized.catch(() => undefined);
+    // Keep the rejection observed until ready() or decode() forwards it to the
+    // load path, which is where a failed parse is reported.
+    void this.prepared.catch(() => undefined);
+  }
+
+  /**
+   * The assembly tree read from the document, once the Worker has parsed it.
+   * Resolves after one parse; rejects with the parse failure otherwise.
+   */
+  ready(): Promise<PreparedSceneHierarchy> {
+    return this.prepared;
   }
 
   /**
@@ -92,7 +117,7 @@ export class GeometryDecoder {
     targetChunkId?: string,
     signal?: AbortSignal,
   ): Promise<GeometryDecodeResult> {
-    await this.initialized;
+    await this.prepared;
     if (signal?.aborted) throw new DOMException("Obsolete target request.", "AbortError");
     const response = await this.request({
       type: "decode",
@@ -104,10 +129,9 @@ export class GeometryDecoder {
     if (response.type !== "ready") {
       throw new Error("The geometry Worker returned an invalid decode response.");
     }
-    const adopted = adoptTransitScene(response.scene, this.hierarchy);
-    this.hierarchy = adopted.hierarchy;
+    const scene = adoptTransitScene(response.scene, this.hierarchy);
     return {
-      scene: adopted.scene,
+      scene,
       ...(response.coarseInstanceTargetMeshIndexes
         ? { coarseInstanceTargetMeshIndexes: response.coarseInstanceTargetMeshIndexes }
         : {}),

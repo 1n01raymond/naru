@@ -120,6 +120,15 @@ decoded or GPU budgets.
 - A manifest reset discards the whole tier rather than salvaging entries, by
   design; salvaging would mean trusting a store whose bookkeeping already
   failed once.
+- The tier is opened by the thread that settles the package's transfer policy,
+  and a policy descriptor crossing into a Worker carries resolved limits and
+  origins but no cache handle, so a resource read inside the geometry Worker is
+  network-only. Since the document-retention change of 2026-09-12 the relocated
+  hierarchy sidecar is read there, beside the document it belongs to, and so
+  left this tier; the property sidecar and the spatial demand index are
+  unaffected. A second store inside the Worker was rejected rather than
+  accepted: two LRU tiers under one quota would evict each other's protected
+  entries, and the sidecar it would hold is read once per scene session.
 
 ## Alternatives considered
 

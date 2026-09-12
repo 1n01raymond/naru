@@ -6,7 +6,7 @@ import type {
   PackageTransport,
 } from "@naru3d/runtime-webgpu";
 
-import { resourceFileName } from "./property-sidecar.js";
+import { resourceFileName } from "./resource-name.js";
 
 export type SpatialDemandSource =
   | {

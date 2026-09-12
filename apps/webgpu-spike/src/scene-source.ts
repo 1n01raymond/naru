@@ -1,18 +1,13 @@
-import {
-  assertPackageUrl,
-  inspectCompiledHierarchy,
-  openPackageTransport,
-  readCompiledHierarchyRef,
-} from "@naru3d/runtime-webgpu";
+import { assertPackageUrl, openPackageTransport } from "@naru3d/runtime-webgpu";
 import type {
   CompiledHierarchy,
   DeclaredPackageResource,
+  PackageTransport,
   PackageTransportDescriptor,
   PackageTransportPolicy,
 } from "@naru3d/runtime-webgpu";
 
-import { loadHierarchySidecar } from "./hierarchy-sidecar.js";
-import { resourceFileName } from "./property-sidecar.js";
+import { resourceFileName } from "./resource-name.js";
 import type { PropertySidecarSource } from "./property-sidecar.js";
 import type { SpatialDemandSource } from "./spatial-demand-source.js";
 
@@ -137,14 +132,6 @@ export function validateLocalBinary(
   }
 }
 
-function parseJson(text: string, label: string): unknown {
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new TypeError(`${label} is not valid JSON.`);
-  }
-}
-
 /** The external resources a compiled glTF declares, for the package budget. */
 function declaredResources(hierarchy: CompiledHierarchy): DeclaredPackageResource[] {
   const resources: DeclaredPackageResource[] = [
@@ -171,15 +158,55 @@ function bufferOf(bytes: Uint8Array): ArrayBuffer {
     : bytes.slice().buffer;
 }
 
-export async function loadSceneHierarchy(
+/**
+ * A compiled document as far as the loader takes it: the bytes to hand to the
+ * geometry Worker, and the transfer policy or selected files the Worker needs to
+ * read anything beside them. The document is deliberately not parsed here — the
+ * Worker owns the only parsed copy for the whole scene session.
+ */
+export interface OpenedSceneDocument {
+  readonly documentSource: GeometryDocumentSource;
+  /**
+   * Bytes of the compiled glTF document as transferred. Recorded here because
+   * the Worker takes ownership of the buffer, after which its own byte length
+   * reads as zero.
+   */
+  readonly documentByteLength: number;
+  /**
+   * The policy this package was opened under. Absent for local files, which are
+   * never transferred.
+   */
+  readonly transport?: PackageTransport;
+  /** `.json` files selected beside a local glTF, for a relocated hierarchy. */
+  readonly sidecarFiles?: readonly File[];
+  /** `.bin` files selected beside a local glTF, for that sidecar's columns. */
+  readonly binaryFiles?: readonly File[];
+  readonly label: string;
+}
+
+/** What the geometry Worker read while parsing the document it was handed. */
+export interface PreparedSceneHierarchy {
+  readonly hierarchy: CompiledHierarchy;
+  /**
+   * Bytes of the relocated hierarchy sidecar, JSON header plus columns. Recorded
+   * when the Worker reads it because the sidecar is read once and dropped: only
+   * the decoded tree outlives it, and nothing later can restate the size.
+   */
+  readonly relocatedHierarchyBytes?: number;
+}
+
+/**
+ * Fetches or opens the compiled document without parsing it. A remote package
+ * settles one transfer policy here and then carries it: every resource below,
+ * the sidecars, and the Worker that fetches ranges read it from this object
+ * instead of reaching for the defaults on their own.
+ */
+export async function openSceneDocument(
   source: SceneSource,
   signal?: AbortSignal,
   policy?: PackageTransportPolicy,
-): Promise<LoadedSceneHierarchy> {
+): Promise<OpenedSceneDocument> {
   if (source.kind === "url") {
-    // One policy is settled here and then carried: every resource below, the
-    // sidecars, and the Worker that fetches ranges all read it from this
-    // object instead of reaching for the defaults on their own.
     const transport = openPackageTransport(source.gltfUrl, policy);
     const documentBytes = await transport.fetchResource(source.gltfUrl, {
       kind: "gltf",
@@ -187,113 +214,96 @@ export async function loadSceneHierarchy(
       limitBytes: transport.limits.documentBytes,
       ...(signal ? { signal } : {}),
     });
-    const document = parseJson(new TextDecoder().decode(documentBytes), source.gltfUrl.href);
-    // Every resource is resolved against the document URL and held to the
-    // package budget before one of them is requested.
+    return {
+      documentSource: { kind: "bytes", bytes: bufferOf(documentBytes) },
+      documentByteLength: documentBytes.byteLength,
+      transport,
+      label: source.gltfUrl.href,
+    };
+  }
+  return {
+    documentSource: { kind: "file", file: source.gltfFile },
+    documentByteLength: source.gltfFile.size,
+    sidecarFiles: source.sidecarFiles,
+    binaryFiles: source.binaryFiles,
+    label: [source.gltfFile, ...source.binaryFiles].map(({ name }) => name).join(" + "),
+  };
+}
+
+/**
+ * Resolves every resource the assembly tree declares, once the Worker has read
+ * that tree. Nothing is fetched or parsed here: a remote package is held to its
+ * budget and handed URLs, a local package is matched against the files the user
+ * selected.
+ */
+export function resolveSceneResources(
+  source: SceneSource,
+  opened: OpenedSceneDocument,
+  prepared: PreparedSceneHierarchy,
+): LoadedSceneHierarchy {
+  const { hierarchy, relocatedHierarchyBytes } = prepared;
+  const common = {
+    documentSource: opened.documentSource,
+    documentByteLength: opened.documentByteLength,
+    hierarchy,
+    ...(relocatedHierarchyBytes === undefined ? {} : { relocatedHierarchyBytes }),
+    label: opened.label,
+  };
+
+  if (source.kind === "url") {
+    const transport = opened.transport;
+    if (!transport) {
+      throw new TypeError("A remote package needs the policy it was opened under.");
+    }
     const resourceUrl = (uri: string): URL =>
       transport.resolveResourceUrl(uri, source.gltfUrl, source.gltfUrl.href);
-    // A relocated hierarchy lives beside the document, so its sidecar is
-    // fetched before the tree is read rather than on demand.
-    const hierarchyRef = readCompiledHierarchyRef(document);
-    const hierarchySidecar = hierarchyRef
-      ? await loadHierarchySidecar(
-          {
-            kind: "url",
-            ref: hierarchyRef,
-            jsonUrl: resourceUrl(hierarchyRef.uri),
-            transport,
-          },
-          signal,
-        )
-      : undefined;
-    const { hierarchy } = inspectCompiledHierarchy(
-      document,
-      hierarchySidecar ? { hierarchy: hierarchySidecar } : {},
-    );
-    const relocatedHierarchyBytes = hierarchyRef && hierarchySidecar
-      ? hierarchyRef.byteLength + hierarchySidecar.columns.byteLength
-      : undefined;
     const targetUrl = resourceUrl(hierarchy.binaryUri);
     const coarseUrl = hierarchy.coarseBinaryUri
       ? resourceUrl(hierarchy.coarseBinaryUri)
       : undefined;
-    const propertiesUrl = hierarchy.properties
-      ? resourceUrl(hierarchy.properties.uri)
-      : undefined;
-    const spatialUrl = hierarchy.spatialIndex
-      ? resourceUrl(hierarchy.spatialIndex.uri)
-      : undefined;
-    // The hierarchy sidecar is fetched above, before this check, because the
-    // assembly tree cannot be read without it; each of its two resources is
-    // held to the single-resource ceiling on its own. Nothing else is
-    // requested until the whole package fits its budget.
-    transport.assertBudget(documentBytes.byteLength, declaredResources(hierarchy));
+    const properties = hierarchy.properties;
+    const spatialIndex = hierarchy.spatialIndex;
+    // The hierarchy sidecar is read by the Worker before this check, because the
+    // assembly tree cannot be read without it; each of its two resources is held
+    // to the single-resource ceiling on its own. Nothing else is requested until
+    // the whole package fits its budget.
+    transport.assertBudget(opened.documentByteLength, declaredResources(hierarchy));
     return {
-      documentSource: { kind: "bytes", bytes: bufferOf(documentBytes) },
-      documentByteLength: documentBytes.byteLength,
-      hierarchy,
-      ...(relocatedHierarchyBytes === undefined ? {} : { relocatedHierarchyBytes }),
+      ...common,
       transport: transport.describe(),
       targetBinary: { kind: "url", href: targetUrl.href },
       ...(coarseUrl ? { coarseBinary: { kind: "url" as const, href: coarseUrl.href } } : {}),
-      ...(hierarchy.properties && propertiesUrl
+      ...(properties
         ? {
             properties: {
               kind: "url" as const,
-              ref: hierarchy.properties,
-              jsonUrl: propertiesUrl,
+              ref: properties,
+              jsonUrl: resourceUrl(properties.uri),
               transport,
             },
           }
         : {}),
-      ...(hierarchy.spatialIndex && spatialUrl
+      ...(spatialIndex
         ? {
             spatialIndex: {
               kind: "url" as const,
-              ref: hierarchy.spatialIndex,
-              url: spatialUrl,
+              ref: spatialIndex,
+              url: resourceUrl(spatialIndex.uri),
               transport,
             },
           }
         : {}),
-      label: source.gltfUrl.href,
     };
   }
 
-  const document = parseJson(await source.gltfFile.text(), source.gltfFile.name);
-  const localHierarchyRef = readCompiledHierarchyRef(document);
-  const localHierarchyJson = localHierarchyRef
-    ? source.sidecarFiles.find(({ name }) => name === resourceFileName(localHierarchyRef.uri))
-    : undefined;
-  if (localHierarchyRef && !localHierarchyJson) {
-    throw new TypeError(`Select ${localHierarchyRef.uri} with the glTF file.`);
-  }
-  // Bound to a name rather than inlined so the transferred sidecar size stays
-  // readable here; the decoded tree is all that survives this call.
-  const localHierarchySidecar = localHierarchyRef && localHierarchyJson
-    ? await loadHierarchySidecar({
-        kind: "file",
-        ref: localHierarchyRef,
-        jsonFile: localHierarchyJson,
-        resourceFiles: source.binaryFiles,
-      })
-    : undefined;
-  const { hierarchy } = inspectCompiledHierarchy(
-    document,
-    localHierarchySidecar ? { hierarchy: localHierarchySidecar } : {},
-  );
   const fileFor = (uri: string): File | undefined => {
-    const expectedName = decodeURIComponent(
-      new URL(uri, "https://naru.local/").pathname.split("/").pop() ?? "",
-    );
+    const expectedName = resourceFileName(uri);
     return source.binaryFiles.find(({ name }) => name === expectedName);
   };
   const targetFile = fileFor(hierarchy.binaryUri);
   if (!targetFile) throw new TypeError(`Select ${hierarchy.binaryUri} with the glTF file.`);
   validateLocalBinary(hierarchy, targetFile);
-  const coarseFile = hierarchy.coarseBinaryUri
-    ? fileFor(hierarchy.coarseBinaryUri)
-    : undefined;
+  const coarseFile = hierarchy.coarseBinaryUri ? fileFor(hierarchy.coarseBinaryUri) : undefined;
   if (hierarchy.coarseBinaryUri && !coarseFile) {
     throw new TypeError(`Select ${hierarchy.coarseBinaryUri} with the glTF file.`);
   }
@@ -313,7 +323,10 @@ export async function loadSceneHierarchy(
     ...(spatialFile ? [spatialFile] : []),
   ]);
   const extraBinaries = source.binaryFiles.filter((file) => !geometryFiles.has(file));
-  const allowedExtraBinaries = (sidecarJsonFile ? 1 : 0) + (localHierarchyJson ? 1 : 0);
+  // A relocated tree already reached the Worker, so its column file is one of
+  // the binaries selected beside the glTF rather than an unexplained extra.
+  const allowedExtraBinaries =
+    (sidecarJsonFile ? 1 : 0) + (hierarchy.relocatedHierarchy ? 1 : 0);
   if (extraBinaries.length > allowedExtraBinaries) {
     const expectedResourceCount = geometryFiles.size + allowedExtraBinaries;
     throw new TypeError(
@@ -322,15 +335,7 @@ export async function loadSceneHierarchy(
     );
   }
   return {
-    documentSource: { kind: "file", file: source.gltfFile },
-    documentByteLength: source.gltfFile.size,
-    hierarchy,
-    ...(localHierarchyRef && localHierarchySidecar
-      ? {
-          relocatedHierarchyBytes:
-            localHierarchyRef.byteLength + localHierarchySidecar.columns.byteLength,
-        }
-      : {}),
+    ...common,
     targetBinary: { kind: "file", file: targetFile },
     ...(coarseFile ? { coarseBinary: { kind: "file" as const, file: coarseFile } } : {}),
     ...(propertiesRef && sidecarJsonFile
@@ -344,14 +349,7 @@ export async function loadSceneHierarchy(
         }
       : {}),
     ...(spatialRef && spatialFile
-      ? {
-          spatialIndex: {
-            kind: "file" as const,
-            ref: spatialRef,
-            file: spatialFile,
-          },
-        }
+      ? { spatialIndex: { kind: "file" as const, ref: spatialRef, file: spatialFile } }
       : {}),
-    label: [source.gltfFile, ...source.binaryFiles].map(({ name }) => name).join(" + "),
   };
 }

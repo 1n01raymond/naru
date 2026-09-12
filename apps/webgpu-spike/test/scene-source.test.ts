@@ -3,17 +3,59 @@ import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CompiledHierarchy } from "@naru3d/runtime-webgpu";
+import { inspectCompiledHierarchy } from "@naru3d/runtime-webgpu";
+import type { CompiledHierarchy, PackageTransportPolicy } from "@naru3d/runtime-webgpu";
 
 import { compileSceneToGltf } from "../../../packages/compiler/src/index.js";
 import { hydratePhase0Evidence } from "../../../packages/compiler/src/evidence-input.js";
 
+import { loadDocumentHierarchySidecar } from "../src/hierarchy-sidecar.js";
 import {
-  loadSceneHierarchy,
+  openSceneDocument,
   parseSceneUrl,
+  resolveSceneResources,
   selectLocalSceneFiles,
   validateLocalBinary,
 } from "../src/scene-source.js";
+import type { LoadedSceneHierarchy, SceneSource } from "../src/scene-source.js";
+
+/**
+ * The load path the Studio drives across two threads: the loader opens the
+ * document, the geometry Worker parses it and reads the assembly tree out of it,
+ * and the loader then resolves the resources that tree declares. Both halves run
+ * in one process here because a Worker module cannot be imported from a test.
+ */
+async function loadScenePackage(
+  source: SceneSource,
+  signal?: AbortSignal,
+  policy?: PackageTransportPolicy,
+): Promise<LoadedSceneHierarchy> {
+  const opened = await openSceneDocument(source, signal, policy);
+  const document = JSON.parse(
+    opened.documentSource.kind === "bytes"
+      ? new TextDecoder().decode(opened.documentSource.bytes)
+      : await opened.documentSource.file.text(),
+  ) as unknown;
+  const sidecar = await loadDocumentHierarchySidecar(
+    document,
+    opened.documentSource.kind === "bytes"
+      ? { kind: "url", ...(opened.transport ? { transport: opened.transport } : {}) }
+      : {
+          kind: "file",
+          sidecarFiles: opened.sidecarFiles ?? [],
+          binaryFiles: opened.binaryFiles ?? [],
+        },
+    signal,
+  );
+  const { hierarchy } = inspectCompiledHierarchy(
+    document,
+    sidecar ? { hierarchy: sidecar.sidecar } : {},
+  );
+  return resolveSceneResources(source, opened, {
+    hierarchy,
+    ...(sidecar ? { relocatedHierarchyBytes: sidecar.byteLength } : {}),
+  });
+}
 
 const hierarchy = {
   binaryUri: "geometry/scene.bin",
@@ -104,7 +146,7 @@ describe("remote scene packages", () => {
   it("resolves package resources against the document it loaded", async () => {
     stubDocument(fixture);
 
-    const loaded = await loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl });
+    const loaded = await loadScenePackage({ kind: "url", gltfUrl: fixtureUrl });
 
     expect(loaded.targetBinary).toEqual({
       kind: "url",
@@ -119,7 +161,7 @@ describe("remote scene packages", () => {
       buffers: [{ ...fixture.buffers[0], uri: "https://attacker.example/scene.bin" }],
     });
 
-    await expect(loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
+    await expect(loadScenePackage({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
       /must stay on https:\/\/example\.com/u,
     );
   });
@@ -130,12 +172,12 @@ describe("remote scene packages", () => {
       buffers: [{ ...fixture.buffers[0], uri: "https://cdn.example/scene.bin" }],
     };
     stubDocument(split);
-    await expect(loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
+    await expect(loadScenePackage({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
       /must stay on https:\/\/example\.com/u,
     );
 
     stubDocument(split);
-    const loaded = await loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
+    const loaded = await loadScenePackage({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
       additionalOrigins: ["https://cdn.example"],
     });
     expect(loaded.targetBinary).toEqual({
@@ -153,7 +195,7 @@ describe("remote scene packages", () => {
     stubDocument(fixture);
 
     await expect(
-      loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
+      loadScenePackage({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
         limits: { packageBytes: 60_000 },
       }),
     ).rejects.toThrow(/more than 60000 bytes/u);
@@ -165,7 +207,7 @@ describe("remote scene packages", () => {
     stubDocument(fixture);
 
     await expect(
-      loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
+      loadScenePackage({ kind: "url", gltfUrl: fixtureUrl }, undefined, {
         limits: { documentBytes: 1_024 },
       }),
     ).rejects.toThrow(/scene\.gltf is larger than 1024 bytes/u);
@@ -225,7 +267,7 @@ describe("relocated hierarchy packages", () => {
     const compiled = await compileRelocated();
     stubPackage(compiled);
 
-    const loaded = await loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl });
+    const loaded = await loadScenePackage({ kind: "url", gltfUrl: fixtureUrl });
 
     expect(compiled.document.nodes).toHaveLength(11);
     expect(loaded.hierarchy.relocatedHierarchy?.relocatedCount).toBe(2);
@@ -242,7 +284,7 @@ describe("relocated hierarchy packages", () => {
     corrupted[last] = (corrupted[last] ?? 0) ^ 0xff;
     stubPackage(compiled, { "hierarchy.bin": corrupted });
 
-    await expect(loadSceneHierarchy({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
+    await expect(loadScenePackage({ kind: "url", gltfUrl: fixtureUrl })).rejects.toThrow(
       /digest mismatch/u,
     );
   });

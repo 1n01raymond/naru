@@ -11,9 +11,9 @@ import type { LoadedSceneHierarchy } from "./scene-source.js";
  */
 export interface PackageRetentionBytes {
   /**
-   * The compiled glTF document as transferred. The main thread parses it to
-   * read the hierarchy and hands the same bytes to the Worker, which retains
-   * the parsed form for the session. Taken from the length recorded at load,
+   * The compiled glTF document as transferred. The main thread hands the bytes
+   * to the geometry Worker without parsing them, and the Worker retains the
+   * only parsed form for the session. Taken from the length recorded at load,
    * because the transfer detaches the buffer the loader held.
    */
   readonly documentBytes: number;
@@ -24,8 +24,9 @@ export interface PackageRetentionBytes {
   /**
    * The relocated hierarchy sidecar, JSON header plus columns, for a package
    * that carries its assembly tree outside the document. Zero when the tree is
-   * in the document. These bytes are read once on the main thread and dropped:
-   * the figure is what crossed the network, not what the decoded tree costs.
+   * in the document. These bytes are read once in the geometry Worker, beside
+   * the document it belongs to, and dropped once the tree is decoded: the
+   * figure is what crossed the network, not what the decoded tree costs.
    */
   readonly relocatedHierarchyBytes: number;
   /**

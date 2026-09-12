@@ -45,17 +45,9 @@ function decodedScene(surfaceVertices = new Float32Array()): DecodedCompiledScen
 }
 
 describe("geometry transfer protocol", () => {
-  it("keeps the hierarchy in transit for full-document decodes", () => {
+  it("omits the hierarchy from decode responses without copying payload fields", () => {
     const scene = decodedScene();
-    const transit = transitSceneForResponse(scene, false);
-
-    expect(transit).toBe(scene);
-    expect(transit.hierarchy).toBe(scene.hierarchy);
-  });
-
-  it("omits the hierarchy for chunk decodes without copying payload fields", () => {
-    const scene = decodedScene();
-    const transit = transitSceneForResponse(scene, true);
+    const transit = transitSceneForResponse(scene);
 
     expect("hierarchy" in transit).toBe(false);
     expect(transit.gpuScene).toBe(scene.gpuScene);
@@ -63,17 +55,13 @@ describe("geometry transfer protocol", () => {
     expect(transit.summary).toBe(scene.summary);
   });
 
-  it("caches the hierarchy from a bearing response and reattaches it to chunks", () => {
+  it("reattaches the hierarchy the Worker posted when it parsed the document", () => {
     const scene = decodedScene();
 
-    const first = adoptTransitScene(transitSceneForResponse(scene, false), undefined);
-    expect(first.scene).toBe(scene);
-    expect(first.hierarchy).toBe(scene.hierarchy);
+    const adopted = adoptTransitScene(transitSceneForResponse(scene), scene.hierarchy);
 
-    const chunk = adoptTransitScene(transitSceneForResponse(scene, true), first.hierarchy);
-    expect(chunk.scene.hierarchy).toBe(scene.hierarchy);
-    expect(chunk.hierarchy).toBe(scene.hierarchy);
-    expect(chunk.scene.gpuScene).toBe(scene.gpuScene);
+    expect(adopted.hierarchy).toBe(scene.hierarchy);
+    expect(adopted.gpuScene).toBe(scene.gpuScene);
   });
 
   it("keeps sibling material groups on one vertex pool across the Worker boundary", () => {
@@ -93,7 +81,7 @@ describe("geometry transfer protocol", () => {
         batches: [group, { ...group, surfaceIndices: new Uint32Array([0, 1, 0]) }],
       },
     };
-    const transit = transitSceneForResponse(scene, true);
+    const transit = transitSceneForResponse(scene);
     const transferables = compiledSceneTransferables(scene);
     expect(transferables.filter((buffer) => buffer === pool.buffer)).toHaveLength(1);
 
@@ -109,8 +97,8 @@ describe("geometry transfer protocol", () => {
     }
   });
 
-  it("rejects a chunk response that arrives before the hierarchy is cached", () => {
-    const transit = transitSceneForResponse(decodedScene(), true);
+  it("rejects a decode response that arrives before the hierarchy is known", () => {
+    const transit = transitSceneForResponse(decodedScene());
 
     expect(() => adoptTransitScene(transit, undefined)).toThrow(
       /omitted the scene hierarchy before it was cached/u,

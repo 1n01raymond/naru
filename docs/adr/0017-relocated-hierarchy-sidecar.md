@@ -52,11 +52,13 @@ schema `naru.package-hierarchy.1` — instead of into the document.
   `PackageHierarchyError("INVALID_HIERARCHY")` rather than answering with the
   nodes that happened to stay behind.
 - A caller that decodes geometry and never reads the tree declares
-  `hierarchy: "geometry-only"` and gets an **empty** tree. The Studio's
-  geometry Worker is that caller: it decodes byte ranges on a thread that has
-  no reason to hold tens of megabytes of assembly structure. Returning the
+  `hierarchy: "geometry-only"` and gets an **empty** tree. Returning the
   retained nodes to it would look exactly like a complete small tree, which is
-  the failure this option exists to keep visible.
+  the failure this option exists to keep visible. The Studio's geometry Worker
+  was that caller when this decision was taken; since the document-retention
+  work of 2026-09-12 it parses the document itself, so it reads the sidecar
+  there and posts the tree back instead of declining it. The sentinel remains
+  part of the reader's contract for callers that only decode geometry.
 - `renderableOccurrences` is derived from the document, not from the tree, so
   it stays exact for a geometry-only caller. That is sound precisely because
   relocation moves only nodes that draw nothing.

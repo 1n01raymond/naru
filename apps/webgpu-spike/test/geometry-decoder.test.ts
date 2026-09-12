@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import type { CompiledHierarchy } from "@naru3d/runtime-webgpu";
+
 import type * as DecoderModule from "../src/geometry-decoder.js";
 import type { GeometryWorkerResponse } from "../src/geometry.worker.js";
+import type { OpenedSceneDocument } from "../src/scene-source.js";
 
 type Listener = (event: unknown) => void;
 
@@ -49,9 +52,24 @@ class FakeWorker {
 const decoderModule = async (): Promise<typeof DecoderModule> =>
   import("../src/geometry-decoder.js");
 
+/** A document opened but not parsed, the way the scene loader hands one over. */
+const openedDocument = (bytes: ArrayBuffer): OpenedSceneDocument => ({
+  documentSource: { kind: "bytes", bytes },
+  documentByteLength: bytes.byteLength,
+  label: "scene.gltf",
+});
+
+/**
+ * The assembly tree the Worker reads out of the document it was handed. The
+ * decoder only carries it through to the caller, so a lifecycle test needs no
+ * field of it.
+ */
+const parsedHierarchy = {} as unknown as CompiledHierarchy;
+
 const initialized = (requestId: number): GeometryWorkerResponse => ({
   type: "initialized",
   requestId,
+  hierarchy: parsedHierarchy,
   targetChunkResidencyCosts: new Map(),
 });
 
@@ -69,7 +87,7 @@ describe("GeometryDecoder lifecycle", () => {
     const { GeometryDecoder } = await decoderModule();
     const bytes = new Uint8Array([1, 2, 3]).buffer;
     const controller = new AbortController();
-    const decoder = new GeometryDecoder({ kind: "bytes", bytes }, controller.signal);
+    const decoder = new GeometryDecoder(openedDocument(bytes), controller.signal);
     const worker = FakeWorker.instances[0];
     if (!worker) throw new TypeError("The decoder did not construct a Worker.");
 
@@ -88,7 +106,7 @@ describe("GeometryDecoder lifecycle", () => {
     const { GeometryDecoder } = await decoderModule();
     const controller = new AbortController();
     const decoder = new GeometryDecoder(
-      { kind: "bytes", bytes: new Uint8Array([1]).buffer },
+      openedDocument(new Uint8Array([1]).buffer),
       controller.signal,
     );
     const worker = FakeWorker.instances[0];
@@ -111,7 +129,7 @@ describe("GeometryDecoder lifecycle", () => {
     const { GeometryDecoder } = await decoderModule();
     const controller = new AbortController();
     const decoder = new GeometryDecoder(
-      { kind: "bytes", bytes: new Uint8Array([1]).buffer },
+      openedDocument(new Uint8Array([1]).buffer),
       controller.signal,
     );
     const worker = FakeWorker.instances[0];
@@ -134,7 +152,7 @@ describe("GeometryDecoder lifecycle", () => {
     const { GeometryDecoder } = await decoderModule();
     const first = new AbortController();
     const previous = new GeometryDecoder(
-      { kind: "bytes", bytes: new Uint8Array([1]).buffer },
+      openedDocument(new Uint8Array([1]).buffer),
       first.signal,
     );
     FakeWorker.instances[0]?.respond(initialized(1));
@@ -142,7 +160,7 @@ describe("GeometryDecoder lifecycle", () => {
 
     const second = new AbortController();
     const next = new GeometryDecoder(
-      { kind: "bytes", bytes: new Uint8Array([2]).buffer },
+      openedDocument(new Uint8Array([2]).buffer),
       second.signal,
     );
     FakeWorker.instances[1]?.respond(initialized(1));
@@ -160,7 +178,7 @@ describe("GeometryDecoder lifecycle", () => {
     const { GeometryDecoder } = await decoderModule();
     const controller = new AbortController();
     const decoder = new GeometryDecoder(
-      { kind: "bytes", bytes: new Uint8Array([1]).buffer },
+      openedDocument(new Uint8Array([1]).buffer),
       controller.signal,
     );
     const worker = FakeWorker.instances[0];
@@ -185,7 +203,7 @@ describe("GeometryDecoder lifecycle", () => {
       // Open: one session, one Worker, one transferred document.
       const openControl = new AbortController();
       const open = new GeometryDecoder(
-        { kind: "bytes", bytes: new Uint8Array([cycle]).buffer },
+        openedDocument(new Uint8Array([cycle]).buffer),
         openControl.signal,
       );
       const openWorker = FakeWorker.instances[cycle * 2];
@@ -200,7 +218,7 @@ describe("GeometryDecoder lifecycle", () => {
       // which is the overlap the Studio accepts so a failed load keeps the scene.
       const replaceControl = new AbortController();
       const replacement = new GeometryDecoder(
-        { kind: "bytes", bytes: new Uint8Array([cycle, 1]).buffer },
+        openedDocument(new Uint8Array([cycle, 1]).buffer),
         replaceControl.signal,
       );
       const replacementWorker = FakeWorker.instances[cycle * 2 + 1];

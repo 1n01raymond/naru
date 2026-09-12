@@ -40,8 +40,9 @@ import {
 import { AxisSectionPlane } from "./section-plane.js";
 import type { SectionAxis } from "./section-plane.js";
 import {
-  loadSceneHierarchy,
+  openSceneDocument,
   parseSceneUrl,
+  resolveSceneResources,
   selectLocalSceneFiles,
 } from "./scene-source.js";
 import type { GeometryBinarySource, SceneSource } from "./scene-source.js";
@@ -529,12 +530,24 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     status.dataset.state = "loading";
     const persistence = await persistentCachePromise;
     persistence?.release();
-    const loaded = await loadSceneHierarchy(
+    const opened = await openSceneDocument(
       source,
       cancellation.signal,
       persistence ? { persistence } : undefined,
     );
     publishPersistentCacheStats(persistence);
+    const interactions = cancellation;
+    pendingCleanup = () => interactions.abort();
+    // The Worker parses the document and reads the assembly tree out of it, so
+    // this thread never holds a second parse of the same bytes.
+    const geometryDecoder = new GeometryDecoder(opened, interactions.signal);
+    const loaded = await geometryDecoder
+      .ready()
+      .then((prepared) => resolveSceneResources(source, opened, prepared))
+      .catch((error: unknown) => {
+        geometryDecoder.dispose();
+        throw error;
+      });
     const { hierarchy } = loaded;
     const chunksByPrototype = targetChunkByPrototype(hierarchy);
     const residencyBudget = residencyBudgetFromLocation();
@@ -552,13 +565,6 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     sceneSourceLabel.textContent = loaded.label;
     sceneSourceLabel.title = loaded.label;
     document.documentElement.dataset.sceneSource = source.kind;
-    const interactions = cancellation;
-    pendingCleanup = () => interactions.abort();
-    const geometryDecoder = new GeometryDecoder(
-      loaded.documentSource,
-      interactions.signal,
-      loaded.transport,
-    );
     const listenerOptions = { signal: interactions.signal };
     const hierarchyView = new HierarchyListView(hierarchyList, hierarchy.entries, {
       signal: interactions.signal,
@@ -593,6 +599,9 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       `decoding ${formatBytes(hierarchy.binaryByteLength)} in Worker…`;
     status.dataset.stage = "hierarchy";
 
+    // Created only after the scene it replaces has been disposed: the canvas has
+    // exactly one context, and a disposed renderer unconfigures it, which would
+    // invalidate a configuration made before that dispose ran.
     const renderer = await NaruWebGpuRenderer.create(canvas, {
       onDeviceLost: (message) => {
         status.textContent = `WebGPU device lost: ${message}`;
