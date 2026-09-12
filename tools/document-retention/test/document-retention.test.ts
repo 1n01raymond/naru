@@ -208,6 +208,21 @@ describe("sampleFailures", () => {
     expect(sampleFailures("s", absent)).toEqual([]);
   });
 
+  it("refuses absent residency that declares no reason", () => {
+    // The hierarchy milestone is reached before the scheduler admits a chunk, so
+    // its residency is genuinely absent; a recorder that omits the reason must be
+    // refused rather than having the absence read as zero.
+    for (const missing of [undefined, null, ""]) {
+      const absent = sample({
+        phase: "hierarchy",
+        residency: { unavailableReason: missing },
+      });
+      expect(sampleFailures("s", absent).join("\n")).toContain(
+        "residency.unavailableReason",
+      );
+    }
+  });
+
   it("refuses absent residency in a settled phase", () => {
     for (const phase of settledPhases) {
       const absent = sample({

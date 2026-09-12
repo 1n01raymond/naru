@@ -520,14 +520,18 @@ async function readEndpoint(page) {
     const dataset = document.documentElement.dataset;
     const number = (value) => (value === undefined ? null : Number(value));
     const status = document.querySelector("#status")?.textContent ?? "";
-    const triangles = /([\d,]+) triangles/.exec(status);
     const occurrences = /(\d+) renderable occurrences/.exec(status);
+    // The status line reports batches and occurrences, never triangles: the
+    // triangle total is published in its own element, grouped for display. Read it
+    // there, and keep the placeholder the Studio shows between scenes absent
+    // rather than parsing it as a number.
+    const triangleText = document.querySelector("#triangle-count")?.textContent?.trim() ?? "";
     return {
       chunksReady: number(dataset.targetChunksReady),
       chunksTotal: number(dataset.targetChunksTotal),
       decodedBytes: number(dataset.residentDecodedBytes),
       gpuBytes: number(dataset.residentGpuBytes),
-      triangleCount: triangles?.[1] ?? null,
+      triangleCount: /^[\d,]+$/.test(triangleText) ? triangleText : null,
       occurrenceCount: occurrences?.[1] ?? null,
     };
   });
@@ -716,7 +720,14 @@ async function driveRun({
     600_000,
   );
   milestones.hierarchyReadyMs = Date.now() - startedAt;
-  await sample("hierarchy");
+  // The assembly tree appears before the scheduler admits its first chunk, so
+  // there is no target residency to read yet. Measured: the memory envelope's
+  // hierarchy samples carry the same absence.
+  await sample("hierarchy", {
+    residencyAbsentReason:
+      "The assembly tree is ready before the progressive scheduler admits a target " +
+      "chunk, so the Studio has published no target residency dataset yet.",
+  });
 
   await awaitMilestone(
     page,
@@ -866,7 +877,8 @@ async function driveRun({
         atMilliseconds,
         pageSample,
         processSample,
-        null,
+        "The replacement load clears the Studio's published residency, so a poll " +
+          "that lands after that reset reads no target residency.",
       );
       overlapPolls += 1;
       const heap = candidateSample.page.usedJsHeapBytes;
@@ -909,19 +921,26 @@ async function driveRun({
     // Studio has no close command, and adding one would be product code the
     // protocol forbids mid-experiment. The replacement declares no target
     // chunks, so residency is genuinely unpublishable in this phase.
+    //
+    // The transition is observed through a quantity that cannot read true for the
+    // scene being replaced. `hierarchyReady` is written once and never cleared, so
+    // it cannot witness a teardown at all, and the load stages it sits beside are
+    // cleared and restored within one load, so a poll can miss their absence. The
+    // occurrence count is not reset between loads: it holds the open scene's value
+    // until the replacement's own tree is built, so one wait covers both halves of
+    // the transition with no transient window to catch. Measured: both arms publish
+    // it from the same place.
+    const replacedOccurrenceText = await page.evaluate(
+      () => document.querySelector("#occurrence-count")?.textContent ?? "",
+    );
     await page.click("#open-pygamer-scene");
     await awaitMilestone(
       page,
-      "the open scene's teardown",
-      () => document.documentElement.dataset.hierarchyReady !== "true",
-      undefined,
-      600_000,
-    );
-    await awaitMilestone(
-      page,
       "the replacement package's assembly tree",
-      () => document.documentElement.dataset.hierarchyReady === "true",
-      undefined,
+      (previous) =>
+        document.querySelector("#stage-hierarchy")?.dataset.state === "ready" &&
+        (document.querySelector("#occurrence-count")?.textContent ?? "") !== previous,
+      replacedOccurrenceText,
       600_000,
     );
     await sample("disposed", {
