@@ -541,28 +541,11 @@ async function loadScene(source: SceneSource): Promise<boolean> {
     // The Worker parses the document and reads the assembly tree out of it, so
     // this thread never holds a second parse of the same bytes.
     const geometryDecoder = new GeometryDecoder(opened, interactions.signal);
-    // Started before the tree is awaited, so the device is created while the
-    // Worker parses rather than after it.
-    const rendererPromise = NaruWebGpuRenderer.create(canvas, {
-      onDeviceLost: (message) => {
-        status.textContent = `WebGPU device lost: ${message}`;
-        status.dataset.state = "error";
-      },
-      fallbackDepthOffset: fallbackDepthOffsetFromLocation(),
-    });
-    // Marked handled here so a device failure cannot surface as an unhandled
-    // rejection while the Worker is still parsing. It is rethrown below, where
-    // the renderer is awaited.
-    void rendererPromise.catch(() => undefined);
     const loaded = await geometryDecoder
       .ready()
       .then((prepared) => resolveSceneResources(source, opened, prepared))
       .catch((error: unknown) => {
         geometryDecoder.dispose();
-        void rendererPromise.then(
-          (created) => created.destroy(),
-          () => undefined,
-        );
         throw error;
       });
     const { hierarchy } = loaded;
@@ -616,7 +599,16 @@ async function loadScene(source: SceneSource): Promise<boolean> {
       `decoding ${formatBytes(hierarchy.binaryByteLength)} in Worker…`;
     status.dataset.stage = "hierarchy";
 
-    const renderer = await rendererPromise;
+    // Created only after the scene it replaces has been disposed: the canvas has
+    // exactly one context, and a disposed renderer unconfigures it, which would
+    // invalidate a configuration made before that dispose ran.
+    const renderer = await NaruWebGpuRenderer.create(canvas, {
+      onDeviceLost: (message) => {
+        status.textContent = `WebGPU device lost: ${message}`;
+        status.dataset.state = "error";
+      },
+      fallbackDepthOffset: fallbackDepthOffsetFromLocation(),
+    });
     document.documentElement.dataset.fallbackDepthOffset = String(renderer.fallbackDepthOffset);
     const adapterInfo = renderer.adapter.info;
     setText(
