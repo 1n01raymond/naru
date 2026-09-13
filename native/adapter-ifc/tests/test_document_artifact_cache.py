@@ -12,6 +12,11 @@ import pytest
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
 sys.path.insert(0, str(TOOLS))
 
+from property_columns import (  # noqa: E402
+    decode_property_row,
+    encode_property_value_columns,
+)
+
 from document_artifact_cache import (  # noqa: E402
     DOCUMENT_ARTIFACT_SCHEMA,
     document_artifact_key,
@@ -213,6 +218,101 @@ def test_restored_geometry_keeps_the_dtype_the_scene_writer_packs(tmp_path: Path
     assert edges["segments"].tolist() == [0, 1]
 
 
+PROPERTY_ROWS = [["wall", 300, None], [], ["wall", True]]
+
+
+def document_with_properties() -> dict[str, object]:
+    """A document that interned its own keys and encoded its own values.
+
+    That is what the per-document pass produces since ADR-0019 slice 3, so the
+    artifact has to carry both tables and hand the columns back ready to merge.
+    """
+
+    extracted = extracted_document()
+    extracted["propertyIndex"] = {
+        "keys": ["Load", "Name", "Note"],
+        "sets": [[0, 1, 2], [], [0, 1]],
+    }
+    extracted["propertyValues"] = encode_property_value_columns(PROPERTY_ROWS)
+    return extracted
+
+
+def test_property_columns_round_trip_as_typed_views_over_the_stored_region(
+    tmp_path: Path,
+) -> None:
+    extracted = document_with_properties()
+    encoded = extracted["propertyValues"]
+    payload = prepare_document_payload(extracted)
+    publish_document_artifact(tmp_path, key_input(), payload)
+
+    loaded = read_document_artifact(tmp_path, key_input())
+    assert loaded is not None
+    assert loaded["propertyIndex"] == extracted["propertyIndex"]
+    columns = loaded["propertyValues"]
+    assert columns["value_heap"].dtype == np.dtype("<u1")
+    assert columns["value_offsets"].dtype == np.dtype("<u4")
+    assert columns["row_refs"].dtype == np.dtype("<u4")
+    assert columns["row_offsets"].dtype == np.dtype("<u4")
+    assert bytes(columns["value_heap"]) == bytes(encoded["value_heap"])
+    assert [decode_property_row(columns, row) for row in range(len(PROPERTY_ROWS))] == (
+        PROPERTY_ROWS
+    )
+
+
+def test_property_columns_keep_their_place_in_the_structure_as_byte_lengths(
+    tmp_path: Path,
+) -> None:
+    extracted = document_with_properties()
+    encoded = extracted["propertyValues"]
+    artifact_path = publish_document_artifact(
+        tmp_path, key_input(), prepare_document_payload(extracted)
+    )
+    header, body = _decompress(artifact_path)
+
+    structure = json.loads(body[: int(header["structureBytes"])])
+    assert structure["propertyValues"] == {
+        "value_heap": len(encoded["value_heap"]),
+        "value_offsets": 4 * len(encoded["value_offsets"]),
+        "row_refs": 4 * len(encoded["row_refs"]),
+        "row_offsets": 4 * len(encoded["row_offsets"]),
+        "value_count": encoded["value_count"],
+        "row_count": encoded["row_count"],
+        "distinct_value_count": encoded["distinct_value_count"],
+    }
+    # The property regions follow the geometry ones, every region padded so a
+    # restored array is a view over aligned bytes: six float64 positions, two
+    # uint32 indices, two uint32 segments, then the heap and the three tables.
+    region_start = _aligned(int(header["structureBytes"]))
+    assert len(body) - region_start == 64 + sum(
+        _aligned(length)
+        for length in (
+            len(encoded["value_heap"]),
+            4 * len(encoded["value_offsets"]),
+            4 * len(encoded["row_refs"]),
+            4 * len(encoded["row_offsets"]),
+        )
+    )
+
+
+def test_property_columns_are_hoisted_even_without_geometry(tmp_path: Path) -> None:
+    """The heap is raw `bytes`, so it can never be left in the structure JSON."""
+
+    extracted = document_with_properties()
+    extracted["representations"] = []
+    artifact_path = publish_document_artifact(
+        tmp_path, key_input(), prepare_document_payload(extracted)
+    )
+    header, _ = _decompress(artifact_path)
+    assert int(header["structureBytes"]) < int(header["payloadBytes"])
+
+    loaded = read_document_artifact(tmp_path, key_input())
+    assert loaded is not None
+    assert [
+        decode_property_row(loaded["propertyValues"], row)
+        for row in range(len(PROPERTY_ROWS))
+    ] == PROPERTY_ROWS
+
+
 def test_a_document_without_geometry_stores_the_structure_alone(tmp_path: Path) -> None:
     extracted = extracted_document()
     extracted["representations"] = []
@@ -325,5 +425,5 @@ def test_geometry_lengths_that_do_not_describe_the_region_are_misses(tmp_path: P
         assert timing["artifactState"] == "invalid"
         assert (
             timing["artifactInvalidReason"]
-            == "geometry lengths do not describe the stored region"
+            == "region lengths do not describe the stored bytes"
         )

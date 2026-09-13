@@ -757,16 +757,18 @@ that is cheaper to restore than to rebuild remains before per-discipline
 compilation is a complete product claim;
 [ADR-0019](adr/0019-document-artifact-transport.md) names that unit -- the
 verified per-document Scene IR artifact, restored across the adapter-compiler
-transport -- and the gates it must pass. Its first two slices are
+transport -- and the gates it must pass. Its landed slices are
 [recorded](../artifacts/cache/rebuild-stages/README.md) against a same-session
 clean rebuild on Digital Hub and sixty5, with byte-identical packages, a lower
 whole-process rebuild median, and lower peak memory on both: artifacts verified
-from their stored bytes, and then the mesh arrays stored as raw binary regions
-a reader views instead of decoding (`naru.ifc-document-artifact.3`, pinned by
-the compiler in [`ifc-federation.ts`](../packages/compiler/src/ifc-federation.ts)),
-which is what cuts the adapter's parse of an unchanged document. The
-compiler's own structure scan and the federation re-merge are what slice 3
-addresses.
+from their stored bytes, then the mesh arrays stored as raw binary regions a
+reader views instead of decoding, and then the property key table and value
+heap interned per document so the federation pass only remaps pre-encoded bytes
+(`naru.ifc-document-artifact.4`, pinned by the compiler in
+[`ifc-federation.ts`](../packages/compiler/src/ifc-federation.ts)). Together
+those cut the adapter's parse of an unchanged document. The compiler's own
+structure scan and the in-compiler federation assembly are what the remaining
+slice addresses.
 
 [ADR-0018](adr/0018-content-addressed-compiled-payloads.md) was the reviewed
 design for that payload tier: reuse one unit, the prototype payload -- the

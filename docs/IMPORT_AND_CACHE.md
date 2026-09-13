@@ -228,11 +228,12 @@ expands cross-document semantic relations to a transitive reconciliation set.
 Focused tests cover changed, deleted, and renamed/relabelled inputs plus
 reconciliation invalidation, and unchanged whole-package cache hits restore the
 index byte-for-byte. The adapter now also keeps verified per-document extraction
-artifacts under the selected cache (`naru.ifc-document-artifact.3`, verified by
+artifacts under the selected cache (`naru.ifc-document-artifact.4`, verified by
 header checks and one SHA-256 over the stored payload bytes before any parse,
-with the mesh arrays stored as raw binary regions the reader views instead of
-re-decoding; [ADR-0019](adr/0019-document-artifact-transport.md) slices 1 and
-2): unchanged
+with the mesh arrays and the document's property key table, value heap, and
+index tables stored as raw binary regions the reader views instead of
+re-decoding; [ADR-0019](adr/0019-document-artifact-transport.md) slices 1, 2,
+and 3a): unchanged
 disciplines skip IfcOpenShell parsing and tessellation, while changed,
 renamed, or corrupt identities miss.
 An actual two-discipline fixture proves cold/warm and one-document-changed merge
@@ -298,20 +299,28 @@ gate 0 stage decomposition put artifact verification at 4,434.2 ms on Digital
 Hub and 34,204.2 ms on sixty5 (29 and 44 percent of the adapter's main) under
 the `.1` artifact format, which re-serialized the parsed object to verify it.
 Slice 1 (`naru.ifc-document-artifact.2`, verification of the stored bytes
-before any parse) and slice 2 (`naru.ifc-document-artifact.3`, the structure
+before any parse), slice 2 (`naru.ifc-document-artifact.3`, the structure
 records still canonical JSON but the bulk numeric geometry stored as raw
-little-endian regions read back as typed views) are recorded in the
-[rebuild record](../artifacts/cache/rebuild-stages/README.md). After slice 2:
-verification 28.7 ms on Digital Hub and 329.0 ms on sixty5, the parse that
-follows it 167.3 and 3,161.0 ms (650.6 and 5,482.0 after slice 1),
+little-endian regions read back as typed views), and slice 3a
+(`naru.ifc-document-artifact.4`, property interning and value encoding moved
+into the per-document pass so the artifact carries that document's key table,
+deduped value heap, and index tables as regions of the same kind) are recorded
+in the [rebuild record](../artifacts/cache/rebuild-stages/README.md). After
+slice 3a: verification 25.6 ms on Digital Hub and 229.5 ms on sixty5 (4,434.2
+and 34,204.2 at gate 0), the parse that follows it 136.7 and 3,664.1 ms,
 byte-identical packages against a same-session clean rebuild (no cache
 directory) with both slice 1 package digests reproduced unchanged, exact
-per-document restore decisions, and a whole-process rebuild of 10,631.0 ms
-against 52,570.5 ms clean on Digital Hub and 70,667.5 against
-317,588.2 ms on sixty5 with lower peak memory. The clean arm is re-measured
-in each session, so only a same-session pair is a comparison. Slice 3
-(in-compiler federation assembly) follows under the same gate 4; ADR-0010
-stays Proposed until the record that closes it.
+per-document restore decisions, and a whole-process rebuild of 10,302.4 ms
+against 53,754.4 ms clean on Digital Hub and 61,672.4 against 316,082.6 ms on
+sixty5 with lower peak memory. The clean arm is re-measured in each session, so
+only a same-session pair is a comparison, and sixty5's artifact parse rose
+where Digital Hub's fell -- the record reports both and names the four measured
+numbers. Slice 3a is the prerequisite for assembling the merge outside Python,
+because Python and JavaScript disagree on the canonical JSON of a number and
+`properties.bin` is passed through untouched; with the values already encoded
+the federation pass only remaps opaque bytes. Slice 3b (in-compiler federation
+assembly) follows under the same gate 4; ADR-0010 stays Proposed until the
+record that closes it.
 
 Shared lookup reuses the same manifest and resource hashes. The resolution
 order is local verified entry, authorized shared entry, then local compilation.
