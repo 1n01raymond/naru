@@ -9,8 +9,8 @@ trackers; those documents win whenever this file disagrees with them.
 NARU compiles CAD/BIM sources (STEP through an isolated OCCT adapter, IFC
 through an isolated IfcOpenShell adapter) into a neutral Engineering Scene IR,
 packages it as standard glTF 2.0, and renders it in the browser through a
-direct, data-oriented WebGPU runtime. Status: Phase 2 large-scene alpha; Phase 1
-is complete (`docs/ROADMAP.md`, `docs/PHASE_2.md`). The roadmap is
+direct, data-oriented WebGPU runtime. Status: Phase 3 open-platform beta work;
+Phases 1 and 2 are complete (`docs/ROADMAP.md`, `docs/PHASE_2.md`). The roadmap is
 evidence-gated: a capability counts only when the repository reproduces it.
 
 ## AI-assisted contributions
@@ -54,7 +54,9 @@ Node 22.12+ and pnpm 11 (`packageManager` pin). If `pnpm` is not on PATH, use
 | Command | Purpose |
 |---|---|
 | `pnpm install` | Bootstrap the workspace |
-| `pnpm check` | The CI gate: every evidence validator, then lint, typecheck, test, build |
+| `pnpm check` / `pnpm check:pr` | Pull-request gate: contracts, current evidence, lint, typecheck, test, build |
+| `pnpm check:evidence:historical` | Audit completed-decision, superseded, browser, memory, and benchmark records |
+| `pnpm check:scheduled` / `pnpm check:release` | Audit all committed evidence; release also requires native prerequisites and the live demo smoke check |
 | `pnpm test` / `pnpm test:watch` | Vitest over `{apps,packages,tools}/**/*.test.ts` |
 | `pnpm lint` / `pnpm typecheck` / `pnpm build` | Individual gates |
 | `pnpm dev` | Studio prototype (Vite) |
@@ -67,7 +69,8 @@ Node 22.12+ and pnpm 11 (`packageManager` pin). If `pnpm` is not on PATH, use
 
 Run the narrowest validator for the record you touched first. Run `pnpm check`
 before opening a pull request; CI runs exactly that plus
-`pnpm native:check -- --allow-missing`.
+`pnpm native:check -- --allow-missing`. Historical records remain required when
+touched and are audited weekly and before releases; see `docs/VALIDATION.md`.
 
 ## How a change is expected to look
 
@@ -76,8 +79,8 @@ Nearly every feature lands as one vertical slice:
 1. the code change (adapter, compiler, runtime, or Studio);
 2. unit tests beside the package (`packages/*/test`, `apps/*/test`);
 3. re-recorded evidence under `artifacts/<record>/` with its README;
-4. an updated or new validator in `scripts/validate-*-evidence.mjs`, wired into
-   the `check` script in `package.json`;
+4. an updated or new validator in `scripts/validate-*-evidence.mjs`, classified
+   as current or historical in `scripts/lib/validation-tiers.mjs`;
 5. documentation sync: `docs/PHASE_2.md` (current state, next gate, and evidence
    debt), `docs/ROADMAP.md` phase status, the affected design document
    (`COMPILER.md`, `RUNTIME.md`, `SCENE_IR.md`, `BENCHMARKS.md`), and the

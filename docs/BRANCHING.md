@@ -129,7 +129,7 @@ the normal process could not be used, and how recurrence will be prevented.
 NARU enables required checks only after each check exists and has succeeded on a
 real pull request. This prevents a missing workflow from blocking every merge.
 
-The intended Phase 1 required checks are:
+The required pull-request checks are:
 
 - documentation links and formatting;
 - lint and type checking;
@@ -139,6 +139,11 @@ The intended Phase 1 required checks are:
 
 Performance claims also follow [the benchmark contract](BENCHMARKS.md); a green
 generic CI job is not a substitute for reproducible benchmark evidence.
+Completed-decision and host-specific evidence is not charged to every pull
+request. It remains committed, runs in the weekly evidence audit and release
+audit, and is mandatory whenever a change touches that record. The exact tier
+membership and native/headed/memory recording profiles are defined in
+[the validation policy](VALIDATION.md).
 
 ## Release branches
 
