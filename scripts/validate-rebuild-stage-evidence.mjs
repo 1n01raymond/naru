@@ -21,7 +21,7 @@ const mode = "fresh-process-changed-discipline-transport-vs-clean-rebuild";
 const manifestSha256 = "77d7d587d6b32938a371325e281a4584e10c2ff3118a59f300a9da097eb2f478";
 const adapterLedgerSchema = "naru.ifc-adapter-stage-timing.1";
 const compilerLedgerSchema = "naru.ifc-federation-stage-timing.1";
-const documentArtifactSchema = "naru.ifc-document-artifact.3";
+const documentArtifactSchema = "naru.ifc-document-artifact.4";
 const reportExclusions = ["adapter-report.json:documentArtifactCache"];
 const compilerStageNames = [
   "inspectSources",
@@ -296,7 +296,7 @@ for (const [modelId, expected] of Object.entries(models)) {
     const memoryVerdict = record.distributions.whole.peakWorkingSetBytes.median <= record.cleanDistributions.whole.peakWorkingSetBytes.median;
     check(gate4.peakMemoryNoHigher === memoryVerdict, `${label}: gate 4 memory verdict does not follow from the distributions`);
     check(gate4.met === (gate4.fasterByMoreThanThreeSpreads && gate4.peakMemoryNoHigher), `${label}: gate 4 verdict does not follow from its two conditions`);
-    check(gate4.slice === 2, `${label}: gate 4 slice ${gate4.slice}`);
+    check(gate4.slice === "3a", `${label}: gate 4 slice ${gate4.slice}`);
   } else {
     failures.push(`${label}: gate 4 block or distributions missing`);
   }

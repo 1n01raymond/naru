@@ -24,7 +24,7 @@ The encoded layout matches the Scene IR `propertyValues` transport contract
 from __future__ import annotations
 
 import json
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 U32_LIMIT = 2**32
 
@@ -88,13 +88,90 @@ def encode_property_value_columns(
     }
 
 
-def decode_property_row(columns: dict[str, Any], row: int) -> list[Any]:
-    """Decodes one bag's values back from the columns (test/verification aid)."""
-    start = columns["row_offsets"][row]
-    end = columns["row_offsets"][row + 1]
-    heap = columns["value_heap"]
+def decode_property_row(columns: Mapping[str, Any], row: int) -> list[Any]:
+    """Decodes one bag's values back from the columns (test/verification aid).
+
+    Accepts both freshly encoded columns and the typed views a restored artifact
+    hands back, so the heap is read through a `memoryview` either way.
+    """
+    start = int(columns["row_offsets"][row])
+    end = int(columns["row_offsets"][row + 1])
+    heap = memoryview(columns["value_heap"]).cast("B")
     offsets = columns["value_offsets"]
     return [
-        json.loads(heap[offsets[ref] : offsets[ref + 1]].decode("utf-8"))
+        json.loads(
+            heap[int(offsets[ref]) : int(offsets[ref + 1])].tobytes().decode("utf-8")
+        )
         for ref in columns["row_refs"][start:end]
     ]
+
+
+def _distinct_encoded_values(columns: Mapping[str, Any]) -> list[bytes]:
+    """Reconstructs one column set's distinct encoded values, in heap order.
+
+    Accepts both a freshly encoded column set (``bytes`` heap, list offsets)
+    and one restored from a document artifact (numpy views), so the federation
+    merge never re-encodes a value.
+    """
+    heap = memoryview(columns["value_heap"])
+    offsets = columns["value_offsets"]
+    return [
+        heap[int(offsets[index]) : int(offsets[index + 1])].tobytes()
+        for index in range(len(offsets) - 1)
+    ]
+
+
+def merge_property_value_columns(
+    columns: Sequence[Mapping[str, Any]],
+    rows: Sequence[tuple[int, int]],
+) -> dict[str, Any]:
+    """Merges per-document property value columns into federation columns.
+
+    ``columns[d]`` is document ``d``'s column set as
+    :func:`encode_property_value_columns` returns it, and ``rows`` names the
+    federation rows in order as ``(document, local_row)`` pairs. The result is
+    what :func:`encode_property_value_columns` would have produced from those
+    rows' values directly: encoded values are moved, never re-encoded, so the
+    merge cannot depend on the encoder running twice.
+    """
+    document_values = [_distinct_encoded_values(entry) for entry in columns]
+    distinct = sorted({encoded for values in document_values for encoded in values})
+    positions = {encoded: index for index, encoded in enumerate(distinct)}
+    remaps = [[positions[encoded] for encoded in values] for values in document_values]
+
+    row_refs: list[int] = []
+    row_offsets: list[int] = [0]
+    for document, local_row in rows:
+        remap = remaps[document]
+        entry = columns[document]
+        local_refs = entry["row_refs"]
+        local_offsets = entry["row_offsets"]
+        start = int(local_offsets[local_row])
+        end = int(local_offsets[local_row + 1])
+        row_refs.extend(
+            remap[int(local_refs[position])] for position in range(start, end)
+        )
+        row_offsets.append(len(row_refs))
+
+    value_offsets: list[int] = [0]
+    for encoded in distinct:
+        value_offsets.append(value_offsets[-1] + len(encoded))
+    value_heap = b"".join(distinct)
+
+    for limit_name, exceeded in (
+        ("value heap bytes", len(value_heap) >= U32_LIMIT),
+        ("value count", len(row_refs) >= U32_LIMIT),
+        ("row count", len(rows) >= U32_LIMIT),
+    ):
+        if exceeded:
+            raise ValueError(f"Property value columns exceed the u32 {limit_name} limit.")
+
+    return {
+        "value_heap": value_heap,
+        "value_offsets": value_offsets,
+        "row_refs": row_refs,
+        "row_offsets": row_offsets,
+        "value_count": len(row_refs),
+        "row_count": len(rows),
+        "distinct_value_count": len(distinct),
+    }

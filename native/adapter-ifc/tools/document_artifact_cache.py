@@ -5,17 +5,18 @@ whose decompressed content is a canonical-JSON header line followed by exactly
 ``payloadBytes`` bytes of payload:
 
     {"key":...,"keyInput":{...},"payloadBytes":N,"payloadSha256":"...",
-     "structureBytes":S,"schemaVersion":"naru.ifc-document-artifact.3"}\n
-    <structure JSON, exactly S bytes><zero padding to 8><geometry bytes>
+     "structureBytes":S,"schemaVersion":"naru.ifc-document-artifact.4"}\n
+    <structure JSON, exactly S bytes><zero padding to 8><binary regions>
 
 The structure region is canonical JSON (UTF-8, sorted keys, compact
-separators, no NaN). The geometry region holds the vertex, index, normal, and
-edge arrays of every representation, each already in the little-endian dtype
-the scene writer packs it as, so restoring one is a typed view rather than a
-scan of Python numbers; a hoisted field keeps its place in the structure JSON
-as its byte length, and the fields' offsets follow from walking the
-representations in order (ADR-0019 slice 2). When a document carries no
-geometry the payload is the structure region alone.
+separators, no NaN). The binary regions hold the vertex, index, normal, and
+edge arrays of every representation (ADR-0019 slice 2) followed by the
+document's property value heap and index columns (slice 3), each already in the
+little-endian dtype the scene writer packs it as, so restoring one is a typed
+view rather than a scan of Python numbers; a hoisted field keeps its place in
+the structure JSON as its byte length, and the fields' offsets follow from
+walking the representations in order and then the property columns. When a
+document carries neither the payload is the structure region alone.
 
 The header names what the payload must hash to. A reader checks the schema,
 the key, and the key input, hashes the payload bytes it just decompressed, and
@@ -23,8 +24,8 @@ parses them only when the length and the digest match: verification is one
 read and one hash of the stored bytes, never a re-serialization of the parsed
 object (ADR-0019 slice 1). Any file that fails a check is a miss; nothing
 executable such as pickle is ever loaded. Publication serializes the structure
-once and streams the geometry it already holds, writing to a temporary sibling
-and renaming it into place.
+once and streams the binary regions it already holds, writing to a temporary
+sibling and renaming it into place.
 """
 
 from __future__ import annotations
@@ -40,7 +41,7 @@ from typing import Any
 
 import numpy as np
 
-DOCUMENT_ARTIFACT_SCHEMA = "naru.ifc-document-artifact.3"
+DOCUMENT_ARTIFACT_SCHEMA = "naru.ifc-document-artifact.4"
 _SURFACE_POSITION_ALIAS = {"$naruAlias": "surface.positions"}
 
 # The geometry fields hoisted out of the payload JSON, in the order the scene
@@ -56,7 +57,19 @@ GEOMETRY_FIELD_LAYOUT: tuple[tuple[str, str, str], ...] = (
     ("edges", "classes", "<u1"),
     ("edges", "sourceIds", "<u4"),
 )
-_GEOMETRY_ALIGNMENT = 8
+
+# The property column fields hoisted out of the payload JSON, in the order they
+# are stored, each with the dtype the scene writer packs it as. The value heap
+# carries the bytes `encode_property_value` produced for this document, so a
+# federation merge moves encoded values instead of running the encoder again
+# (ADR-0019 slice 3).
+PROPERTY_FIELD_LAYOUT: tuple[tuple[str, str], ...] = (
+    ("value_heap", "<u1"),
+    ("value_offsets", "<u4"),
+    ("row_refs", "<u4"),
+    ("row_offsets", "<u4"),
+)
+_REGION_ALIGNMENT = 8
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -127,108 +140,132 @@ def restore_document_payload(
 
 
 def _aligned(offset: int) -> int:
-    remainder = offset % _GEOMETRY_ALIGNMENT
-    return offset if remainder == 0 else offset + (_GEOMETRY_ALIGNMENT - remainder)
+    remainder = offset % _REGION_ALIGNMENT
+    return offset if remainder == 0 else offset + (_REGION_ALIGNMENT - remainder)
 
 
-def split_geometry_payload(
+def _region_view(value: Any, dtype: str) -> memoryview | None:
+    """The little-endian bytes of one hoistable field, or None when it is not one."""
+
+    if isinstance(value, (bytes, bytearray, memoryview)):
+        return memoryview(value).cast("B")
+    if isinstance(value, (list, tuple, np.ndarray)):
+        # `ascontiguousarray` returns the argument itself when it already has
+        # this dtype and layout, so a stored-form array is not copied.
+        return memoryview(np.ascontiguousarray(value, dtype=dtype)).cast("B")
+    return None
+
+
+def split_payload_regions(
     payload: dict[str, Any],
 ) -> tuple[dict[str, Any], list[memoryview]]:
-    """Hoist the geometry arrays of `payload` into one aligned binary region.
+    """Hoist the binary arrays of `payload` into one aligned sequence of regions.
 
-    Returns the structure to serialize and the geometry regions to store after
-    it, in order. The regions are views rather than one joined buffer: a
-    real-large document carries hundreds of megabytes of geometry, and it is
-    hashed and written a region at a time. Each hoisted field keeps its place
-    in the structure as its byte length; the offsets follow from walking
-    `representations` in order and `GEOMETRY_FIELD_LAYOUT` within each, so no
-    offset table is stored. A field that is absent, null, or the
-    shared-positions marker is left where it is.
+    Returns the structure to serialize and the regions to store after it, in
+    order: every representation's geometry first, then the document's property
+    columns. The regions are views rather than one joined buffer: a real-large
+    document carries hundreds of megabytes of geometry, and it is hashed and
+    written a region at a time. Each hoisted field keeps its place in the
+    structure as its byte length; the offsets follow from walking
+    `representations` in order with `GEOMETRY_FIELD_LAYOUT` within each and then
+    `PROPERTY_FIELD_LAYOUT`, so no offset table is stored. A field that is
+    absent, null, or the shared-positions marker is left where it is.
     """
 
-    representations = payload.get("representations")
-    if not isinstance(representations, list):
-        return payload, []
     blocks: list[memoryview] = []
     offset = 0
-    replacements: list[Any] = []
-    for representation in representations:
-        if not isinstance(representation, dict):
-            replacements.append(representation)
-            continue
-        replacement = dict(representation)
-        for part in ("surface", "edges"):
-            block = replacement.get(part)
-            if isinstance(block, dict):
-                replacement[part] = dict(block)
-        for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
-            block = replacement.get(part)
-            if not isinstance(block, dict):
+
+    def hoist(block: dict[str, Any], field: str, dtype: str) -> None:
+        nonlocal offset
+        raw = _region_view(block.get(field), dtype)
+        if raw is None:
+            return
+        padding = _aligned(offset) - offset
+        if padding:
+            blocks.append(memoryview(bytes(padding)))
+            offset += padding
+        blocks.append(raw)
+        offset += raw.nbytes
+        block[field] = raw.nbytes
+
+    structure = dict(payload)
+    representations = structure.get("representations")
+    if isinstance(representations, list):
+        replacements: list[Any] = []
+        for representation in representations:
+            if not isinstance(representation, dict):
+                replacements.append(representation)
                 continue
-            value = block.get(field)
-            if not isinstance(value, (list, tuple, np.ndarray)):
-                continue
-            # `ascontiguousarray` returns the argument itself when it already
-            # has this dtype and layout, so a stored-form array is not copied.
-            raw = memoryview(np.ascontiguousarray(value, dtype=dtype)).cast("B")
-            padding = _aligned(offset) - offset
-            if padding:
-                blocks.append(memoryview(bytes(padding)))
-                offset += padding
-            blocks.append(raw)
-            offset += raw.nbytes
-            block[field] = raw.nbytes
-        replacements.append(replacement)
+            replacement = dict(representation)
+            for part in ("surface", "edges"):
+                block = replacement.get(part)
+                if isinstance(block, dict):
+                    replacement[part] = dict(block)
+            for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
+                block = replacement.get(part)
+                if isinstance(block, dict):
+                    hoist(block, field, dtype)
+            replacements.append(replacement)
+        structure["representations"] = replacements
+    columns = structure.get("propertyValues")
+    if isinstance(columns, dict):
+        replacement = dict(columns)
+        for field, dtype in PROPERTY_FIELD_LAYOUT:
+            hoist(replacement, field, dtype)
+        structure["propertyValues"] = replacement
     if offset == 0:
         return payload, []
-    structure = dict(payload)
-    structure["representations"] = replacements
     return structure, blocks
 
 
-def attach_geometry_payload(
+def attach_payload_regions(
     structure: dict[str, Any],
     buffer: bytes,
     start: int,
 ) -> dict[str, Any] | None:
-    """Restore hoisted geometry in place as typed views over `buffer`.
+    """Restore hoisted arrays in place as typed views over `buffer`.
 
-    `start` is where the geometry region begins in `buffer`. Returns
-    `structure` once every hoisted length has been resolved, or None when the
-    lengths do not describe exactly the stored region: a malformed artifact is
-    a miss, never an exception and never a partially restored document.
+    `start` is where the binary regions begin in `buffer`. Returns `structure`
+    once every hoisted length has been resolved, or None when the lengths do not
+    describe exactly the stored region: a malformed artifact is a miss, never an
+    exception and never a partially restored document.
     """
 
-    representations = structure.get("representations")
     available = len(buffer) - start
     if available < 0:
         return None
-    if not isinstance(representations, list):
-        return structure if available == 0 else None
+    fields: list[tuple[dict[str, Any], str, str]] = []
+    representations = structure.get("representations")
+    if isinstance(representations, list):
+        for representation in representations:
+            if not isinstance(representation, dict):
+                continue
+            for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
+                block = representation.get(part)
+                if isinstance(block, dict):
+                    fields.append((block, field, dtype))
+    columns = structure.get("propertyValues")
+    if isinstance(columns, dict):
+        for field, dtype in PROPERTY_FIELD_LAYOUT:
+            fields.append((columns, field, dtype))
     offset = 0
-    for representation in representations:
-        if not isinstance(representation, dict):
+    for block, field, dtype in fields:
+        length = block.get(field)
+        if isinstance(length, bool) or not isinstance(length, int):
             continue
-        for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
-            block = representation.get(part)
-            if not isinstance(block, dict):
-                continue
-            length = block.get(field)
-            if isinstance(length, bool) or not isinstance(length, int):
-                continue
-            descriptor = np.dtype(dtype)
-            if length < 0 or length % descriptor.itemsize:
-                return None
-            offset = _aligned(offset)
-            if offset + length > available:
-                return None
-            block[field] = np.frombuffer(
-                buffer,
-                dtype=descriptor,
-                count=length // descriptor.itemsize,
-                offset=start + offset,
-            )
-            offset += length
+        descriptor = np.dtype(dtype)
+        if length < 0 or length % descriptor.itemsize:
+            return None
+        offset = _aligned(offset)
+        if offset + length > available:
+            return None
+        block[field] = np.frombuffer(
+            buffer,
+            dtype=descriptor,
+            count=length // descriptor.itemsize,
+            offset=start + offset,
+        )
+        offset += length
     if offset != available:
         return None
     return structure
@@ -343,13 +380,13 @@ def read_document_artifact(
         payload = None
     failure = None if isinstance(payload, dict) else "structure is not a JSON object"
     if failure is None:
-        geometry_start = (
+        regions_start = (
             structure_bytes
             if len(stored.payload_bytes) == structure_bytes
             else _aligned(structure_bytes)
         )
-        if attach_geometry_payload(payload, stored.payload_bytes, geometry_start) is None:
-            failure = "geometry lengths do not describe the stored region"
+        if attach_payload_regions(payload, stored.payload_bytes, regions_start) is None:
+            failure = "region lengths do not describe the stored bytes"
     parse_ms = (time.perf_counter() - started) * 1000.0
     if failure is not None:
         if timing is not None:
@@ -369,8 +406,8 @@ def publish_document_artifact(
 ) -> Path:
     """Write the artifact for `key_input` atomically; idempotent for an identical payload.
 
-    The structure is serialized exactly once and the geometry is streamed from
-    the arrays the caller already holds, so no copy of the whole payload is
+    The structure is serialized exactly once and the binary regions are streamed
+    from the arrays the caller already holds, so no copy of the whole payload is
     built. An existing artifact whose stored bytes verify and name the same
     digest is kept; one naming a different digest is an error (one key must
     never mean two payloads); one that fails verification is overwritten.
@@ -382,15 +419,15 @@ def publish_document_artifact(
     directory.mkdir(parents=True, exist_ok=True)
     key = document_artifact_key(key_input)
     path = directory / f"{key}.json.gz"
-    structure, geometry = split_geometry_payload(payload)
+    structure, regions = split_payload_regions(payload)
     structure_bytes = _canonical_bytes(structure)
     padding = (
-        bytes(_aligned(len(structure_bytes)) - len(structure_bytes)) if geometry else b""
+        bytes(_aligned(len(structure_bytes)) - len(structure_bytes)) if regions else b""
     )
-    regions: list[Any] = [structure_bytes, padding, *geometry]
+    stored_regions: list[Any] = [structure_bytes, padding, *regions]
     digest = hashlib.sha256()
     payload_bytes_count = 0
-    for region in regions:
+    for region in stored_regions:
         digest.update(region)
         payload_bytes_count += memoryview(region).nbytes
     payload_sha256 = digest.hexdigest()
@@ -420,7 +457,7 @@ def publish_document_artifact(
                 filename="", mode="wb", fileobj=raw_output, mtime=0
             ) as compressed:
                 compressed.write(header_line)
-                for region in regions:
+                for region in stored_regions:
                     if memoryview(region).nbytes:
                         compressed.write(region)
             raw_output.flush()
