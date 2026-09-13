@@ -570,7 +570,7 @@ const referenceDocuments = Object.fromEntries(
 const referenceTotal = distribution(referenceRuns.map((run) => round(sum(run.map((r) => r.milliseconds)))));
 const adapterLoadPlusVerify = overTransport((s) => unchangedSum(s, "artifactLoadMilliseconds") + unchangedSum(s, "artifactVerifyMilliseconds"));
 const gate3 = {
-  rule: "For the unchanged documents, the adapter's artifactLoadMilliseconds + artifactVerifyMilliseconds (one gzip read, one header line, one SHA-256 over the stored payload bytes; naru.ifc-document-artifact.2) is compared with the same read, gunzip, and hash of the same files performed in this recorder process, repeated once per sample. Met when the adapter median is at most 2x the reference median. Parsing is ledgered separately (artifactParseMilliseconds), so neither figure hides a re-serialization; the artifact format itself is pinned by native/adapter-ifc/tests/test_document_artifact_cache.py.",
+  rule: "For the unchanged documents, the adapter's artifactLoadMilliseconds + artifactVerifyMilliseconds (one gzip read, one header line, one SHA-256 over the stored payload bytes; naru.ifc-document-artifact.3) is compared with the same read, gunzip, and hash of the same files performed in this recorder process, repeated once per sample. Met when the adapter median is at most 2x the reference median. Parsing is ledgered separately (artifactParseMilliseconds), so neither figure hides a re-serialization; the artifact format itself is pinned by native/adapter-ifc/tests/test_document_artifact_cache.py.",
   artifactSchema: referenceDocuments[unchangedDisciplines[0]].schemaVersion,
   adapter: {
     loadMilliseconds: distributions.unchangedArtifactLoadMilliseconds,
@@ -601,7 +601,7 @@ const cleanSpread = round(cleanProcess.maximum - cleanProcess.minimum);
 const saving = round(cleanProcess.median - transportProcess.median);
 const gate4 = {
   rule: "The whole-process median of the transport rebuild is lower than the clean rebuild median by more than three times the clean samples' spread (maximum minus minimum), and the transport median peak process-tree working set is no higher than the clean median. Both arms are fresh processes recorded in this session, interleaved per index.",
-  slice: 1,
+  slice: 2,
   transport: {
     processMedianMilliseconds: transportProcess.median,
     processMinimumMilliseconds: transportProcess.minimum,

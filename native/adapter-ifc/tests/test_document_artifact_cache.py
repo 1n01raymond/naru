@@ -6,6 +6,7 @@ import json
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 TOOLS = Path(__file__).resolve().parents[1] / "tools"
@@ -57,6 +58,27 @@ def extracted_document() -> dict[str, object]:
     }
 
 
+def as_plain(value: object) -> object:
+    """Restored geometry is typed arrays; compare payloads by their values."""
+
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, dict):
+        return {key: as_plain(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [as_plain(item) for item in value]
+    return value
+
+
+# The geometry region is aligned so a restored array is a view, never a copy.
+_GEOMETRY_ALIGNMENT = 8
+_SHARED_POSITIONS = {"$naruAlias": "surface.positions"}
+
+
+def _aligned(offset: int) -> int:
+    return offset + (-offset % _GEOMETRY_ALIGNMENT)
+
+
 def test_publishes_deterministic_verified_artifact(tmp_path: Path) -> None:
     first_directory = tmp_path / "first"
     second_directory = tmp_path / "second"
@@ -66,7 +88,7 @@ def test_publishes_deterministic_verified_artifact(tmp_path: Path) -> None:
     second_path = publish_document_artifact(second_directory, key_input(), payload)
 
     assert first_path.read_bytes() == second_path.read_bytes()
-    assert read_document_artifact(first_directory, key_input()) == payload
+    assert as_plain(read_document_artifact(first_directory, key_input())) == as_plain(payload)
 
 
 def test_restores_shared_surface_edge_positions(tmp_path: Path) -> None:
@@ -98,7 +120,7 @@ def test_corruption_and_identity_changes_are_cache_misses(tmp_path: Path) -> Non
     assert read_document_artifact(tmp_path, renamed_discipline) is None
 
     publish_document_artifact(tmp_path, key_input(), payload)
-    assert read_document_artifact(tmp_path, key_input()) == payload
+    assert as_plain(read_document_artifact(tmp_path, key_input())) == as_plain(payload)
 
     different_payload = {**payload, "sourceDigest": "different"}
     with pytest.raises(ValueError, match="two different payloads"):
@@ -112,7 +134,9 @@ def test_read_reports_load_and_verify_stages_without_changing_the_verdict(
     artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
 
     verified: dict[str, object] = {}
-    assert read_document_artifact(tmp_path, key_input(), verified) == payload
+    assert as_plain(read_document_artifact(tmp_path, key_input(), verified)) == as_plain(
+        payload
+    )
     assert verified["artifactState"] == "verified"
     assert verified["artifactBytes"] == artifact_path.stat().st_size
     assert verified["artifactLoadMilliseconds"] >= 0
@@ -150,12 +174,55 @@ def test_artifact_is_a_header_line_over_the_stored_payload_bytes(tmp_path: Path)
     assert header["keyInput"] == key_input()
     assert header["payloadBytes"] == len(body)
     assert header["payloadSha256"] == hashlib.sha256(body).hexdigest()
-    assert json.loads(body) == payload
-    # The payload is canonical JSON, so the header digest is reproducible from the object.
+
+    # The payload is a canonical-JSON structure region, zero padding to the
+    # geometry alignment, then the hoisted arrays in layout order.
+    structure_bytes = header["structureBytes"]
+    assert 0 < structure_bytes < header["payloadBytes"]
+    structure = json.loads(body[:structure_bytes])
     canonical = json.dumps(
-        payload, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False
+        structure, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False
     ).encode("utf-8")
-    assert body == canonical
+    assert body[:structure_bytes] == canonical
+    geometry_start = _aligned(structure_bytes)
+    assert set(body[structure_bytes:geometry_start]) <= {0}
+
+    # A hoisted field keeps its place in the structure as its byte length, so the
+    # offsets follow from the layout order and no offset table is stored: six
+    # float64 positions, then two uint32 indices, then two uint32 segments.
+    representation = structure["representations"][0]
+    assert representation["surface"] == {"positions": 48, "indices": 8}
+    assert representation["edges"] == {"positions": _SHARED_POSITIONS, "segments": 8}
+    assert len(body) - geometry_start == 64
+
+
+def test_restored_geometry_keeps_the_dtype_the_scene_writer_packs(tmp_path: Path) -> None:
+    payload = prepare_document_payload(extracted_document())
+    publish_document_artifact(tmp_path, key_input(), payload)
+
+    loaded = read_document_artifact(tmp_path, key_input())
+    assert loaded is not None
+    surface = loaded["representations"][0]["surface"]
+    edges = loaded["representations"][0]["edges"]
+
+    assert surface["positions"].dtype == np.dtype("<f8")
+    assert surface["indices"].dtype == np.dtype("<u4")
+    assert edges["segments"].dtype == np.dtype("<u4")
+    assert surface["positions"].tolist() == [0.0, 0.0, 0.0, 1.0, 0.0, 0.0]
+    assert surface["indices"].tolist() == [0, 1]
+    assert edges["segments"].tolist() == [0, 1]
+
+
+def test_a_document_without_geometry_stores_the_structure_alone(tmp_path: Path) -> None:
+    extracted = extracted_document()
+    extracted["representations"] = []
+    payload = prepare_document_payload(extracted)
+    artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
+    header, body = _decompress(artifact_path)
+
+    assert header["structureBytes"] == header["payloadBytes"] == len(body)
+    assert json.loads(body) == payload
+    assert read_document_artifact(tmp_path, key_input()) == payload
 
 
 def _rewrite(artifact_path: Path, header: dict[str, object], body: bytes) -> None:
@@ -206,4 +273,57 @@ def test_stored_byte_verification_rejects_tampering_truncation_and_old_envelopes
     # Republishing over any invalid artifact restores a verified one with the same bytes.
     assert publish_document_artifact(tmp_path, key_input(), payload) == artifact_path
     assert artifact_path.read_bytes() == original
-    assert read_document_artifact(tmp_path, key_input()) == payload
+    assert as_plain(read_document_artifact(tmp_path, key_input())) == as_plain(payload)
+
+
+def _republish_with_structure(
+    artifact_path: Path,
+    header: dict[str, object],
+    body: bytes,
+    structure: dict[str, object],
+) -> None:
+    """Rewrite an artifact around a tampered structure, keeping its geometry.
+
+    The header is re-derived, so what the read path sees is a well-formed
+    artifact whose declared geometry lengths are the only thing wrong with it.
+    """
+
+    geometry = body[_aligned(int(header["structureBytes"])) :]
+    encoded = json.dumps(
+        structure, ensure_ascii=False, separators=(",", ":"), sort_keys=True, allow_nan=False
+    ).encode("utf-8")
+    payload = encoded + bytes(_aligned(len(encoded)) - len(encoded)) + geometry
+    _rewrite(
+        artifact_path,
+        {
+            **header,
+            "structureBytes": len(encoded),
+            "payloadBytes": len(payload),
+            "payloadSha256": hashlib.sha256(payload).hexdigest(),
+        },
+        payload,
+    )
+
+
+def test_geometry_lengths_that_do_not_describe_the_region_are_misses(tmp_path: Path) -> None:
+    payload = prepare_document_payload(extracted_document())
+    artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
+    header, body = _decompress(artifact_path)
+    structure = json.loads(body[: int(header["structureBytes"])])
+
+    # Twelve overruns the stored region, zero leaves eight bytes unclaimed, and
+    # seven is not a whole number of uint32 elements. Four is deliberately not
+    # among these: a shortfall smaller than the alignment padding is absorbed by
+    # the next field's alignment, which is why the read path also checks that the
+    # declared lengths end exactly where the stored region does.
+    for length in (12, 0, 7):
+        tampered = json.loads(json.dumps(structure))
+        tampered["representations"][0]["surface"]["indices"] = length
+        _republish_with_structure(artifact_path, header, body, tampered)
+        timing: dict[str, object] = {}
+        assert read_document_artifact(tmp_path, key_input(), timing) is None
+        assert timing["artifactState"] == "invalid"
+        assert (
+            timing["artifactInvalidReason"]
+            == "geometry lengths do not describe the stored region"
+        )

@@ -110,7 +110,7 @@ ADR-0011's transport already refuses a document whose shape it did not expect.
 Each staged resource is published atomically -- written to a temporary name and
 renamed into place -- and its `sha256` and byte length are recorded in the
 manifest that names it, so a reader verifies before parsing, exactly as
-ADR-0019's `naru.ifc-document-artifact.2` verifies stored bytes before
+ADR-0019's `naru.ifc-document-artifact.3` verifies stored bytes before
 `json.loads`. A half-written preview is therefore unobservable rather than
 merely unlikely.
 

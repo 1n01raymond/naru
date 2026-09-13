@@ -2,20 +2,29 @@
 
 An artifact is one deterministic gzip stream (mtime 0, no embedded file name)
 whose decompressed content is a canonical-JSON header line followed by exactly
-``payloadBytes`` bytes of canonical payload JSON (UTF-8, sorted keys, compact
-separators, no NaN):
+``payloadBytes`` bytes of payload:
 
     {"key":...,"keyInput":{...},"payloadBytes":N,"payloadSha256":"...",
-     "schemaVersion":"naru.ifc-document-artifact.2"}\n
-    <payload JSON, exactly N bytes>
+     "structureBytes":S,"schemaVersion":"naru.ifc-document-artifact.3"}\n
+    <structure JSON, exactly S bytes><zero padding to 8><geometry bytes>
+
+The structure region is canonical JSON (UTF-8, sorted keys, compact
+separators, no NaN). The geometry region holds the vertex, index, normal, and
+edge arrays of every representation, each already in the little-endian dtype
+the scene writer packs it as, so restoring one is a typed view rather than a
+scan of Python numbers; a hoisted field keeps its place in the structure JSON
+as its byte length, and the fields' offsets follow from walking the
+representations in order (ADR-0019 slice 2). When a document carries no
+geometry the payload is the structure region alone.
 
 The header names what the payload must hash to. A reader checks the schema,
 the key, and the key input, hashes the payload bytes it just decompressed, and
 parses them only when the length and the digest match: verification is one
 read and one hash of the stored bytes, never a re-serialization of the parsed
 object (ADR-0019 slice 1). Any file that fails a check is a miss; nothing
-executable such as pickle is ever loaded. Publication serializes the payload
-once, writes to a temporary sibling, and renames it into place.
+executable such as pickle is ever loaded. Publication serializes the structure
+once and streams the geometry it already holds, writing to a temporary sibling
+and renaming it into place.
 """
 
 from __future__ import annotations
@@ -29,8 +38,25 @@ import time
 from pathlib import Path
 from typing import Any
 
-DOCUMENT_ARTIFACT_SCHEMA = "naru.ifc-document-artifact.2"
+import numpy as np
+
+DOCUMENT_ARTIFACT_SCHEMA = "naru.ifc-document-artifact.3"
 _SURFACE_POSITION_ALIAS = {"$naruAlias": "surface.positions"}
+
+# The geometry fields hoisted out of the payload JSON, in the order the scene
+# writer packs them, each with the dtype it is packed as. Storing an array in
+# its final dtype makes restoration a typed view and packing a copy, instead of
+# a scan of Python numbers on both sides (ADR-0019 slice 2).
+GEOMETRY_FIELD_LAYOUT: tuple[tuple[str, str, str], ...] = (
+    ("surface", "positions", "<f8"),
+    ("surface", "indices", "<u4"),
+    ("surface", "normals", "<f4"),
+    ("edges", "positions", "<f8"),
+    ("edges", "segments", "<u4"),
+    ("edges", "classes", "<u1"),
+    ("edges", "sourceIds", "<u4"),
+)
+_GEOMETRY_ALIGNMENT = 8
 
 
 def _canonical_bytes(value: Any) -> bytes:
@@ -90,15 +116,122 @@ def restore_document_payload(
     for representation in payload["representations"]:
         surface = representation.get("surface")
         edges = representation.get("edges")
-        if (
-            surface is not None
-            and edges is not None
-            and edges.get("positions") == _SURFACE_POSITION_ALIAS
-        ):
+        if surface is None or edges is None:
+            continue
+        # Compare the marker by type first: once geometry is restored as typed
+        # arrays, `array == dict` is an elementwise comparison, not a test.
+        marker = edges.get("positions")
+        if isinstance(marker, dict) and marker == _SURFACE_POSITION_ALIAS:
             edges["positions"] = surface["positions"]
     return {"input": document_input, **payload}
 
 
+def _aligned(offset: int) -> int:
+    remainder = offset % _GEOMETRY_ALIGNMENT
+    return offset if remainder == 0 else offset + (_GEOMETRY_ALIGNMENT - remainder)
+
+
+def split_geometry_payload(
+    payload: dict[str, Any],
+) -> tuple[dict[str, Any], list[memoryview]]:
+    """Hoist the geometry arrays of `payload` into one aligned binary region.
+
+    Returns the structure to serialize and the geometry regions to store after
+    it, in order. The regions are views rather than one joined buffer: a
+    real-large document carries hundreds of megabytes of geometry, and it is
+    hashed and written a region at a time. Each hoisted field keeps its place
+    in the structure as its byte length; the offsets follow from walking
+    `representations` in order and `GEOMETRY_FIELD_LAYOUT` within each, so no
+    offset table is stored. A field that is absent, null, or the
+    shared-positions marker is left where it is.
+    """
+
+    representations = payload.get("representations")
+    if not isinstance(representations, list):
+        return payload, []
+    blocks: list[memoryview] = []
+    offset = 0
+    replacements: list[Any] = []
+    for representation in representations:
+        if not isinstance(representation, dict):
+            replacements.append(representation)
+            continue
+        replacement = dict(representation)
+        for part in ("surface", "edges"):
+            block = replacement.get(part)
+            if isinstance(block, dict):
+                replacement[part] = dict(block)
+        for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
+            block = replacement.get(part)
+            if not isinstance(block, dict):
+                continue
+            value = block.get(field)
+            if not isinstance(value, (list, tuple, np.ndarray)):
+                continue
+            # `ascontiguousarray` returns the argument itself when it already
+            # has this dtype and layout, so a stored-form array is not copied.
+            raw = memoryview(np.ascontiguousarray(value, dtype=dtype)).cast("B")
+            padding = _aligned(offset) - offset
+            if padding:
+                blocks.append(memoryview(bytes(padding)))
+                offset += padding
+            blocks.append(raw)
+            offset += raw.nbytes
+            block[field] = raw.nbytes
+        replacements.append(replacement)
+    if offset == 0:
+        return payload, []
+    structure = dict(payload)
+    structure["representations"] = replacements
+    return structure, blocks
+
+
+def attach_geometry_payload(
+    structure: dict[str, Any],
+    buffer: bytes,
+    start: int,
+) -> dict[str, Any] | None:
+    """Restore hoisted geometry in place as typed views over `buffer`.
+
+    `start` is where the geometry region begins in `buffer`. Returns
+    `structure` once every hoisted length has been resolved, or None when the
+    lengths do not describe exactly the stored region: a malformed artifact is
+    a miss, never an exception and never a partially restored document.
+    """
+
+    representations = structure.get("representations")
+    available = len(buffer) - start
+    if available < 0:
+        return None
+    if not isinstance(representations, list):
+        return structure if available == 0 else None
+    offset = 0
+    for representation in representations:
+        if not isinstance(representation, dict):
+            continue
+        for part, field, dtype in GEOMETRY_FIELD_LAYOUT:
+            block = representation.get(part)
+            if not isinstance(block, dict):
+                continue
+            length = block.get(field)
+            if isinstance(length, bool) or not isinstance(length, int):
+                continue
+            descriptor = np.dtype(dtype)
+            if length < 0 or length % descriptor.itemsize:
+                return None
+            offset = _aligned(offset)
+            if offset + length > available:
+                return None
+            block[field] = np.frombuffer(
+                buffer,
+                dtype=descriptor,
+                count=length // descriptor.itemsize,
+                offset=start + offset,
+            )
+            offset += length
+    if offset != available:
+        return None
+    return structure
 
 
 class _StoredArtifact:
@@ -130,6 +263,13 @@ def _header_failure(header: Any, key: str, key_input: dict[str, Any]) -> str | N
         return "payloadBytes is not a byte count"
     if not isinstance(header.get("payloadSha256"), str):
         return "payloadSha256 is not a digest"
+    structure_bytes = header.get("structureBytes")
+    if (
+        isinstance(structure_bytes, bool)
+        or not isinstance(structure_bytes, int)
+        or not 0 <= structure_bytes <= payload_bytes
+    ):
+        return "structureBytes is not a byte count within the payload"
     return None
 
 
@@ -195,16 +335,26 @@ def read_document_artifact(
             timing["artifactInvalidReason"] = stored.reason
     if stored.state != "verified" or stored.payload_bytes is None:
         return None
+    structure_bytes = stored.header["structureBytes"] if stored.header else 0
     started = time.perf_counter()
     try:
-        payload = json.loads(stored.payload_bytes)
+        payload = json.loads(stored.payload_bytes[:structure_bytes])
     except (UnicodeDecodeError, json.JSONDecodeError):
         payload = None
+    failure = None if isinstance(payload, dict) else "structure is not a JSON object"
+    if failure is None:
+        geometry_start = (
+            structure_bytes
+            if len(stored.payload_bytes) == structure_bytes
+            else _aligned(structure_bytes)
+        )
+        if attach_geometry_payload(payload, stored.payload_bytes, geometry_start) is None:
+            failure = "geometry lengths do not describe the stored region"
     parse_ms = (time.perf_counter() - started) * 1000.0
-    if not isinstance(payload, dict):
+    if failure is not None:
         if timing is not None:
             timing["artifactState"] = "invalid"
-            timing["artifactInvalidReason"] = "payload is not a JSON object"
+            timing["artifactInvalidReason"] = failure
         return None
     if timing is not None:
         timing["artifactPayloadBytes"] = len(stored.payload_bytes)
@@ -219,10 +369,11 @@ def publish_document_artifact(
 ) -> Path:
     """Write the artifact for `key_input` atomically; idempotent for an identical payload.
 
-    The payload is serialized exactly once. An existing artifact whose stored
-    bytes verify and name the same digest is kept; one naming a different
-    digest is an error (one key must never mean two payloads); one that fails
-    verification is overwritten.
+    The structure is serialized exactly once and the geometry is streamed from
+    the arrays the caller already holds, so no copy of the whole payload is
+    built. An existing artifact whose stored bytes verify and name the same
+    digest is kept; one naming a different digest is an error (one key must
+    never mean two payloads); one that fails verification is overwritten.
     """
 
     if not isinstance(payload, dict):
@@ -231,8 +382,18 @@ def publish_document_artifact(
     directory.mkdir(parents=True, exist_ok=True)
     key = document_artifact_key(key_input)
     path = directory / f"{key}.json.gz"
-    payload_bytes = _canonical_bytes(payload)
-    payload_sha256 = hashlib.sha256(payload_bytes).hexdigest()
+    structure, geometry = split_geometry_payload(payload)
+    structure_bytes = _canonical_bytes(structure)
+    padding = (
+        bytes(_aligned(len(structure_bytes)) - len(structure_bytes)) if geometry else b""
+    )
+    regions: list[Any] = [structure_bytes, padding, *geometry]
+    digest = hashlib.sha256()
+    payload_bytes_count = 0
+    for region in regions:
+        digest.update(region)
+        payload_bytes_count += memoryview(region).nbytes
+    payload_sha256 = digest.hexdigest()
     existing = _load_stored_artifact(path, key, key_input)
     if existing.state == "verified" and existing.header is not None:
         if existing.header["payloadSha256"] != payload_sha256:
@@ -244,8 +405,9 @@ def publish_document_artifact(
             "schemaVersion": DOCUMENT_ARTIFACT_SCHEMA,
             "key": key,
             "keyInput": key_input,
-            "payloadBytes": len(payload_bytes),
+            "payloadBytes": payload_bytes_count,
             "payloadSha256": payload_sha256,
+            "structureBytes": len(structure_bytes),
         }
     ) + b"\n"
     descriptor, temporary_name = tempfile.mkstemp(
@@ -258,7 +420,9 @@ def publish_document_artifact(
                 filename="", mode="wb", fileobj=raw_output, mtime=0
             ) as compressed:
                 compressed.write(header_line)
-                compressed.write(payload_bytes)
+                for region in regions:
+                    if memoryview(region).nbytes:
+                        compressed.write(region)
             raw_output.flush()
             os.fsync(raw_output.fileno())
         os.replace(temporary_path, path)

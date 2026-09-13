@@ -160,6 +160,16 @@ measured against gate 0 before the next begins:
    its file once, hashing it once, and taking typed-array views. This is
    what removes the structure scan; a per-document JSON artifact would move
    the same bytes through the same scanner.
+   **Landed 2026-09-13** as `naru.ifc-document-artifact.3` (adapter only;
+   [tests](../../native/adapter-ifc/tests/test_document_artifact_cache.py),
+   compiler pin in `ifc-federation.ts`), narrower than this bullet reads: the
+   structure records stayed canonical JSON and only the bulk numeric geometry
+   regions became raw little-endian typed views, for the reason recorded under
+   *Implementation notes* below. Artifact parse fell from 650.6 to 167.3 ms on
+   Digital Hub and from 5,482.0 to 3,161.0 ms on sixty5, with the artifacts
+   themselves smaller (Digital Hub 14,018,134 to 13,178,145 bytes, sixty5
+   101,185,751 to 92,975,427) and no package byte moved
+   ([record](../../artifacts/cache/rebuild-stages/README.md)).
 3. **Assemble the federation in the compiler.** The adapter keeps ownership
    of extraction and of each document's artifact. For a rebuild it emits a
    federation manifest -- document order, per-document artifact key and
@@ -214,10 +224,12 @@ that tier; its README will note that the recorder is retired with the flag.
   document. No second identity scheme, no content digest over geometry, no
   store of thousands of small files.
 - Restore is bounded by one sequential read and one SHA-256 of the stored
-  bytes. Measured after slice 1 (gate 3): Digital Hub load + verify of the
-  three unchanged artifacts 201.6 ms against a 143.8 ms read + gunzip + hash
-  of the same files in the recorder process (1.402x); sixty5 1,665.1 [1,662.0, 1,707.5] ms
-  against 1,256.0 [1,203.2, 1,318.4] ms (1.326x).
+  bytes. Measured after slice 2 (gate 3): Digital Hub load + verify of the
+  three unchanged artifacts 154.7 [145.1, 163.2] ms against a 107.4
+  [103.6, 124.7] ms read + gunzip + hash of the same files in the recorder
+  process (1.44x); sixty5 1,436.6 [1,430.7, 1,480.4] ms against 1,052.9
+  [1,024.2, 1,107.7] ms (1.364x). After slice 1 the same figures were
+  201.6 against 143.8 ms (1.402x) and 1,665.1 against 1,256.0 ms (1.326x).
 - The compiler stops scanning unchanged documents' structure JSON, the single
   largest in-process cost of a rebuild, and the adapter stops re-writing the
   federation it did not change.
@@ -228,8 +240,11 @@ that tier; its README will note that the recorder is retired with the flag.
 
 ### Negative
 
-- Two format bumps: the document artifact (`.2`) and a column-form structure
-  transport. Both are cold namespaces, so every user re-extracts once.
+- Format bumps on the artifact, one per transport slice and each a cold
+  namespace, so every user re-extracts once. Slices 1 and 2 took the same
+  lineage to `.2` and then `.3` at the same path rather than introducing a
+  second transport, which is why there is one bump per slice and not one per
+  format.
 - The federation merge exists in two implementations, Python for the
   monolithic path and TypeScript for the artifact path, and they must stay
   byte-equivalent; gate 1 pins it, and every later adapter change to the merge
@@ -299,13 +314,22 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   transport/clean pairs, `adapter-report.json` identical outside the one
   excluded key, Digital Hub package digest `c4b151e5...` (the gate 0 record's
   digest, so the format change moved no byte), sixty5 `05707534...` (likewise its gate 0 digest).
+  **Slice 2: met 2026-09-13** -- both digests reproduced unchanged
+  (`c4b151e5...`, `05707534...`), so the second format change also moved no
+  package byte; on sixty5 ten of the eleven package files are byte-identical
+  across the five pairs and `adapter-report.json` is identical outside the
+  same excluded key.
 - **Gate 2, exact decisions:** the adapter report names every document's
   restore or extraction and its reason; a corrupt artifact warns and
   re-extracts; a wrong key never restores. **Slice 1: met 2026-09-03** -- the
   record pins hits/misses and per-document ledger states (`verified` /
   `absent`) identical across samples on both models; the refusal reasons for
   corrupt, truncated, tampered, wrong-key, and previous-schema artifacts are
-  unit-tested.
+  unit-tested. **Slice 2: met 2026-09-13** -- three verified restores and one
+  miss on Digital Hub, six and one on sixty5, identical across all five
+  samples on both models; a `.2` artifact is refused by its schema line and
+  republished at the same path, which both warm-ups confirm (seven misses,
+  zero hits).
 - **Gate 3, restore cost:** the verification stage of an unchanged document,
   measured in the gate 0 decomposition, is bounded by one read and one hash
   of its stored bytes -- no stage re-serializes, re-parses for verification,
@@ -313,7 +337,9 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   a same-session ratio: adapter load + verify against the recorder's own
   read + gunzip + hash of the same files, met at 2x or better, with the parse
   ledgered apart so nothing hides inside it. **Slice 1: met 2026-09-03** --
-  Digital Hub 1.402x, sixty5 1.326x.
+  Digital Hub 1.402x, sixty5 1.326x. **Slice 2: met 2026-09-13** -- Digital
+  Hub 1.44x, sixty5 1.364x, both inside the 2x bound, with the ledgered parse
+  down from 650.6 to 167.3 ms and from 5,482.0 to 3,161.0 ms.
 - **Gate 4, the same rule as ADR-0018:** after each slice, the whole-process
   median of a changed-discipline rebuild is lower than the clean rebuild
   median on Digital Hub and on sixty5, by more than three times the clean
@@ -330,7 +356,13 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   247,070.8 ms, three spreads 26,603.7 ms; peak 4.15 GB
   against 5.08 GB). The gate 0 record had no clean arm, so whether
   slice 1 alone changed this verdict is not recorded; slice 1's own effect is
-  gate 3's verification column.
+  gate 3's verification column. **Slice 2: met 2026-09-13** -- Digital Hub
+  10,631.0 ms against 52,570.5 ms (saving 41,939.5 ms, three clean spreads
+  11,026.2 ms; peak working set 0.48 GB against 1.83 GB); sixty5 70,667.5 ms
+  against 317,588.2 ms (saving 246,920.7 ms, three spreads 23,595.0 ms; peak
+  3.61 GB against 5.11 GB). The clean arm is re-measured in each session, so
+  its medians moved between the two slices; only the same-session pair is a
+  comparison.
 
 The removal of `--payload-cache` is its own slice and needs no gate beyond
 `pnpm check`: the ADR-0018 record's validator keeps validating the committed
@@ -339,3 +371,35 @@ slice landed on 2026-09-03: `--payload-cache` is gone from both commands, the
 store, the selection logic, the `compiledPayloadCache` report block, their
 tests, and `scripts/record-payload-reuse-evidence.mjs` are deleted, and
 `pnpm cache:payload:check` still validates the committed record.
+
+### Implementation notes (2026-09-13, column-form structure slice)
+
+Where it narrows the Decision above, the narrowing is deliberate and stated
+here:
+
+- **Geometry moves to raw regions at known paths; the structure records stay
+  canonical JSON.** The Decision asks for fixed-width typed columns plus one
+  string table over every structure-bearing record. What landed
+  (`naru.ifc-document-artifact.3`) keeps the structure records as the
+  canonical JSON the previous format already verified, adds a
+  `structureBytes` header field, and appends the bulk numeric arrays --
+  surface positions, indices, normals, edge positions, segments, classes, and
+  source ids, at the bounded paths
+  `payload["representations"][i]["surface"|"edges"][field]` -- as raw
+  little-endian regions padded to eight bytes. The payload SHA-256 still
+  covers the whole payload region, so the verification contract of slice 1 is
+  unchanged. The reason is composition, measured on the corpus before the code
+  was written: `json.loads` is C, so a pure-Python column decoder loses on
+  record-shaped data (dicts and short strings) and wins enormously on bulk
+  numbers, where a typed-array view replaces one Python object per element.
+  Digital Hub's documents carry 20.7 bulk numbers per record item and the
+  largest sixty5 document 2.2, so the numeric arrays are where the parse time
+  is. Because the hoisted paths are known and bounded, re-attaching the views
+  after the JSON parse is O(representations), not O(records).
+- **One namespace lineage, not two transports.** The Negative consequences
+  above predicted two format bumps; there is one lineage, `.1` to `.2`
+  (slice 1) to `.3` (this slice), at the same path, each earlier file refused
+  by its schema line and republished. `document_artifact_cache.py` is inside
+  the adapter's self-hash set (`extract_federation_scene_ir.py`), so the bump
+  is a cold namespace; both warm-ups confirm it (Digital Hub 0 hits and 4
+  misses, sixty5 0 hits and 7 misses).

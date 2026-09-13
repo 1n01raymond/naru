@@ -72,7 +72,7 @@ def test_reuses_unchanged_documents_and_matches_clean_federation(tmp_path: Path)
     warm_report = run_adapter(warm, architecture, structure, cache_directory)
 
     assert clean_report["documentArtifactCache"] == {
-        "schemaVersion": "naru.ifc-document-artifact.2",
+        "schemaVersion": "naru.ifc-document-artifact.3",
         "status": "disabled",
         "hits": [],
         "misses": [],
