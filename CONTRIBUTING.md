@@ -1,7 +1,7 @@
 # Contributing to NARU
 
-NARU has completed its first vertical slice and is in the Phase 2 large-scene
-alpha. Contributions that sharpen a use case, add reproducible evidence,
+NARU has completed its Phase 2 large-scene alpha and is working toward the
+Phase 3 open-platform beta. Contributions that sharpen a use case, add reproducible evidence,
 challenge an assumption, or reduce implementation risk are as valuable as
 code. The current work order and evidence debt are maintained in
 [`docs/PHASE_2.md`](docs/PHASE_2.md).
@@ -58,8 +58,11 @@ pnpm check
 pnpm dev
 ```
 
-`pnpm check` validates every committed evidence record, then lints,
-type-checks, tests, and builds every workspace package.
+`pnpm check` is the pull-request gate: portable contracts, current product
+evidence, lint, type checking, tests, and every workspace build. Historical
+evidence is preserved and audited separately with `pnpm check:scheduled`; the
+release-host audit is `pnpm check:release`. See the
+[validation tier policy](docs/VALIDATION.md).
 `pnpm phase1:compile:evidence` reproduces the historical first glTF package,
 while `pnpm dev` opens the current Studio. Native OCCT work is isolated under
 `native/adapter-occt`; run `pnpm native:check` before configuring it. See the
@@ -86,7 +89,10 @@ perform the final evidence pass.
 
 These commands do not replace the repository gate. Run `pnpm check` before
 opening a pull request; CI runs that gate plus
-`pnpm native:check -- --allow-missing`.
+`pnpm native:check -- --allow-missing`. When a change touches historical
+evidence, also run its focused validator even though unrelated pull requests do
+not audit it. Large native, headed-browser, and memory measurements follow the
+recording profiles in `docs/VALIDATION.md`.
 
 ## Documentation and translations
 

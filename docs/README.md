@@ -18,26 +18,28 @@ Read in this order:
    and distribution.
 8. [Benchmark plan](BENCHMARKS.md) — datasets, baselines, metrics, scenarios,
    and anti-benchmark rules.
-9. [Real-large results matrix](REAL_LARGE_RESULTS.md) — the committed cold/warm
+9. [Validation tiers](VALIDATION.md) — pull-request, current, historical,
+   scheduled, release, and hardware-bound recording responsibilities.
+10. [Real-large results matrix](REAL_LARGE_RESULTS.md) — the committed cold/warm
    import, startup, frame, memory, and interaction figures for one real-large
    model, presented together.
-10. [Roadmap](ROADMAP.md) — evidence-gated phases and exit criteria.
-11. [Phase 0 evidence](PHASE_0.md) — completed exit record, reproduction, and
+11. [Roadmap](ROADMAP.md) — evidence-gated phases and exit criteria.
+12. [Phase 0 evidence](PHASE_0.md) — completed exit record, reproduction, and
    known limits.
-12. [Phase 1 evidence](PHASE_1.md) — completed vertical-slice evidence and
-    known limits.
-13. [Phase 1 completion report](PHASE_1_REPORT.md) — exit decision and
-    consolidated reproducible performance summary.
-14. [Phase 2 tracker](PHASE_2.md) — large-scene priorities, dependencies,
-    exit-gate status, and the evidence debt carried into Phase 3.
-15. [Phase 2 completion report](PHASE_2_REPORT.md) — exit decision and
-    consolidated reproducible performance summary for the large-scene alpha.
-16. [Architecture decisions](adr/README.md) — decisions and alternatives.
-17. [Branching and releases](BRANCHING.md) — work branches, pull requests,
-    merge rules, backports, tags, and enforcement gates.
-18. [Translations](TRANSLATIONS.md) — README languages, terminology, and
-    maintenance workflow.
-19. [API reference](API_REFERENCE.md) — the TypeDoc-generated surface of the
+13. [Phase 1 evidence](PHASE_1.md) — completed vertical-slice evidence and
+   known limits.
+14. [Phase 1 completion report](PHASE_1_REPORT.md) — exit decision and
+   consolidated reproducible performance summary.
+15. [Phase 2 tracker](PHASE_2.md) — large-scene priorities, dependencies,
+   exit-gate status, and the evidence debt carried into Phase 3.
+16. [Phase 2 completion report](PHASE_2_REPORT.md) — exit decision and
+   consolidated reproducible performance summary for the large-scene alpha.
+17. [Architecture decisions](adr/README.md) — decisions and alternatives.
+18. [Branching and releases](BRANCHING.md) — work branches, pull requests,
+   merge rules, backports, tags, and enforcement gates.
+19. [Translations](TRANSLATIONS.md) — README languages, terminology, and
+   maintenance workflow.
+20. [API reference](API_REFERENCE.md) — the TypeDoc-generated surface of the
     four workspace packages, published with the demo site at `naru/api/`.
 
 ## Documentation rules

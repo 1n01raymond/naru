@@ -8,7 +8,7 @@
 
 ## Validation
 
-<!-- List exact commands, models, browsers, and results. Write "Not applicable" with a reason when appropriate. -->
+<!-- List exact commands, models, browsers, and results. Include pnpm check:pr, any touched historical validator, and any required native/headed/memory recorder. Write "Not applicable" with a reason when appropriate. -->
 
 ## Impact
 
@@ -26,6 +26,7 @@
 - [ ] I updated user, API, architecture, or translation documentation where needed.
 - [ ] I added an ADR for a public API, serialized format, trust-boundary, or major dependency decision.
 - [ ] Performance claims follow `docs/BENCHMARKS.md` and include reproducible evidence.
+- [ ] I ran the validation tier and focused record checks required by `docs/VALIDATION.md`.
 - [ ] No proprietary CAD/BIM data or unlicensed derived data is included.
 - [ ] My commits include the Developer Certificate of Origin sign-off (`git commit -s`).
 
