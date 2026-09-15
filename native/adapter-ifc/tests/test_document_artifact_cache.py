@@ -19,6 +19,7 @@ from property_columns import (  # noqa: E402
 
 from document_artifact_cache import (  # noqa: E402
     DOCUMENT_ARTIFACT_SCHEMA,
+    describe_document_artifact,
     document_artifact_key,
     document_artifact_path,
     prepare_document_payload,
@@ -427,3 +428,79 @@ def test_geometry_lengths_that_do_not_describe_the_region_are_misses(tmp_path: P
             timing["artifactInvalidReason"]
             == "region lengths do not describe the stored bytes"
         )
+
+
+def test_describe_names_a_stored_artifact_from_its_header_alone(tmp_path: Path) -> None:
+    payload = prepare_document_payload(extracted_document())
+    artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
+    header, _ = _decompress(artifact_path)
+
+    described = describe_document_artifact(tmp_path, key_input())
+
+    # A federation manifest names each document by the header's key and payload
+    # digest, so what `describe` returns has to be the stored header itself.
+    assert described == header
+    assert set(header) == {
+        "schemaVersion",
+        "key",
+        "keyInput",
+        "payloadBytes",
+        "payloadSha256",
+        "structureBytes",
+    }
+    assert header["key"] == document_artifact_key(key_input())
+
+
+def test_describe_declines_absent_unreadable_and_foreign_artifacts(tmp_path: Path) -> None:
+    assert describe_document_artifact(tmp_path, key_input()) is None
+
+    payload = prepare_document_payload(extracted_document())
+    artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
+    original = artifact_path.read_bytes()
+    header, body = _decompress(artifact_path)
+
+    # Another document's key resolves to another path, which is simply absent.
+    assert describe_document_artifact(tmp_path, key_input("c" * 64)) is None
+
+    for rewritten in (
+        {**header, "key": "0" * 64},
+        {**header, "schemaVersion": "naru.ifc-document-artifact.1"},
+        {**header, "keyInput": {**key_input(), "uriHint": "models/renamed.ifc"}},
+    ):
+        _rewrite(artifact_path, rewritten, body)
+        assert describe_document_artifact(tmp_path, key_input()) is None
+
+    artifact_path.write_bytes(b"not a gzip member")
+    assert describe_document_artifact(tmp_path, key_input()) is None
+
+    _rewrite(artifact_path, header, body)
+    whole = artifact_path.read_bytes()
+    artifact_path.write_bytes(whole[: len(whole) // 2])
+    assert describe_document_artifact(tmp_path, key_input()) is None
+
+    assert publish_document_artifact(tmp_path, key_input(), payload) == artifact_path
+    assert artifact_path.read_bytes() == original
+    assert describe_document_artifact(tmp_path, key_input()) == header
+
+
+def test_describe_names_an_artifact_whose_payload_bytes_are_corrupt(tmp_path: Path) -> None:
+    """Naming is not verification: the hydrating consumer rejects the payload.
+
+    `describe` reads the header line and stops, so a manifest can declare a cache
+    hit for an artifact whose payload was tampered with afterwards. The consumer
+    that hydrates the artifact verifies the stored bytes and refuses it, which is
+    why the compiler falls back to a full rebuild instead of trusting a manifest.
+    """
+
+    payload = prepare_document_payload(extracted_document())
+    artifact_path = publish_document_artifact(tmp_path, key_input(), payload)
+    header, body = _decompress(artifact_path)
+
+    flipped = bytearray(body)
+    flipped[len(flipped) // 2] ^= 0x01
+    _rewrite(artifact_path, header, bytes(flipped))
+
+    assert describe_document_artifact(tmp_path, key_input()) == header
+    timing: dict[str, object] = {}
+    assert read_document_artifact(tmp_path, key_input(), timing) is None
+    assert timing["artifactInvalidReason"] == "payload digest mismatch"

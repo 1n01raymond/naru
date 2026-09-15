@@ -399,6 +399,36 @@ def read_document_artifact(
     return payload
 
 
+def describe_document_artifact(
+    cache_directory: str | os.PathLike[str],
+    key_input: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return the stored header for `key_input` without reading its payload.
+
+    A federation manifest names each document's artifact by key and payload
+    digest, and the consumer that hydrates the artifact is the one that verifies
+    its bytes (ADR-0019 slice 3b). Reading the header alone keeps manifest
+    assembly independent of payload size: the gzip member is decompressed only
+    up to the first newline. `None` means there is nothing usable to name --
+    absent, unreadable, or a header that does not describe this key.
+    """
+
+    path = document_artifact_path(cache_directory, key_input)
+    key = document_artifact_key(key_input)
+    try:
+        with gzip.open(path, "rb") as source:
+            header_line = source.readline()
+    except (OSError, EOFError):
+        return None
+    try:
+        header = json.loads(header_line)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return None
+    if _header_failure(header, key, key_input) is not None:
+        return None
+    return header
+
+
 def publish_document_artifact(
     cache_directory: str | os.PathLike[str],
     key_input: dict[str, Any],
