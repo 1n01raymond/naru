@@ -53,6 +53,41 @@ export type {
   SpatialVector3,
 } from "./spatial-demand.js";
 export { compileIfcFederation } from "./ifc-federation.js";
+export {
+  assembleIfcFederation,
+  ifcDocumentArtifactPath,
+  ifcDocumentArtifactSchema,
+  ifcFederationManifestSchema,
+  parseIfcFederationManifest,
+} from "./ifc-federation-assembly.js";
+export type {
+  AssembleIfcFederationOptions,
+  IfcDocumentArtifactCacheResult,
+  IfcFederationAssembly,
+  IfcFederationAssemblyDocument,
+  IfcFederationAssemblyFallback,
+  IfcFederationAssemblyOutcome,
+  IfcFederationManifest,
+  IfcFederationManifestAdapter,
+  IfcFederationManifestDocument,
+  IfcFederationManifestIdentity,
+} from "./ifc-federation-assembly.js";
+export {
+  canonicalJsonBytes,
+  canonicalJsonEquals,
+  CanonicalJsonError,
+  compareCodePoints,
+  digestCanonicalJson,
+  flagFloat,
+  formatPythonFloat,
+  parseCanonicalJson,
+  serializeCanonicalJson,
+} from "./canonical-json.js";
+export type {
+  CanonicalJsonDigest,
+  FloatSourceTable,
+  ParsedCanonicalJson,
+} from "./canonical-json.js";
 export { AdapterProcessCancelledError, isAdapterProcessCancellation } from "./adapter-process.js";
 export {
   createImportJobId,
