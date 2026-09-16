@@ -32,7 +32,8 @@ IFC options:
   --omit-default-node-transforms Omit identity matrices; emit pure translations
   --retain-scene-ir              Keep the split intermediate pair under output
   --staged-preview <directory>   Publish each document's tree there as soon as it parses
-  --assemble-federation          Merge cached document artifacts in the compiler (needs --cache)
+  --assemble-federation          Merge cached document artifacts in the compiler (default with --cache)
+  --no-assemble-federation       Keep the adapter's monolithic merge under --cache
 
 General options:
   --spatial-index                Emit the optional occurrence demand BVH
@@ -249,6 +250,7 @@ export function parseIfcCompileArguments(
       args: [...argumentList],
       options: ifcOptions,
       allowPositionals: false,
+      allowNegative: true,
       strict: true,
     }),
   );
@@ -287,8 +289,8 @@ export function parseIfcCompileArguments(
   );
   const spatialPayloadOrder = values["spatial-payload-order"] ?? false;
   assertSpatialDependants(spatialIndex, spatialLeafCapacity, spatialPayloadOrder);
-  const assembleFederation = values["assemble-federation"] ?? false;
-  if (assembleFederation && !cacheDirectory) {
+  const assembleFederation = values["assemble-federation"] ?? cacheDirectory !== undefined;
+  if (values["assemble-federation"] === true && !cacheDirectory) {
     throw new TypeError(`--assemble-federation requires --cache.\n\n${usage}`);
   }
 

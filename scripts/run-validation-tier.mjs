@@ -20,12 +20,15 @@ try {
   process.exit(2);
 }
 
-const pnpm = process.platform === "win32" ? "pnpm.cmd" : "pnpm";
 console.log(`[validation-tier] ${tier}: ${scripts.length} command(s)`);
 
 for (const [index, script] of scripts.entries()) {
   console.log(`\n[validation-tier] ${index + 1}/${scripts.length} pnpm run ${script}`);
-  const result = spawnSync(pnpm, ["run", script], { stdio: "inherit" });
+  const result = spawnSync("pnpm", ["run", script], {
+    stdio: "inherit",
+    // pnpm is a .cmd shim on Windows, which Node refuses to spawn without a shell.
+    shell: process.platform === "win32",
+  });
   if (result.error !== undefined) {
     console.error(`[validation-tier] could not start ${script}: ${result.error.message}`);
     process.exit(1);

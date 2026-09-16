@@ -56,7 +56,8 @@ it cannot be re-recorded from the current tree.
 `rebuild-stages/` is ADR-0019's gate record (`naru.rebuild-stage-evidence.3`):
 the same changed-discipline rebuild compiled through restored
 `naru.ifc-document-artifact.4` artifacts with the federation assembled in the
-compiler from them (`--assemble-federation`; the adapter writes a
+compiler from them (`--assemble-federation`, passed explicitly by the recorder
+and the default under `--cache` since 2026-09-17; the adapter writes a
 `naru.ifc-federation-manifest.1` manifest instead of the Scene IR) and,
 interleaved in the same session, with no cache directory at all, five
 fresh-process samples per arm per model, each decomposed into adapter stages

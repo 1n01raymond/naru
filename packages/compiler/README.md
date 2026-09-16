@@ -188,8 +188,12 @@ cache is selected, retained intermediates are included only when that option is
 part of the key. The qualified four-discipline result is under
 `artifacts/ifc/digital-hub/`.
 
-`--assemble-federation` (`assembleFederation: true`; needs `--cache`) is
-[ADR-0019](../../docs/adr/0019-document-artifact-transport.md) slice 3b: on a
+With `--cache` the compiler assembles the federation itself by default
+(`--assemble-federation` / `assembleFederation`, on by default since
+2026-09-17; `--no-assemble-federation` or `assembleFederation: false` keeps
+the adapter's monolithic merge, and the flag without `--cache` is an error).
+That is [ADR-0019](../../docs/adr/0019-document-artifact-transport.md) slice
+3b: on a
 whole-package miss the adapter runs in manifest mode, restoring or extracting
 each document's `naru.ifc-document-artifact.4` entry and writing a
 `naru.ifc-federation-manifest.1` manifest instead of the monolithic split Scene

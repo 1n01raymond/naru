@@ -90,7 +90,8 @@ export interface IfcFederationCompileOptions {
    * On a rebuild, ask the adapter for a federation manifest and assemble the
    * federation in the compiler from the cached document artifacts instead of
    * reading a scene file the adapter merged and wrote (ADR-0019 slice 3b).
-   * Inert without `cacheDirectory`. The assembled transport is byte-identical
+   * On whenever `cacheDirectory` is set unless explicitly `false`; inert
+   * without `cacheDirectory`. The assembled transport is byte-identical
    * to the adapter's, so the package, its digest, and the package-cache key
    * do not depend on this option; any artifact that fails verification makes
    * the compile fall back to the monolithic adapter run.
@@ -197,7 +198,7 @@ export interface IfcFederationCompilationResult {
   readonly stages?: IfcFederationStageTiming;
   /** Only when `stagedPreviewDirectory` was requested and the compile rebuilt. */
   readonly stagedPreview?: StagedPreviewManifest;
-  /** Only when `assembleFederation` was requested with a cache and the compile rebuilt. */
+  /** Only when `assembleFederation` was in effect with a cache and the compile rebuilt. */
   readonly assembly?: IfcFederationCompileAssembly;
 }
 
@@ -903,7 +904,7 @@ async function runIfcFederationCompile(
     };
     let assembled: IfcFederationAssembly | undefined;
     let assembly: IfcFederationCompileAssembly | undefined;
-    if (options.assembleFederation === true && documentCacheDirectory !== undefined) {
+    if (options.assembleFederation !== false && documentCacheDirectory !== undefined) {
       const manifestPath = join(temporaryDirectory, "federation-manifest.json");
       await extract(
         [

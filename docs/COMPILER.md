@@ -767,8 +767,9 @@ heap interned per document so the federation pass only remaps pre-encoded bytes
 (`naru.ifc-document-artifact.4`, pinned by the compiler in
 [`ifc-federation.ts`](../packages/compiler/src/ifc-federation.ts)). Together
 those cut the adapter's parse of an unchanged document. The last slice
-(2026-09-16) removed the compiler's own structure scan: with
-`--assemble-federation` the adapter writes a `naru.ifc-federation-manifest.1`
+(2026-09-16) removed the compiler's own structure scan: under `--cache`
+(`--assemble-federation`, the default since 2026-09-17;
+`--no-assemble-federation` opts out) the adapter writes a `naru.ifc-federation-manifest.1`
 manifest instead of the monolithic Scene IR and the compiler assembles the
 federation from the verified artifacts in process
 ([`ifc-federation-assembly.ts`](../packages/compiler/src/ifc-federation-assembly.ts)),
