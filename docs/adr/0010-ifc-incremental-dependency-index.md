@@ -1,6 +1,7 @@
 # ADR-0010: Index IFC document dependencies before partial compilation
 
-Status: Proposed
+Status: Accepted
+Accepted: 2026-09-16
 
 ## Context
 
@@ -90,10 +91,16 @@ cheaper than a clean one while reproducing the complete clean package byte for
 byte. The byte-for-byte half is recorded: a changed-discipline rebuild of
 Digital Hub and sixty5 through the content-addressed payload store reproduced
 every clean package resource ([artifacts/cache/payload-reuse](../../artifacts/cache/payload-reuse/README.md)).
-The cheaper half is not: that store restored payloads slower than the compiler
-re-encodes them, so [ADR-0018](0018-content-addressed-compiled-payloads.md) is
-Rejected by its own gate and this ADR remains Proposed until a successor reuse
-unit passes the same measurement. The successor is
-[ADR-0019](0019-document-artifact-transport.md), which makes the per-document
-Scene IR artifact -- the unit this index already owns -- the thing restored,
-and whose gate 4 record moves both ADRs together.
+The cheaper half was not met by that store: it restored payloads slower than
+the compiler re-encodes them, so
+[ADR-0018](0018-content-addressed-compiled-payloads.md) is Rejected by its own
+gate. The successor, [ADR-0019](0019-document-artifact-transport.md), makes the
+per-document Scene IR artifact -- the unit this index already owns -- the
+thing restored, and its gate 4 record
+([artifacts/cache/rebuild-stages](../../artifacts/cache/rebuild-stages/README.md))
+measures a changed-discipline rebuild against a same-session clean rebuild on
+Digital Hub and sixty5. The cheaper half is recorded there after every ADR-0019
+slice, with the final slice (in-compiler federation assembly, 2026-09-16)
+reproducing the clean package byte for byte while the compiler assembles the
+federation from the restored artifacts; that record is what moved this ADR to
+Accepted together with ADR-0019.

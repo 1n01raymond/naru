@@ -23,7 +23,7 @@ reverse. They explain context and trade-offs rather than only the final choice.
 | [0007](0007-rebrand-naru.md) | Rebrand to NARU; freeze serialized `madi.*` identifiers | Accepted |
 | [0008](0008-spatial-demand-partitioning.md) | Separate spatial demand from shared prototype payload ownership | Proposed |
 | [0009](0009-persistent-compiled-cache.md) | Key persistent compiled caches by complete import identity | Accepted |
-| [0010](0010-ifc-incremental-dependency-index.md) | Index IFC document dependencies before partial compilation | Proposed |
+| [0010](0010-ifc-incremental-dependency-index.md) | Index IFC document dependencies before partial compilation | Accepted |
 | [0011](0011-remote-package-limits.md) | Bound remote compiled packages before parsing or allocating | Accepted |
 | [0012](0012-mutable-public-fixture-downloads.md) | Pin mutable public-share fixtures by content identity | Proposed |
 | [0013](0013-optional-gltf-resource-name-elision.md) | Allow opt-in glTF resource-name elision | Proposed |
@@ -32,7 +32,7 @@ reverse. They explain context and trade-offs rather than only the final choice.
 | [0016](0016-streamed-gltf-document.md) | Serialize the compiled glTF document as a stream | Accepted |
 | [0017](0017-relocated-hierarchy-sidecar.md) | Move the assembly tree into a package sidecar | Accepted |
 | [0018](0018-content-addressed-compiled-payloads.md) | Content-address compiled prototype payloads; rebuild the federation | Rejected |
-| [0019](0019-document-artifact-transport.md) | Reuse verified per-document Scene IR artifacts across the transport; retire the payload tier | Proposed |
+| [0019](0019-document-artifact-transport.md) | Reuse verified per-document Scene IR artifacts across the transport; retire the payload tier | Accepted |
 | [0020](0020-cancellable-import-jobs.md) | Report imports as a versioned lifecycle; cancellation stops the adapter tree | Proposed |
 | [0021](0021-staged-hierarchy-first-import.md) | Publish an import assembly tree per document, before geometry | Accepted |
 | [0022](0022-workspace-manifest.md) | Persist a non-authoritative workspace manifest keyed by source and package identity | Accepted |

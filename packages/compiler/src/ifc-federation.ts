@@ -1,12 +1,20 @@
 import { availableParallelism, tmpdir } from "node:os";
 import { performance } from "node:perf_hooks";
 import { createHash } from "node:crypto";
+import { closeSync, openSync, writeSync } from "node:fs";
 import { copyFile, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { runAdapterProcess } from "./adapter-process.js";
 import { errorCode } from "./cache-primitives.js";
+import { serializeCanonicalJson } from "./canonical-json.js";
+import { assembleIfcFederation } from "./ifc-federation-assembly.js";
+import type {
+  IfcFederationAssembly,
+  IfcFederationAssemblyDocument,
+  IfcFederationAssemblyFallback,
+} from "./ifc-federation-assembly.js";
 import {
   createImportJobReporter,
   ImportJobCancelledError,
@@ -78,6 +86,16 @@ export interface IfcFederationCompileOptions {
   readonly targetChunkByteBudget?: number;
   /** Optional persistent package cache keyed by the complete federation/toolchain identity. */
   readonly cacheDirectory?: string;
+  /**
+   * On a rebuild, ask the adapter for a federation manifest and assemble the
+   * federation in the compiler from the cached document artifacts instead of
+   * reading a scene file the adapter merged and wrote (ADR-0019 slice 3b).
+   * Inert without `cacheDirectory`. The assembled transport is byte-identical
+   * to the adapter's, so the package, its digest, and the package-cache key
+   * do not depend on this option; any artifact that fails verification makes
+   * the compile fall back to the monolithic adapter run.
+   */
+  readonly assembleFederation?: boolean;
   readonly spatialIndex?: boolean;
   readonly spatialLeafCapacity?: number;
   readonly spatialPayloadOrder?: boolean;
@@ -119,6 +137,7 @@ export type IfcFederationStageName =
   | "toolchainIdentity"
   | "cacheLookup"
   | "adapter"
+  | "assembleFederation"
   | "readSceneIr"
   | "hydrate"
   | "compile"
@@ -148,7 +167,7 @@ export interface IfcAdapterProcessTiming {
 export type LedgerCompileStage = Exclude<CompileStage, "reduceGeometry">;
 
 export interface IfcFederationStageTiming {
-  readonly schemaVersion: "naru.ifc-federation-stage-timing.1";
+  readonly schemaVersion: "naru.ifc-federation-stage-timing.2";
   /** Entry of `compileIfcFederation` to its return; excludes temp-dir cleanup. */
   readonly totalMilliseconds: number;
   readonly stages: Readonly<Record<IfcFederationStageName, number>>;
@@ -178,7 +197,17 @@ export interface IfcFederationCompilationResult {
   readonly stages?: IfcFederationStageTiming;
   /** Only when `stagedPreviewDirectory` was requested and the compile rebuilt. */
   readonly stagedPreview?: StagedPreviewManifest;
+  /** Only when `assembleFederation` was requested with a cache and the compile rebuilt. */
+  readonly assembly?: IfcFederationCompileAssembly;
 }
+
+/** How a rebuild obtained its federation transport under `assembleFederation`. */
+export type IfcFederationCompileAssembly =
+  | {
+      readonly status: "assembled";
+      readonly documents: readonly IfcFederationAssemblyDocument[];
+    }
+  | IfcFederationAssemblyFallback;
 
 const incrementalDependencyIndexFilename = "incremental-dependencies.json";
 
@@ -483,6 +512,7 @@ const federationStageNames: readonly IfcFederationStageName[] = [
   "toolchainIdentity",
   "cacheLookup",
   "adapter",
+  "assembleFederation",
   "readSceneIr",
   "hydrate",
   "compile",
@@ -498,7 +528,7 @@ class StageLedger {
   private readonly startedAt = performance.now();
   private readonly durations = new Map<IfcFederationStageName, number>();
   structureReadMilliseconds = 0;
-  /** Ledger keys are pinned by `naru.ifc-federation-stage-timing.1`; `reduceGeometry` folds into `other`. */
+  /** Ledger keys are pinned by `naru.ifc-federation-stage-timing.2`; `reduceGeometry` folds into `other`. */
   readonly compileStages: Record<LedgerCompileStage, number> = {
     validateScene: 0,
     encodeGeometry: 0,
@@ -535,7 +565,7 @@ class StageLedger {
       this.compileStages.encodeGeometry +
       this.compileStages.measureDocument;
     return {
-      schemaVersion: "naru.ifc-federation-stage-timing.1",
+      schemaVersion: "naru.ifc-federation-stage-timing.2",
       totalMilliseconds,
       stages,
       unattributedMilliseconds: totalMilliseconds - attributed,
@@ -840,67 +870,134 @@ async function runIfcFederationCompile(
       `${source.discipline}=${source.uriHint}`,
     ]);
     reporter.enter("extracting");
-    const adapterArguments = [
-      adapterScriptPath,
-      ...sourceArguments,
-      "--scene",
-      scenePath,
-      "--geometry",
-      geometryPath,
-      "--properties",
-      propertiesPath,
-      "--report",
-      adapterReportPath,
-      ...(options.cacheDirectory
-        ? ["--document-cache", resolve(options.cacheDirectory, "ifc-documents")]
-        : []),
+    const documentCacheDirectory = options.cacheDirectory
+      ? resolve(options.cacheDirectory, "ifc-documents")
+      : undefined;
+    const commonArguments = [
+      ...(documentCacheDirectory ? ["--document-cache", documentCacheDirectory] : []),
       "--threads",
       String(threads),
       ...(ledger ? ["--stage-timing", stageTimingPath] : []),
-      ...(stagedWriter ? ["--structure-preview", previewDirectory] : []),
     ];
-    const adapterRun = await stage(ledger, "adapter", () =>
-      stagedWriter
-        ? runAdapterWithStagedPreviews({
-            run: (adapterSignal) =>
-              runAdapter(pythonExecutable, adapterArguments, environment, adapterSignal),
-            previewDirectory,
-            sources,
-            writer: stagedWriter,
-            reporter,
-            signal,
-          })
-        : runAdapter(pythonExecutable, adapterArguments, environment, signal),
-    );
-    if (ledger) ledger.adapter = await readAdapterTiming(stageTimingPath, adapterRun);
+    // Previews are staged by whichever adapter run comes first; a monolithic
+    // rerun after a failed assembly publishes none, because the writer has
+    // already completed the set.
+    const extract = async (
+      adapterArguments: readonly string[],
+      writer: StagedPreviewWriter | undefined,
+    ): Promise<void> => {
+      const adapterRun = await stage(ledger, "adapter", () =>
+        writer
+          ? runAdapterWithStagedPreviews({
+              run: (adapterSignal) =>
+                runAdapter(pythonExecutable, adapterArguments, environment, adapterSignal),
+              previewDirectory,
+              sources,
+              writer,
+              reporter,
+              signal,
+            })
+          : runAdapter(pythonExecutable, adapterArguments, environment, signal),
+      );
+      if (ledger) ledger.adapter = await readAdapterTiming(stageTimingPath, adapterRun);
+    };
+    let assembled: IfcFederationAssembly | undefined;
+    let assembly: IfcFederationCompileAssembly | undefined;
+    if (options.assembleFederation === true && documentCacheDirectory !== undefined) {
+      const manifestPath = join(temporaryDirectory, "federation-manifest.json");
+      await extract(
+        [
+          adapterScriptPath,
+          ...sourceArguments,
+          "--federation-manifest",
+          manifestPath,
+          ...commonArguments,
+          ...(stagedWriter ? ["--structure-preview", previewDirectory] : []),
+        ],
+        stagedWriter,
+      );
+      const outcome = await stage(ledger, "assembleFederation", async () =>
+        assembleIfcFederation({
+          manifest: await readFile(manifestPath, "utf8"),
+          cacheDirectory: documentCacheDirectory,
+          ...(signal === undefined ? {} : { signal }),
+        }),
+      );
+      if (outcome.status === "assembled") {
+        assembled = outcome;
+        assembly = { status: "assembled", documents: outcome.documents };
+      } else {
+        assembly = outcome;
+        console.warn(
+          `[naru] federation assembly fell back (${outcome.discipline}: ${outcome.reason}); ` +
+            "running the adapter monolithically.",
+        );
+      }
+    }
+    if (assembled === undefined) {
+      await extract(
+        [
+          adapterScriptPath,
+          ...sourceArguments,
+          "--scene",
+          scenePath,
+          "--geometry",
+          geometryPath,
+          "--properties",
+          propertiesPath,
+          "--report",
+          adapterReportPath,
+          ...commonArguments,
+          ...(stagedWriter && assembly === undefined
+            ? ["--structure-preview", previewDirectory]
+            : []),
+        ],
+        assembly === undefined ? stagedWriter : undefined,
+      );
+    }
     reporter.enter("compiling");
     // The structure document is never read or parsed as one string: the
     // streaming reader parses it record by record and hashes it on the way
     // through. Before property indexing (`madi.ifc-scene-ir-split.2`) a
     // real-large federation reached 632 MB against V8's 536,870,888-code-unit
     // string limit, and the reader keeps the compiler safe if a future
-    // federation crosses it again.
-    const [structure, geometry, properties, serializedAdapterReport] = await stage(
-      ledger,
-      "readSceneIr",
-      () =>
-        Promise.all([
-          ledger
-            ? (async () => {
-                const started = performance.now();
-                try {
-                  return await readIfcStructure(scenePath);
-                } finally {
-                  ledger.structureReadMilliseconds = performance.now() - started;
-                }
-              })()
-            : readIfcStructure(scenePath),
-          readFile(geometryPath),
-          readFile(propertiesPath),
-          readFile(adapterReportPath, "utf8"),
-        ]),
-    );
-    const parsedAdapterReport = parseJson(serializedAdapterReport, "IFC adapter report");
+    // federation crosses it again. An assembled federation never had a
+    // structure file: its digest was streamed off the canonical serializer.
+    const [structure, geometry, properties, parsedAdapterReport] = assembled
+      ? [
+          {
+            value: assembled.scene,
+            byteLength: assembled.structure.byteLength,
+            sha256: assembled.structure.sha256,
+          },
+          assembled.geometry,
+          assembled.properties,
+          assembled.report,
+        ]
+      : await stage(ledger, "readSceneIr", async () => {
+          const [read, geometryBytes, propertyBytes, serializedAdapterReport] =
+            await Promise.all([
+              ledger
+                ? (async () => {
+                    const started = performance.now();
+                    try {
+                      return await readIfcStructure(scenePath);
+                    } finally {
+                      ledger.structureReadMilliseconds = performance.now() - started;
+                    }
+                  })()
+                : readIfcStructure(scenePath),
+              readFile(geometryPath),
+              readFile(propertiesPath),
+              readFile(adapterReportPath, "utf8"),
+            ]);
+          return [
+            read,
+            geometryBytes,
+            propertyBytes,
+            parseJson(serializedAdapterReport, "IFC adapter report"),
+          ] as const;
+        });
     const identity = assertAdapterIdentity(
       parsedAdapterReport,
       sources,
@@ -1018,13 +1115,17 @@ async function runIfcFederationCompile(
       ),
     );
     if (retainSceneIr) {
-      await stage(ledger, "retainSceneIr", () =>
-        Promise.all([
+      await stage(ledger, "retainSceneIr", async () => {
+        if (assembled) {
+          await retainAssembledSceneIr(assembled, outputDirectory);
+          return;
+        }
+        await Promise.all([
           copyFile(scenePath, resolve(outputDirectory, "scene-ir.json")),
           copyFile(geometryPath, resolve(outputDirectory, "scene-ir-geometry.bin")),
           copyFile(propertiesPath, resolve(outputDirectory, "scene-ir-properties.bin")),
-        ]),
-      );
+        ]);
+      });
     }
     if (cacheKeyInput && cacheKey) {
       const publishInput = cacheKeyInput;
@@ -1068,6 +1169,7 @@ async function runIfcFederationCompile(
       cache: cacheKey ? { status: "miss", key: cacheKey } : { status: "disabled" },
       ...(ledger ? { stages: ledger.finish() } : {}),
       ...(stagedWriter ? { stagedPreview: stagedWriter.manifest() } : {}),
+      ...(assembly ? { assembly } : {}),
     };
   } catch (error) {
     // A staged directory only ever outlives a compile that completed: on any
@@ -1080,6 +1182,36 @@ async function runIfcFederationCompile(
   } finally {
     await rm(temporaryDirectory, { recursive: true, force: true });
   }
+}
+
+/**
+ * Retains the Scene IR of an assembled federation: the same three files the
+ * adapter would have written. The structure is streamed through the canonical
+ * serializer into the file so a real-large scene never exists as one string;
+ * the bytes are exactly those `assembly.structure` digested.
+ */
+async function retainAssembledSceneIr(
+  assembly: IfcFederationAssembly,
+  outputDirectory: string,
+): Promise<void> {
+  const descriptor = openSync(resolve(outputDirectory, "scene-ir.json"), "w");
+  try {
+    const put = (chunk: string): void => {
+      const bytes = Buffer.from(chunk, "utf8");
+      let offset = 0;
+      while (offset < bytes.byteLength) {
+        offset += writeSync(descriptor, bytes, offset, bytes.byteLength - offset);
+      }
+    };
+    serializeCanonicalJson(assembly.scene, assembly.floats, put);
+    put("\n");
+  } finally {
+    closeSync(descriptor);
+  }
+  await Promise.all([
+    writeFile(resolve(outputDirectory, "scene-ir-geometry.bin"), assembly.geometry),
+    writeFile(resolve(outputDirectory, "scene-ir-properties.bin"), assembly.properties),
+  ]);
 }
 
 /**

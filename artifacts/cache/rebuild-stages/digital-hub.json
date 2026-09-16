@@ -1,7 +1,7 @@
 {
-  "schemaVersion": "naru.rebuild-stage-evidence.2",
+  "schemaVersion": "naru.rebuild-stage-evidence.3",
   "mode": "fresh-process-changed-discipline-transport-vs-clean-rebuild",
-  "recordedAt": "2026-09-13T05:54:17.007Z",
+  "recordedAt": "2026-09-15T15:06:35.276Z",
   "model": "digital-hub",
   "host": {
     "platform": "win32",
@@ -12,8 +12,8 @@
     "totalMemoryBytes": 33463021568
   },
   "commit": {
-    "head": "e6a78dd595530cb71044dff6eb238e44d984defa",
-    "describe": "perf: store bulk artifact geometry as raw regions (ADR-0019 slice 2) (#148)",
+    "head": "8fa8a35cf0ccf386974524d48c1521679d8e0e95",
+    "describe": "feat: assemble an IFC federation from cached document artifacts (ADR-0019 slice 3b-2)",
     "workingTreeClean": false
   },
   "fixture": {
@@ -65,7 +65,7 @@
     "changedSha256": "b428d64184f73a8ef5250efc64b3f9d2a9186cb3bca35296705023284dcd932c"
   },
   "adapter": {
-    "fingerprint": "272c4e3d8e8510b2312ea5c1510b3269cb4ec11691e4297b2df1eac88f77b49d",
+    "fingerprint": "955c13fb9769c0a7aebe52deef55dc8eef9320127d16f8562c0ff8d66e241810",
     "name": "IfcOpenShell",
     "schemaVersion": "naru.ifc-adapter-identity.1",
     "toolchain": {
@@ -83,16 +83,17 @@
     "spatialIndex": true,
     "relocateHierarchyNodes": true,
     "cacheDirectory": "output/rebuild-stages/digital-hub/cache",
+    "assembleFederation": true,
     "cleanArmCacheDirectory": null,
     "pythonExecutable": "output/venv-ifc/Scripts/python.exe"
   },
   "protocol": {
     "processIsolation": "Every sample and the warm-up is one fresh `node scripts/lib/ifc-cache-sample.mjs` process; the adapter is a fresh Python process inside it.",
-    "cacheState": "Warm-up extracts the ORIGINAL federation once (adapter only) so every document artifact is warm. Before each transport sample the package cache entries and the changed document's artifact are deleted; the unchanged documents' artifacts stay. Each transport sample therefore restores every unchanged document and re-extracts the changed one, and its package cache lookup is a miss. Each clean sample compiles the same changed federation with no cache directory: nothing is looked up, restored, or published.",
+    "cacheState": "Warm-up extracts the ORIGINAL federation once (adapter only) so every document artifact is warm. Before each transport sample the package cache entries and the changed document's artifact are deleted; the unchanged documents' artifacts stay. Each transport sample therefore runs the adapter in manifest mode: it restores every unchanged document, re-extracts the changed one, and writes a federation manifest instead of the Scene IR; the compiler then assembles the package from the document artifacts (`assembleFederation: true`), and its package cache lookup is a miss. Each clean sample compiles the same changed federation with no cache directory: nothing is looked up, restored, or published.",
     "ordering": "Per index: reset, transport sample, then clean sample, so host drift over the session lands on both arms alike.",
     "change": "architecture: \"#823= IFCEXTRUDEDAREASOLID(#817,#822,#20,7.77);\" -> \"#823= IFCEXTRUDEDAREASOLID(#817,#822,#20,9.77);\"",
     "timing": "Adapter stages come from `--stage-timing` (a separate ledger file, never the report); compiler stages from `stageTiming: true` on compileIfcFederation. Neither touches a package byte: every transport sample's packageDigest must equal the first transport sample's, and every clean sample's the first clean sample's.",
-    "sampleValidity": "A transport sample counts only when the process exits 0, the package cache misses, the document artifact hits are exactly the unchanged documents and the miss is exactly the changed one, no warning is emitted, the stage ledger is present, and the package digest equals the first transport sample's. A clean sample counts only when the process exits 0, the package cache and the document artifact cache are disabled, no warning is emitted, the stage ledger is present, and the package digest equals the first clean sample's. Up to 3 attempts per index and arm; every discarded attempt is recorded. Byte identity across the arms is gate 1's verdict, never a validity rule.",
+    "sampleValidity": "A transport sample counts only when the process exits 0, the package cache misses, the document artifact hits are exactly the unchanged documents and the miss is exactly the changed one, the compiler assembled the federation from the artifacts (no monolithic fallback), no warning is emitted, the stage ledger is present, and the package digest equals the first transport sample's. A clean sample counts only when the process exits 0, the package cache and the document artifact cache are disabled, no federation assembly took place, no warning is emitted, the stage ledger is present, and the package digest equals the first clean sample's. Up to 3 attempts per index and arm; every discarded attempt is recorded. Byte identity across the arms is gate 1's verdict, never a validity rule.",
     "statistics": "median; p95 nearest-rank; minimum; maximum over the accepted samples of each arm",
     "peakMemory": "os-sampled-win32-process-tree",
     "uncontrolled": "Other processes on the host, disk cache state between samples, and CPU frequency scaling."
@@ -103,9 +104,9 @@
   "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
   "cleanPackageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
   "warmUp": {
-    "adapterMilliseconds": 57123.6,
-    "processMilliseconds": 57179.5,
-    "peakWorkingSetBytes": 1823789056,
+    "adapterMilliseconds": 52044.3,
+    "processMilliseconds": 52089.6,
+    "peakWorkingSetBytes": 1852260352,
     "documentArtifactCache": {
       "hits": [],
       "misses": [
@@ -123,15 +124,15 @@
     {
       "index": 1,
       "exitCode": 0,
-      "processMilliseconds": 10346.6,
-      "compileMilliseconds": 10239.2,
-      "peakWorkingSetBytes": 441253888,
-      "peakPrivateBytes": 901632000,
+      "processMilliseconds": 9268.1,
+      "compileMilliseconds": 9171.9,
+      "peakWorkingSetBytes": 436633600,
+      "peakPrivateBytes": 905281536,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
         "status": "miss",
-        "key": "c753c0eb8631f253937b23dc32ce0be618ff1864dbeed6899fef695195a0a0e7"
+        "key": "cfcbead76a3097d54046f137c281271b0a92ec6945a7a0eb9c32027b5571b9e9"
       },
       "documentArtifactCache": {
         "hits": [
@@ -144,6 +145,39 @@
         ],
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "enabled"
+      },
+      "assembly": {
+        "status": "assembled",
+        "documents": [
+          {
+            "discipline": "architecture",
+            "artifactKey": "942f33bb36b6bcf5b288d5ac5e367e6eb53c947ecd580bdd632b79e873198463",
+            "artifactBytes": 1446993,
+            "payloadBytes": 8403516,
+            "structureBytes": 3767113
+          },
+          {
+            "discipline": "heating",
+            "artifactKey": "269b528f21c47b3a6d5afae8e4be5c96c4e655f3485047519a102716a82fb630",
+            "artifactBytes": 4484674,
+            "payloadBytes": 24799144,
+            "structureBytes": 10407517
+          },
+          {
+            "discipline": "plumbing",
+            "artifactKey": "2e8b5b2b9e433ce7e6ac3e0e734cd58fd1a1b725ad5647b98784bfe3e6f116ec",
+            "artifactBytes": 7328148,
+            "payloadBytes": 27126268,
+            "structureBytes": 6330282
+          },
+          {
+            "discipline": "ventilation",
+            "artifactKey": "1b0608f81175670b95672fb90c47d80f405c43616c6e6491ad7cab17701d072a",
+            "artifactBytes": 1428970,
+            "payloadBytes": 12301588,
+            "structureBytes": 8163306
+          }
+        ]
       },
       "warnings": [],
       "outputFiles": {
@@ -197,106 +231,100 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 10233.3019,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 9169.734,
         "stages": {
-          "inspectSources": 43.798100000000005,
-          "toolchainIdentity": 397.6999,
-          "cacheLookup": 0.47699999999997544,
-          "adapter": 6666.896699999999,
-          "readSceneIr": 1966.0606000000007,
-          "hydrate": 9.825699999999415,
-          "compile": 829.4542000000001,
-          "validateCompiled": 13.41189999999915,
-          "dependencyIndex": 34.15979999999945,
-          "writePackage": 169.52140000000145,
-          "writeDependencyIndex": 9.38760000000002,
+          "inspectSources": 46.40209999999999,
+          "toolchainIdentity": 359.6242,
+          "cacheLookup": 0.33730000000002747,
+          "adapter": 5670.159000000001,
+          "assembleFederation": 1859.2138999999997,
+          "readSceneIr": 0,
+          "hydrate": 13.848399999999856,
+          "compile": 890.8160999999991,
+          "validateCompiled": 13.286400000000867,
+          "dependencyIndex": 47.746000000001004,
+          "writePackage": 166.01480000000083,
+          "writeDependencyIndex": 8.6208000000006,
           "retainSceneIr": 0,
-          "cachePublish": 72.14589999999953
+          "cachePublish": 73.23970000000008
         },
-        "unattributedMilliseconds": 20.46310000000085,
-        "structureReadMilliseconds": 1960.5785999999998,
+        "unattributedMilliseconds": 20.42529999999897,
+        "structureReadMilliseconds": 0,
         "compileStages": {
-          "validateScene": 92.59890000000087,
-          "encodeGeometry": 313.5113999999994,
-          "measureDocument": 177.33430000000044,
-          "other": 246.0095999999994
+          "validateScene": 106.19220000000041,
+          "encodeGeometry": 331.46800000000076,
+          "measureDocument": 191.78479999999945,
+          "other": 261.3710999999985
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 72.91064453125,
-          "importMilliseconds": 237.79150390625,
-          "importsToMainMilliseconds": 4.72802734375,
-          "mainMilliseconds": 6276.23583984375,
-          "finishToCloseMilliseconds": 75.333984375,
+          "spawnToModuleStartMilliseconds": 56.779052734375,
+          "importMilliseconds": 208.299560546875,
+          "importsToMainMilliseconds": 3.98291015625,
+          "mainMilliseconds": 5356.981201171875,
+          "finishToCloseMilliseconds": 43.957275390625,
           "ledger": {
             "documents": [
               {
                 "artifactState": "absent",
                 "discipline": "architecture",
-                "extractMilliseconds": 4248.322900056839,
+                "extractMilliseconds": 4227.9496000004,
                 "outcome": "extracted",
-                "publishMilliseconds": 721.3781998157501,
-                "readMilliseconds": 9.933300018310547,
+                "publishMilliseconds": 722.1234999997541,
+                "readMilliseconds": 9.757099999580532,
                 "sourceBytes": 9022255
               },
               {
-                "artifactBytes": 4484677,
-                "artifactLoadMilliseconds": 42.76770004071295,
-                "artifactParseMilliseconds": 67.09940009750426,
+                "artifactBytes": 4484674,
+                "artifactLoadMilliseconds": 42.45829999990747,
+                "artifactParseMilliseconds": 58.57250000008207,
                 "artifactPayloadBytes": 24799144,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 9.894900023937225,
+                "artifactVerifyMilliseconds": 9.764500000073895,
                 "discipline": "heating",
                 "outcome": "restored",
-                "readMilliseconds": 12.773799896240234,
-                "restoreMilliseconds": 0.1548001766204834,
+                "readMilliseconds": 14.901599999982864,
+                "restoreMilliseconds": 7.441200000233948,
                 "sourceBytes": 20890415
               },
               {
-                "artifactBytes": 7328176,
-                "artifactLoadMilliseconds": 57.08820000290871,
-                "artifactParseMilliseconds": 40.349600138142705,
+                "artifactBytes": 7328148,
+                "artifactLoadMilliseconds": 63.33180000001448,
+                "artifactParseMilliseconds": 30.58680000003733,
                 "artifactPayloadBytes": 27126268,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 11.308100074529648,
+                "artifactVerifyMilliseconds": 10.696899999857123,
                 "discipline": "plumbing",
                 "outcome": "restored",
-                "readMilliseconds": 16.244699954986572,
-                "restoreMilliseconds": 0.1007997989654541,
+                "readMilliseconds": 15.623300000559539,
+                "restoreMilliseconds": 11.55129999993369,
                 "sourceBytes": 25178864
               },
               {
-                "artifactBytes": 1428967,
-                "artifactLoadMilliseconds": 24.096400011330843,
-                "artifactParseMilliseconds": 44.78139989078045,
+                "artifactBytes": 1428970,
+                "artifactLoadMilliseconds": 21.478900000147405,
+                "artifactParseMilliseconds": 38.51269999995566,
                 "artifactPayloadBytes": 12301588,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 4.912200151011348,
+                "artifactVerifyMilliseconds": 4.8271000000568165,
                 "discipline": "ventilation",
                 "outcome": "restored",
-                "readMilliseconds": 9.029399871826172,
-                "restoreMilliseconds": 0.12020015716552734,
+                "readMilliseconds": 8.119900000281632,
+                "restoreMilliseconds": 6.5775000005960464,
                 "sourceBytes": 12737833
               }
             ],
-            "federation": {
-              "mergeMilliseconds": 7.1275999546051025,
-              "propertyIndexMilliseconds": 62.24869990348816
-            },
-            "importMilliseconds": 237.79150390625,
+            "federation": {},
+            "importMilliseconds": 208.299560546875,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278543363.666,
-              "importsFinishedAtMs": 1789278537082.7021,
-              "mainStartedAtMs": 1789278537087.4302,
-              "moduleStartedAtMs": 1789278536844.9106
+              "finishedAtMs": 1789484494277.0427,
+              "importsFinishedAtMs": 1789484488916.0786,
+              "mainStartedAtMs": 1789484488920.0615,
+              "moduleStartedAtMs": 1789484488707.779
             },
             "write": {
-              "digestMilliseconds": 56.93180012702942,
-              "geometryMilliseconds": 88.74519991874695,
-              "propertiesMilliseconds": 9.794800281524658,
-              "reportMilliseconds": 1.397400140762329,
-              "structureMilliseconds": 682.0921001434326
+              "manifestMilliseconds": 0.9632999999448657
             }
           }
         }
@@ -305,15 +333,15 @@
     {
       "index": 2,
       "exitCode": 0,
-      "processMilliseconds": 10271.2,
-      "compileMilliseconds": 10167.5,
-      "peakWorkingSetBytes": 432340992,
-      "peakPrivateBytes": 894476288,
+      "processMilliseconds": 9211.1,
+      "compileMilliseconds": 9111.8,
+      "peakWorkingSetBytes": 443351040,
+      "peakPrivateBytes": 897044480,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
         "status": "miss",
-        "key": "c753c0eb8631f253937b23dc32ce0be618ff1864dbeed6899fef695195a0a0e7"
+        "key": "cfcbead76a3097d54046f137c281271b0a92ec6945a7a0eb9c32027b5571b9e9"
       },
       "documentArtifactCache": {
         "hits": [
@@ -326,6 +354,39 @@
         ],
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "enabled"
+      },
+      "assembly": {
+        "status": "assembled",
+        "documents": [
+          {
+            "discipline": "architecture",
+            "artifactKey": "942f33bb36b6bcf5b288d5ac5e367e6eb53c947ecd580bdd632b79e873198463",
+            "artifactBytes": 1446993,
+            "payloadBytes": 8403516,
+            "structureBytes": 3767113
+          },
+          {
+            "discipline": "heating",
+            "artifactKey": "269b528f21c47b3a6d5afae8e4be5c96c4e655f3485047519a102716a82fb630",
+            "artifactBytes": 4484674,
+            "payloadBytes": 24799144,
+            "structureBytes": 10407517
+          },
+          {
+            "discipline": "plumbing",
+            "artifactKey": "2e8b5b2b9e433ce7e6ac3e0e734cd58fd1a1b725ad5647b98784bfe3e6f116ec",
+            "artifactBytes": 7328148,
+            "payloadBytes": 27126268,
+            "structureBytes": 6330282
+          },
+          {
+            "discipline": "ventilation",
+            "artifactKey": "1b0608f81175670b95672fb90c47d80f405c43616c6e6491ad7cab17701d072a",
+            "artifactBytes": 1428970,
+            "payloadBytes": 12301588,
+            "structureBytes": 8163306
+          }
+        ]
       },
       "warnings": [],
       "outputFiles": {
@@ -379,106 +440,100 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 10161.6175,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 9109.4074,
         "stages": {
-          "inspectSources": 43.225500000000004,
-          "toolchainIdentity": 401.90729999999996,
-          "cacheLookup": 0.5955000000000155,
-          "adapter": 6611.1892,
-          "readSceneIr": 1934.8215,
-          "hydrate": 9.017899999998917,
-          "compile": 844.8233999999993,
-          "validateCompiled": 12.547899999999572,
-          "dependencyIndex": 33.25799999999981,
-          "writePackage": 169.23929999999928,
-          "writeDependencyIndex": 9.846400000000358,
+          "inspectSources": 43.1662,
+          "toolchainIdentity": 363.415,
+          "cacheLookup": 0.3025000000000091,
+          "adapter": 5601.3079,
+          "assembleFederation": 1817.7101000000002,
+          "readSceneIr": 0,
+          "hydrate": 14.03309999999965,
+          "compile": 933.0716000000002,
+          "validateCompiled": 13.860500000000684,
+          "dependencyIndex": 44.8695000000007,
+          "writePackage": 173.29050000000097,
+          "writeDependencyIndex": 8.760399999999208,
           "retainSceneIr": 0,
-          "cachePublish": 70.59929999999986
+          "cachePublish": 75.5575000000008
         },
-        "unattributedMilliseconds": 20.546300000003612,
-        "structureReadMilliseconds": 1929.6889999999994,
+        "unattributedMilliseconds": 20.062599999997474,
+        "structureReadMilliseconds": 0,
         "compileStages": {
-          "validateScene": 90.9331000000002,
-          "encodeGeometry": 312.7355000000007,
-          "measureDocument": 184.3019000000004,
-          "other": 256.85289999999804
+          "validateScene": 111.5631999999996,
+          "encodeGeometry": 329.91280000000006,
+          "measureDocument": 220.5106999999989,
+          "other": 271.08490000000165
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 66.611083984375,
-          "importMilliseconds": 235.42578125,
-          "importsToMainMilliseconds": 4.4248046875,
-          "mainMilliseconds": 6228.294189453125,
-          "finishToCloseMilliseconds": 76.244140625,
+          "spawnToModuleStartMilliseconds": 60.152099609375,
+          "importMilliseconds": 219.958984375,
+          "importsToMainMilliseconds": 4.081787109375,
+          "mainMilliseconds": 5276.879150390625,
+          "finishToCloseMilliseconds": 40.927978515625,
           "ledger": {
             "documents": [
               {
                 "artifactState": "absent",
                 "discipline": "architecture",
-                "extractMilliseconds": 4234.774399995804,
+                "extractMilliseconds": 4169.053100000136,
                 "outcome": "extracted",
-                "publishMilliseconds": 727.5199999809265,
-                "readMilliseconds": 5.484299898147583,
+                "publishMilliseconds": 724.9639000003226,
+                "readMilliseconds": 5.497899999842048,
                 "sourceBytes": 9022255
               },
               {
-                "artifactBytes": 4484677,
-                "artifactLoadMilliseconds": 45.826700050383806,
-                "artifactParseMilliseconds": 58.65969997830689,
+                "artifactBytes": 4484674,
+                "artifactLoadMilliseconds": 38.88730000016949,
+                "artifactParseMilliseconds": 56.697299999996176,
                 "artifactPayloadBytes": 24799144,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 9.96980001218617,
+                "artifactVerifyMilliseconds": 9.88229999984469,
                 "discipline": "heating",
                 "outcome": "restored",
-                "readMilliseconds": 12.895400047302246,
-                "restoreMilliseconds": 0.14819979667663574,
+                "readMilliseconds": 12.943500000052154,
+                "restoreMilliseconds": 7.3489999999292195,
                 "sourceBytes": 20890415
               },
               {
-                "artifactBytes": 7328176,
-                "artifactLoadMilliseconds": 55.16859982162714,
-                "artifactParseMilliseconds": 34.63530004955828,
+                "artifactBytes": 7328148,
+                "artifactLoadMilliseconds": 52.485600000181876,
+                "artifactParseMilliseconds": 29.320999999981723,
                 "artifactPayloadBytes": 27126268,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 10.797600029036403,
+                "artifactVerifyMilliseconds": 10.720599999785918,
                 "discipline": "plumbing",
                 "outcome": "restored",
-                "readMilliseconds": 15.882499933242798,
-                "restoreMilliseconds": 0.11430001258850098,
+                "readMilliseconds": 15.859100000467151,
+                "restoreMilliseconds": 12.57190000033006,
                 "sourceBytes": 25178864
               },
               {
-                "artifactBytes": 1428967,
-                "artifactLoadMilliseconds": 17.865800065919757,
-                "artifactParseMilliseconds": 43.37270022369921,
+                "artifactBytes": 1428970,
+                "artifactLoadMilliseconds": 16.670299999987037,
+                "artifactParseMilliseconds": 39.686300000084884,
                 "artifactPayloadBytes": 12301588,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 4.869900178164244,
+                "artifactVerifyMilliseconds": 4.8492000000806,
                 "discipline": "ventilation",
                 "outcome": "restored",
-                "readMilliseconds": 9.004699945449829,
-                "restoreMilliseconds": 0.12000012397766113,
+                "readMilliseconds": 8.253200000151992,
+                "restoreMilliseconds": 7.106099999975413,
                 "sourceBytes": 12737833
               }
             ],
-            "federation": {
-              "mergeMilliseconds": 7.028300046920776,
-              "propertyIndexMilliseconds": 63.89389967918396
-            },
-            "importMilliseconds": 235.42578125,
+            "federation": {},
+            "importMilliseconds": 219.958984375,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278607647.7559,
-              "importsFinishedAtMs": 1789278601415.0369,
-              "mainStartedAtMs": 1789278601419.4617,
-              "moduleStartedAtMs": 1789278601179.611
+              "finishedAtMs": 1789484558507.072,
+              "importsFinishedAtMs": 1789484553226.111,
+              "mainStartedAtMs": 1789484553230.1929,
+              "moduleStartedAtMs": 1789484553006.152
             },
             "write": {
-              "digestMilliseconds": 56.389999866485596,
-              "geometryMilliseconds": 82.06379985809326,
-              "propertiesMilliseconds": 8.007500171661377,
-              "reportMilliseconds": 1.3833999633789062,
-              "structureMilliseconds": 666.1087996959686
+              "manifestMilliseconds": 0.8338999999687076
             }
           }
         }
@@ -487,15 +542,15 @@
     {
       "index": 3,
       "exitCode": 0,
-      "processMilliseconds": 10373.8,
-      "compileMilliseconds": 10264.8,
-      "peakWorkingSetBytes": 448622592,
-      "peakPrivateBytes": 938635264,
+      "processMilliseconds": 9351.6,
+      "compileMilliseconds": 9253.3,
+      "peakWorkingSetBytes": 433561600,
+      "peakPrivateBytes": 904814592,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
         "status": "miss",
-        "key": "c753c0eb8631f253937b23dc32ce0be618ff1864dbeed6899fef695195a0a0e7"
+        "key": "cfcbead76a3097d54046f137c281271b0a92ec6945a7a0eb9c32027b5571b9e9"
       },
       "documentArtifactCache": {
         "hits": [
@@ -508,6 +563,39 @@
         ],
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "enabled"
+      },
+      "assembly": {
+        "status": "assembled",
+        "documents": [
+          {
+            "discipline": "architecture",
+            "artifactKey": "942f33bb36b6bcf5b288d5ac5e367e6eb53c947ecd580bdd632b79e873198463",
+            "artifactBytes": 1446993,
+            "payloadBytes": 8403516,
+            "structureBytes": 3767113
+          },
+          {
+            "discipline": "heating",
+            "artifactKey": "269b528f21c47b3a6d5afae8e4be5c96c4e655f3485047519a102716a82fb630",
+            "artifactBytes": 4484674,
+            "payloadBytes": 24799144,
+            "structureBytes": 10407517
+          },
+          {
+            "discipline": "plumbing",
+            "artifactKey": "2e8b5b2b9e433ce7e6ac3e0e734cd58fd1a1b725ad5647b98784bfe3e6f116ec",
+            "artifactBytes": 7328148,
+            "payloadBytes": 27126268,
+            "structureBytes": 6330282
+          },
+          {
+            "discipline": "ventilation",
+            "artifactKey": "1b0608f81175670b95672fb90c47d80f405c43616c6e6491ad7cab17701d072a",
+            "artifactBytes": 1428970,
+            "payloadBytes": 12301588,
+            "structureBytes": 8163306
+          }
+        ]
       },
       "warnings": [],
       "outputFiles": {
@@ -561,106 +649,100 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 10258.8372,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 9251.034099999999,
         "stages": {
-          "inspectSources": 43.179899999999996,
-          "toolchainIdentity": 401.238,
-          "cacheLookup": 0.5647999999999911,
-          "adapter": 6611.2985,
-          "readSceneIr": 2014.0381000000007,
-          "hydrate": 9.25930000000153,
-          "compile": 852.2602999999999,
-          "validateCompiled": 13.508099999999104,
-          "dependencyIndex": 33.96010000000024,
-          "writePackage": 174.96589999999924,
-          "writeDependencyIndex": 10.182200000001103,
+          "inspectSources": 44.004900000000006,
+          "toolchainIdentity": 373.3126,
+          "cacheLookup": 0.29850000000004684,
+          "adapter": 5761.4068,
+          "assembleFederation": 1813.4206000000004,
+          "readSceneIr": 0,
+          "hydrate": 14.514799999999923,
+          "compile": 891.8483999999999,
+          "validateCompiled": 16.26170000000093,
+          "dependencyIndex": 51.48959999999897,
+          "writePackage": 182.6298000000006,
+          "writeDependencyIndex": 8.687700000000405,
           "retainSceneIr": 0,
-          "cachePublish": 74.05709999999999
+          "cachePublish": 73.08050000000003
         },
-        "unattributedMilliseconds": 20.324899999999616,
-        "structureReadMilliseconds": 2008.7796000000008,
+        "unattributedMilliseconds": 20.078199999998105,
+        "structureReadMilliseconds": 0,
         "compileStages": {
-          "validateScene": 93.58449999999903,
-          "encodeGeometry": 322.1936000000005,
-          "measureDocument": 220.35799999999836,
-          "other": 216.12420000000202
+          "validateScene": 111.17020000000048,
+          "encodeGeometry": 338.3253000000004,
+          "measureDocument": 186.17120000000068,
+          "other": 256.1816999999983
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 69.03515625,
-          "importMilliseconds": 235.93798828125,
-          "importsToMainMilliseconds": 4.705810546875,
-          "mainMilliseconds": 6226.76318359375,
-          "finishToCloseMilliseconds": 74.557861328125,
+          "spawnToModuleStartMilliseconds": 58.873291015625,
+          "importMilliseconds": 222.013427734375,
+          "importsToMainMilliseconds": 4.9609375,
+          "mainMilliseconds": 5434.6552734375,
+          "finishToCloseMilliseconds": 40.4970703125,
           "ledger": {
             "documents": [
               {
                 "artifactState": "absent",
                 "discipline": "architecture",
-                "extractMilliseconds": 4160.574500083923,
+                "extractMilliseconds": 4305.148700000253,
                 "outcome": "extracted",
-                "publishMilliseconds": 747.2704999446869,
-                "readMilliseconds": 5.533399820327759,
+                "publishMilliseconds": 727.4025000003166,
+                "readMilliseconds": 5.555199999827892,
                 "sourceBytes": 9022255
               },
               {
-                "artifactBytes": 4484677,
-                "artifactLoadMilliseconds": 44.53380010090768,
-                "artifactParseMilliseconds": 59.484700206667185,
+                "artifactBytes": 4484674,
+                "artifactLoadMilliseconds": 39.02620000008028,
+                "artifactParseMilliseconds": 56.22770000036326,
                 "artifactPayloadBytes": 24799144,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 10.297299828380346,
+                "artifactVerifyMilliseconds": 9.736399999837886,
                 "discipline": "heating",
                 "outcome": "restored",
-                "readMilliseconds": 13.315599918365479,
-                "restoreMilliseconds": 0.14819979667663574,
+                "readMilliseconds": 12.497200000099838,
+                "restoreMilliseconds": 7.061499999836087,
                 "sourceBytes": 20890415
               },
               {
-                "artifactBytes": 7328176,
-                "artifactLoadMilliseconds": 54.52009988948703,
-                "artifactParseMilliseconds": 31.368799973279238,
+                "artifactBytes": 7328148,
+                "artifactLoadMilliseconds": 61.68120000029376,
+                "artifactParseMilliseconds": 39.17890000002444,
                 "artifactPayloadBytes": 27126268,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 10.692399926483631,
+                "artifactVerifyMilliseconds": 10.73050000013609,
                 "discipline": "plumbing",
                 "outcome": "restored",
-                "readMilliseconds": 15.529799938201904,
-                "restoreMilliseconds": 0.09770011901855469,
+                "readMilliseconds": 15.92379999998957,
+                "restoreMilliseconds": 11.8843999998644,
                 "sourceBytes": 25178864
               },
               {
-                "artifactBytes": 1428967,
-                "artifactLoadMilliseconds": 16.695400001481175,
-                "artifactParseMilliseconds": 46.936600003391504,
+                "artifactBytes": 1428970,
+                "artifactLoadMilliseconds": 16.530299999885756,
+                "artifactParseMilliseconds": 39.348899999822606,
                 "artifactPayloadBytes": 12301588,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 4.854599945247173,
+                "artifactVerifyMilliseconds": 4.856500000187225,
                 "discipline": "ventilation",
                 "outcome": "restored",
-                "readMilliseconds": 8.244800090789795,
-                "restoreMilliseconds": 0.11990022659301758,
+                "readMilliseconds": 8.219199999701232,
+                "restoreMilliseconds": 6.544800000265241,
                 "sourceBytes": 12737833
               }
             ],
-            "federation": {
-              "mergeMilliseconds": 8.747099876403809,
-              "propertyIndexMilliseconds": 85.3371000289917
-            },
-            "importMilliseconds": 235.93798828125,
+            "federation": {},
+            "importMilliseconds": 222.013427734375,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278671831.4421,
-              "importsFinishedAtMs": 1789278665599.9731,
-              "mainStartedAtMs": 1789278665604.679,
-              "moduleStartedAtMs": 1789278665364.0352
+              "finishedAtMs": 1789484618674.503,
+              "importsFinishedAtMs": 1789484613234.8867,
+              "mainStartedAtMs": 1789484613239.8477,
+              "moduleStartedAtMs": 1789484613012.8733
             },
             "write": {
-              "digestMilliseconds": 60.78920006752014,
-              "geometryMilliseconds": 99.77439999580383,
-              "propertiesMilliseconds": 8.388700008392334,
-              "reportMilliseconds": 1.32889986038208,
-              "structureMilliseconds": 684.6624000072479
+              "manifestMilliseconds": 0.9035000000149012
             }
           }
         }
@@ -669,15 +751,15 @@
     {
       "index": 4,
       "exitCode": 0,
-      "processMilliseconds": 10250.5,
-      "compileMilliseconds": 10143.2,
-      "peakWorkingSetBytes": 441708544,
-      "peakPrivateBytes": 905908224,
+      "processMilliseconds": 9138.1,
+      "compileMilliseconds": 9039.5,
+      "peakWorkingSetBytes": 430436352,
+      "peakPrivateBytes": 900419584,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
         "status": "miss",
-        "key": "c753c0eb8631f253937b23dc32ce0be618ff1864dbeed6899fef695195a0a0e7"
+        "key": "cfcbead76a3097d54046f137c281271b0a92ec6945a7a0eb9c32027b5571b9e9"
       },
       "documentArtifactCache": {
         "hits": [
@@ -690,6 +772,39 @@
         ],
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "enabled"
+      },
+      "assembly": {
+        "status": "assembled",
+        "documents": [
+          {
+            "discipline": "architecture",
+            "artifactKey": "942f33bb36b6bcf5b288d5ac5e367e6eb53c947ecd580bdd632b79e873198463",
+            "artifactBytes": 1446993,
+            "payloadBytes": 8403516,
+            "structureBytes": 3767113
+          },
+          {
+            "discipline": "heating",
+            "artifactKey": "269b528f21c47b3a6d5afae8e4be5c96c4e655f3485047519a102716a82fb630",
+            "artifactBytes": 4484674,
+            "payloadBytes": 24799144,
+            "structureBytes": 10407517
+          },
+          {
+            "discipline": "plumbing",
+            "artifactKey": "2e8b5b2b9e433ce7e6ac3e0e734cd58fd1a1b725ad5647b98784bfe3e6f116ec",
+            "artifactBytes": 7328148,
+            "payloadBytes": 27126268,
+            "structureBytes": 6330282
+          },
+          {
+            "discipline": "ventilation",
+            "artifactKey": "1b0608f81175670b95672fb90c47d80f405c43616c6e6491ad7cab17701d072a",
+            "artifactBytes": 1428970,
+            "payloadBytes": 12301588,
+            "structureBytes": 8163306
+          }
+        ]
       },
       "warnings": [],
       "outputFiles": {
@@ -743,106 +858,100 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 10137.794699999999,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 9037.296900000001,
         "stages": {
-          "inspectSources": 43.7508,
-          "toolchainIdentity": 407.2398,
-          "cacheLookup": 0.5591000000000008,
-          "adapter": 6592.593,
-          "readSceneIr": 1878.224000000001,
-          "hydrate": 8.942799999998897,
-          "compile": 870.4809999999998,
-          "validateCompiled": 13.279899999999543,
-          "dependencyIndex": 34.76020000000062,
-          "writePackage": 185.938900000001,
-          "writeDependencyIndex": 9.456000000000131,
+          "inspectSources": 43.221199999999996,
+          "toolchainIdentity": 366.29019999999997,
+          "cacheLookup": 0.335899999999981,
+          "adapter": 5601.2301,
+          "assembleFederation": 1777.1818999999996,
+          "readSceneIr": 0,
+          "hydrate": 13.871600000000399,
+          "compile": 896.9293000000007,
+          "validateCompiled": 13.048399999999674,
+          "dependencyIndex": 53.141599999999016,
+          "writePackage": 167.8706999999995,
+          "writeDependencyIndex": 9.072400000000926,
           "retainSceneIr": 0,
-          "cachePublish": 71.55270000000019
+          "cachePublish": 74.96119999999974
         },
-        "unattributedMilliseconds": 21.016499999997905,
-        "structureReadMilliseconds": 1872.6675999999989,
+        "unattributedMilliseconds": 20.142400000002453,
+        "structureReadMilliseconds": 0,
         "compileStages": {
-          "validateScene": 89.39579999999842,
-          "encodeGeometry": 377.29829999999856,
-          "measureDocument": 178.3176999999996,
-          "other": 225.46920000000318
+          "validateScene": 109.94530000000032,
+          "encodeGeometry": 334.3211999999994,
+          "measureDocument": 193.36299999999937,
+          "other": 259.2998000000016
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 67.104736328125,
-          "importMilliseconds": 242.845458984375,
-          "importsToMainMilliseconds": 4.896484375,
-          "mainMilliseconds": 6186.381591796875,
-          "finishToCloseMilliseconds": 91.771728515625,
+          "spawnToModuleStartMilliseconds": 58.524169921875,
+          "importMilliseconds": 220.982421875,
+          "importsToMainMilliseconds": 5.404052734375,
+          "mainMilliseconds": 5276.86328125,
+          "finishToCloseMilliseconds": 39.22607421875,
           "ledger": {
             "documents": [
               {
                 "artifactState": "absent",
                 "discipline": "architecture",
-                "extractMilliseconds": 4215.825899839401,
+                "extractMilliseconds": 4157.851799999829,
                 "outcome": "extracted",
-                "publishMilliseconds": 720.6389999389648,
-                "readMilliseconds": 5.49120020866394,
+                "publishMilliseconds": 720.1961999996565,
+                "readMilliseconds": 5.54009999986738,
                 "sourceBytes": 9022255
               },
               {
-                "artifactBytes": 4484677,
-                "artifactLoadMilliseconds": 42.2388999722898,
-                "artifactParseMilliseconds": 57.2223998606205,
+                "artifactBytes": 4484674,
+                "artifactLoadMilliseconds": 38.87539999959699,
+                "artifactParseMilliseconds": 54.98410000018339,
                 "artifactPayloadBytes": 24799144,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 9.810300078243017,
+                "artifactVerifyMilliseconds": 9.774099999958707,
                 "discipline": "heating",
                 "outcome": "restored",
-                "readMilliseconds": 13.441200017929077,
-                "restoreMilliseconds": 0.14640021324157715,
+                "readMilliseconds": 12.357599999755621,
+                "restoreMilliseconds": 7.049899999517947,
                 "sourceBytes": 20890415
               },
               {
-                "artifactBytes": 7328176,
-                "artifactLoadMilliseconds": 51.35699990205467,
-                "artifactParseMilliseconds": 30.82640003412962,
+                "artifactBytes": 7328148,
+                "artifactLoadMilliseconds": 51.29520000036791,
+                "artifactParseMilliseconds": 43.91849999956321,
                 "artifactPayloadBytes": 27126268,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 10.635000187903643,
+                "artifactVerifyMilliseconds": 10.669600000255741,
                 "discipline": "plumbing",
                 "outcome": "restored",
-                "readMilliseconds": 16.401899814605713,
-                "restoreMilliseconds": 0.09719967842102051,
+                "readMilliseconds": 15.616100000217557,
+                "restoreMilliseconds": 16.220599999651313,
                 "sourceBytes": 25178864
               },
               {
-                "artifactBytes": 1428967,
-                "artifactLoadMilliseconds": 16.721300082281232,
-                "artifactParseMilliseconds": 41.017299983650446,
+                "artifactBytes": 1428970,
+                "artifactLoadMilliseconds": 17.336400000203867,
+                "artifactParseMilliseconds": 39.28069999983563,
                 "artifactPayloadBytes": 12301588,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 4.8512001521885395,
+                "artifactVerifyMilliseconds": 4.86559999990277,
                 "discipline": "ventilation",
                 "outcome": "restored",
-                "readMilliseconds": 8.432499885559082,
-                "restoreMilliseconds": 0.11820006370544434,
+                "readMilliseconds": 9.533400000073016,
+                "restoreMilliseconds": 7.239700000267476,
                 "sourceBytes": 12737833
               }
             ],
-            "federation": {
-              "mergeMilliseconds": 6.385900020599365,
-              "propertyIndexMilliseconds": 59.75099992752075
-            },
-            "importMilliseconds": 242.845458984375,
+            "federation": {},
+            "importMilliseconds": 220.982421875,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278735270.2283,
-              "importsFinishedAtMs": 1789278729078.9502,
-              "mainStartedAtMs": 1789278729083.8467,
-              "moduleStartedAtMs": 1789278728836.1047
+              "finishedAtMs": 1789484680045.774,
+              "importsFinishedAtMs": 1789484674763.5066,
+              "mainStartedAtMs": 1789484674768.9106,
+              "moduleStartedAtMs": 1789484674542.5242
             },
             "write": {
-              "digestMilliseconds": 58.692699909210205,
-              "geometryMilliseconds": 82.21160006523132,
-              "propertiesMilliseconds": 12.529899835586548,
-              "reportMilliseconds": 1.6668002605438232,
-              "structureMilliseconds": 672.2139999866486
+              "manifestMilliseconds": 0.7570999995805323
             }
           }
         }
@@ -851,15 +960,15 @@
     {
       "index": 5,
       "exitCode": 0,
-      "processMilliseconds": 10302.4,
-      "compileMilliseconds": 10191.6,
-      "peakWorkingSetBytes": 446070784,
-      "peakPrivateBytes": 920989696,
+      "processMilliseconds": 9458.9,
+      "compileMilliseconds": 9355.1,
+      "peakWorkingSetBytes": 434372608,
+      "peakPrivateBytes": 903065600,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
         "status": "miss",
-        "key": "c753c0eb8631f253937b23dc32ce0be618ff1864dbeed6899fef695195a0a0e7"
+        "key": "cfcbead76a3097d54046f137c281271b0a92ec6945a7a0eb9c32027b5571b9e9"
       },
       "documentArtifactCache": {
         "hits": [
@@ -872,6 +981,39 @@
         ],
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "enabled"
+      },
+      "assembly": {
+        "status": "assembled",
+        "documents": [
+          {
+            "discipline": "architecture",
+            "artifactKey": "942f33bb36b6bcf5b288d5ac5e367e6eb53c947ecd580bdd632b79e873198463",
+            "artifactBytes": 1446993,
+            "payloadBytes": 8403516,
+            "structureBytes": 3767113
+          },
+          {
+            "discipline": "heating",
+            "artifactKey": "269b528f21c47b3a6d5afae8e4be5c96c4e655f3485047519a102716a82fb630",
+            "artifactBytes": 4484674,
+            "payloadBytes": 24799144,
+            "structureBytes": 10407517
+          },
+          {
+            "discipline": "plumbing",
+            "artifactKey": "2e8b5b2b9e433ce7e6ac3e0e734cd58fd1a1b725ad5647b98784bfe3e6f116ec",
+            "artifactBytes": 7328148,
+            "payloadBytes": 27126268,
+            "structureBytes": 6330282
+          },
+          {
+            "discipline": "ventilation",
+            "artifactKey": "1b0608f81175670b95672fb90c47d80f405c43616c6e6491ad7cab17701d072a",
+            "artifactBytes": 1428970,
+            "payloadBytes": 12301588,
+            "structureBytes": 8163306
+          }
+        ]
       },
       "warnings": [],
       "outputFiles": {
@@ -925,106 +1067,100 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 10185.2626,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 9352.3565,
         "stages": {
-          "inspectSources": 43.5448,
-          "toolchainIdentity": 414.30369999999994,
-          "cacheLookup": 0.4959999999999809,
-          "adapter": 6614.3594,
-          "readSceneIr": 1878.0240000000003,
-          "hydrate": 8.991500000000087,
-          "compile": 874.7049000000006,
-          "validateCompiled": 14.162700000000768,
-          "dependencyIndex": 36.57220000000052,
-          "writePackage": 199.65369999999893,
-          "writeDependencyIndex": 8.509799999999814,
+          "inspectSources": 43.460100000000004,
+          "toolchainIdentity": 359.45300000000003,
+          "cacheLookup": 0.28940000000000055,
+          "adapter": 5749.6947,
+          "assembleFederation": 1933.5767000000005,
+          "readSceneIr": 0,
+          "hydrate": 14.565899999999601,
+          "compile": 906.7762999999995,
+          "validateCompiled": 13.131400000000212,
+          "dependencyIndex": 43.60870000000068,
+          "writePackage": 181.29130000000077,
+          "writeDependencyIndex": 8.721700000000055,
           "retainSceneIr": 0,
-          "cachePublish": 71.02749999999833
+          "cachePublish": 77.57770000000164
         },
-        "unattributedMilliseconds": 20.912399999999252,
-        "structureReadMilliseconds": 1872.3415999999997,
+        "unattributedMilliseconds": 20.2095999999965,
+        "structureReadMilliseconds": 0,
         "compileStages": {
-          "validateScene": 93.51889999999912,
-          "encodeGeometry": 373.372800000001,
-          "measureDocument": 175.5542000000005,
-          "other": 232.25900000000001
+          "validateScene": 122.46579999999994,
+          "encodeGeometry": 322.6923000000006,
+          "measureDocument": 195.33239999999932,
+          "other": 266.28579999999965
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 69.216552734375,
-          "importMilliseconds": 240.921142578125,
-          "importsToMainMilliseconds": 4.3349609375,
-          "mainMilliseconds": 6220.626220703125,
-          "finishToCloseMilliseconds": 78.901123046875,
+          "spawnToModuleStartMilliseconds": 56.27734375,
+          "importMilliseconds": 212.2041015625,
+          "importsToMainMilliseconds": 4.055908203125,
+          "mainMilliseconds": 5436.181396484375,
+          "finishToCloseMilliseconds": 40.28125,
           "ledger": {
             "documents": [
               {
                 "artifactState": "absent",
                 "discipline": "architecture",
-                "extractMilliseconds": 4247.646800041199,
+                "extractMilliseconds": 4300.756200000178,
                 "outcome": "extracted",
-                "publishMilliseconds": 725.9278998374939,
-                "readMilliseconds": 5.451599836349487,
+                "publishMilliseconds": 730.4488999997266,
+                "readMilliseconds": 5.44150000018999,
                 "sourceBytes": 9022255
               },
               {
-                "artifactBytes": 4484677,
-                "artifactLoadMilliseconds": 42.035800172016025,
-                "artifactParseMilliseconds": 57.39209987223148,
+                "artifactBytes": 4484674,
+                "artifactLoadMilliseconds": 43.85649999994712,
+                "artifactParseMilliseconds": 62.7332999997634,
                 "artifactPayloadBytes": 24799144,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 9.77239990606904,
+                "artifactVerifyMilliseconds": 9.805599999708647,
                 "discipline": "heating",
                 "outcome": "restored",
-                "readMilliseconds": 12.88730001449585,
-                "restoreMilliseconds": 0.1512000560760498,
+                "readMilliseconds": 12.453099999576807,
+                "restoreMilliseconds": 7.838700000196695,
                 "sourceBytes": 20890415
               },
               {
-                "artifactBytes": 7328176,
-                "artifactLoadMilliseconds": 51.467200042679906,
-                "artifactParseMilliseconds": 31.268100021407008,
+                "artifactBytes": 7328148,
+                "artifactLoadMilliseconds": 56.1056000001372,
+                "artifactParseMilliseconds": 32.57839999969292,
                 "artifactPayloadBytes": 27126268,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 10.773600079119205,
+                "artifactVerifyMilliseconds": 10.737999999946624,
                 "discipline": "plumbing",
                 "outcome": "restored",
-                "readMilliseconds": 15.550099849700928,
-                "restoreMilliseconds": 0.10680007934570312,
+                "readMilliseconds": 15.842399999964982,
+                "restoreMilliseconds": 12.632299999706447,
                 "sourceBytes": 25178864
               },
               {
-                "artifactBytes": 1428967,
-                "artifactLoadMilliseconds": 16.57039998099208,
-                "artifactParseMilliseconds": 38.560399785637856,
+                "artifactBytes": 1428970,
+                "artifactLoadMilliseconds": 17.797699999846373,
+                "artifactParseMilliseconds": 42.47280000026876,
                 "artifactPayloadBytes": 12301588,
                 "artifactState": "verified",
-                "artifactVerifyMilliseconds": 4.855000181123614,
+                "artifactVerifyMilliseconds": 4.877500000020518,
                 "discipline": "ventilation",
                 "outcome": "restored",
-                "readMilliseconds": 8.274500131607056,
-                "restoreMilliseconds": 0.1202998161315918,
+                "readMilliseconds": 8.349200000055134,
+                "restoreMilliseconds": 7.4354999996721745,
                 "sourceBytes": 12737833
               }
             ],
-            "federation": {
-              "mergeMilliseconds": 6.5838000774383545,
-              "propertyIndexMilliseconds": 61.564199924468994
-            },
-            "importMilliseconds": 240.921142578125,
+            "federation": {},
+            "importMilliseconds": 212.2041015625,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278800140.0989,
-              "importsFinishedAtMs": 1789278793915.1377,
-              "mainStartedAtMs": 1789278793919.4727,
-              "moduleStartedAtMs": 1789278793674.2166
+              "finishedAtMs": 1789484739952.7188,
+              "importsFinishedAtMs": 1789484734512.4814,
+              "mainStartedAtMs": 1789484734516.5374,
+              "moduleStartedAtMs": 1789484734300.2773
             },
             "write": {
-              "digestMilliseconds": 57.932600021362305,
-              "geometryMilliseconds": 81.02509999275208,
-              "propertiesMilliseconds": 11.2399001121521,
-              "reportMilliseconds": 1.6546001434326172,
-              "structureMilliseconds": 674.7221999168396
+              "manifestMilliseconds": 0.7722999998368323
             }
           }
         }
@@ -1035,10 +1171,10 @@
     {
       "index": 1,
       "exitCode": 0,
-      "processMilliseconds": 53825.4,
-      "compileMilliseconds": 53689.8,
-      "peakWorkingSetBytes": 1822502912,
-      "peakPrivateBytes": 2364850176,
+      "processMilliseconds": 54870.9,
+      "compileMilliseconds": 54756.1,
+      "peakWorkingSetBytes": 1838301184,
+      "peakPrivateBytes": 2400636928,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
@@ -1050,6 +1186,7 @@
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "disabled"
       },
+      "assembly": null,
       "warnings": [],
       "outputFiles": {
         "adapter-report.json": {
@@ -1102,86 +1239,87 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 53683.248999999996,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 54749.6815,
         "stages": {
-          "inspectSources": 43.985,
-          "toolchainIdentity": 0.028299999999987335,
+          "inspectSources": 43.1671,
+          "toolchainIdentity": 0.03259999999998797,
           "cacheLookup": 0,
-          "adapter": 50603.2535,
-          "readSceneIr": 1907.725900000005,
-          "hydrate": 8.85120000000461,
-          "compile": 839.4779999999955,
-          "validateCompiled": 14.062299999997776,
-          "dependencyIndex": 42.435800000006566,
-          "writePackage": 193.168700000002,
-          "writeDependencyIndex": 9.293699999994715,
+          "adapter": 51721.3341,
+          "assembleFederation": 0,
+          "readSceneIr": 1893.7364000000016,
+          "hydrate": 9.561099999998987,
+          "compile": 830.6849999999977,
+          "validateCompiled": 14.311500000003434,
+          "dependencyIndex": 34.921500000004016,
+          "writePackage": 173.10020000000077,
+          "writeDependencyIndex": 8.568599999998696,
           "retainSceneIr": 0,
           "cachePublish": 0
         },
-        "unattributedMilliseconds": 20.966599999992468,
-        "structureReadMilliseconds": 1903.0956000000006,
+        "unattributedMilliseconds": 20.26339999999618,
+        "structureReadMilliseconds": 1887.4700000000012,
         "compileStages": {
-          "validateScene": 91.75250000000233,
-          "encodeGeometry": 360.2989000000016,
-          "measureDocument": 179.0627999999997,
-          "other": 208.3637999999919
+          "validateScene": 95.31970000000001,
+          "encodeGeometry": 332.1438000000053,
+          "measureDocument": 178.96839999999793,
+          "other": 224.25309999999445
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 76.541259765625,
-          "importMilliseconds": 241.08935546875,
-          "importsToMainMilliseconds": 4.660400390625,
-          "mainMilliseconds": 50181.58740234375,
-          "finishToCloseMilliseconds": 99.12158203125,
+          "spawnToModuleStartMilliseconds": 62.7314453125,
+          "importMilliseconds": 258.513671875,
+          "importsToMainMilliseconds": 43.71240234375,
+          "mainMilliseconds": 51262.24755859375,
+          "finishToCloseMilliseconds": 93.794921875,
           "ledger": {
             "documents": [
               {
                 "discipline": "architecture",
-                "extractMilliseconds": 4146.636699914932,
+                "extractMilliseconds": 4716.611599999946,
                 "outcome": "extracted",
-                "readMilliseconds": 5.4303998947143555,
+                "readMilliseconds": 9.293300000019372,
                 "sourceBytes": 9022255
               },
               {
                 "discipline": "heating",
-                "extractMilliseconds": 13764.439999818802,
+                "extractMilliseconds": 14241.375,
                 "outcome": "extracted",
-                "readMilliseconds": 12.876100063323975,
+                "readMilliseconds": 12.851600000169128,
                 "sourceBytes": 20890415
               },
               {
                 "discipline": "plumbing",
-                "extractMilliseconds": 25709.799299955368,
+                "extractMilliseconds": 25832.955600000452,
                 "outcome": "extracted",
-                "readMilliseconds": 15.491400003433228,
+                "readMilliseconds": 15.128200000151992,
                 "sourceBytes": 25178864
               },
               {
                 "discipline": "ventilation",
-                "extractMilliseconds": 5425.183299779892,
+                "extractMilliseconds": 5348.691199999768,
                 "outcome": "extracted",
-                "readMilliseconds": 8.449199914932251,
+                "readMilliseconds": 8.363200000021607,
                 "sourceBytes": 12737833
               }
             ],
             "federation": {
-              "mergeMilliseconds": 9.135800123214722,
-              "propertyIndexMilliseconds": 55.39800000190735
+              "mergeMilliseconds": 9.156299999915063,
+              "propertyIndexMilliseconds": 55.153800000436604
             },
-            "importMilliseconds": 241.08935546875,
+            "importMilliseconds": 258.513671875,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278597311.8784,
-              "importsFinishedAtMs": 1789278547125.6306,
-              "mainStartedAtMs": 1789278547130.291,
-              "moduleStartedAtMs": 1789278546884.5413
+              "finishedAtMs": 1789484549261.205,
+              "importsFinishedAtMs": 1789484497955.245,
+              "mainStartedAtMs": 1789484497998.9575,
+              "moduleStartedAtMs": 1789484497696.7314
             },
             "write": {
-              "digestMilliseconds": 58.324300050735474,
-              "geometryMilliseconds": 237.9233000278473,
-              "propertiesMilliseconds": 8.678300142288208,
-              "reportMilliseconds": 1.3855998516082764,
-              "structureMilliseconds": 717.5346999168396
+              "digestMilliseconds": 59.490299999248236,
+              "geometryMilliseconds": 246.63699999963865,
+              "propertiesMilliseconds": 8.738499999511987,
+              "reportMilliseconds": 1.7602999997325242,
+              "structureMilliseconds": 688.4909000000916
             }
           }
         }
@@ -1190,10 +1328,10 @@
     {
       "index": 2,
       "exitCode": 0,
-      "processMilliseconds": 53754.4,
-      "compileMilliseconds": 53623.5,
-      "peakWorkingSetBytes": 1824673792,
-      "peakPrivateBytes": 2374909952,
+      "processMilliseconds": 50623.7,
+      "compileMilliseconds": 50506.2,
+      "peakWorkingSetBytes": 1813430272,
+      "peakPrivateBytes": 2362486784,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
@@ -1205,6 +1343,7 @@
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "disabled"
       },
+      "assembly": null,
       "warnings": [],
       "outputFiles": {
         "adapter-report.json": {
@@ -1257,86 +1396,87 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 53616.5874,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 50499.8528,
         "stages": {
-          "inspectSources": 44.262100000000004,
-          "toolchainIdentity": 0.03130000000000166,
+          "inspectSources": 43.3146,
+          "toolchainIdentity": 0.028799999999989723,
           "cacheLookup": 0,
-          "adapter": 50501.366200000004,
-          "readSceneIr": 1951.9240999999965,
-          "hydrate": 9.645199999999022,
-          "compile": 847.8603999999978,
-          "validateCompiled": 13.795200000000477,
-          "dependencyIndex": 33.8347999999969,
-          "writePackage": 183.85800000000017,
-          "writeDependencyIndex": 9.860500000002503,
+          "adapter": 47407.8018,
+          "assembleFederation": 0,
+          "readSceneIr": 1919.3613000000041,
+          "hydrate": 9.36989999999787,
+          "compile": 861.9488999999958,
+          "validateCompiled": 15.099999999998545,
+          "dependencyIndex": 37.944799999997485,
+          "writePackage": 175.71869999999763,
+          "writeDependencyIndex": 8.861599999996542,
           "retainSceneIr": 0,
           "cachePublish": 0
         },
-        "unattributedMilliseconds": 20.149599999997008,
-        "structureReadMilliseconds": 1946.0570999999982,
+        "unattributedMilliseconds": 20.402400000013586,
+        "structureReadMilliseconds": 1914.2347999999984,
         "compileStages": {
-          "validateScene": 94.40120000000024,
-          "encodeGeometry": 361.0339000000022,
-          "measureDocument": 179.87129999999888,
-          "other": 212.55399999999645
+          "validateScene": 95.238400000002,
+          "encodeGeometry": 361.57450000000244,
+          "measureDocument": 190.95769999999902,
+          "other": 214.1782999999923
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 75.149169921875,
-          "importMilliseconds": 245.4921875,
-          "importsToMainMilliseconds": 4.775146484375,
-          "mainMilliseconds": 50087.18505859375,
-          "finishToCloseMilliseconds": 88.3984375,
+          "spawnToModuleStartMilliseconds": 65.489013671875,
+          "importMilliseconds": 218.92626953125,
+          "importsToMainMilliseconds": 4.177490234375,
+          "mainMilliseconds": 47028.447998046875,
+          "finishToCloseMilliseconds": 90.959228515625,
           "ledger": {
             "documents": [
               {
                 "discipline": "architecture",
-                "extractMilliseconds": 4185.504300117493,
+                "extractMilliseconds": 4167.563099999912,
                 "outcome": "extracted",
-                "readMilliseconds": 5.412300109863281,
+                "readMilliseconds": 5.397399999666959,
                 "sourceBytes": 9022255
               },
               {
                 "discipline": "heating",
-                "extractMilliseconds": 13694.415600061417,
+                "extractMilliseconds": 12983.152599999681,
                 "outcome": "extracted",
-                "readMilliseconds": 12.789099931716919,
+                "readMilliseconds": 13.431899999734014,
                 "sourceBytes": 20890415
               },
               {
                 "discipline": "plumbing",
-                "extractMilliseconds": 25746.84500002861,
+                "extractMilliseconds": 23699.46499999985,
                 "outcome": "extracted",
-                "readMilliseconds": 15.54449987411499,
+                "readMilliseconds": 15.480699999723583,
                 "sourceBytes": 25178864
               },
               {
                 "discipline": "ventilation",
-                "extractMilliseconds": 5347.627200126648,
+                "extractMilliseconds": 5058.94010000024,
                 "outcome": "extracted",
-                "readMilliseconds": 8.475800037384033,
+                "readMilliseconds": 8.302000000141561,
                 "sourceBytes": 12737833
               }
             ],
             "federation": {
-              "mergeMilliseconds": 8.808700323104858,
-              "propertyIndexMilliseconds": 54.75849986076355
+              "mergeMilliseconds": 9.093800000380725,
+              "propertyIndexMilliseconds": 55.284899999853224
             },
-            "importMilliseconds": 245.4921875,
+            "importMilliseconds": 218.92626953125,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278661465.6016,
-              "importsFinishedAtMs": 1789278611373.6414,
-              "mainStartedAtMs": 1789278611378.4165,
-              "moduleStartedAtMs": 1789278611128.1492
+              "finishedAtMs": 1789484609188.0408,
+              "importsFinishedAtMs": 1789484562155.4153,
+              "mainStartedAtMs": 1789484562159.5928,
+              "moduleStartedAtMs": 1789484561936.489
             },
             "write": {
-              "digestMilliseconds": 56.788299798965454,
-              "geometryMilliseconds": 235.13750004768372,
-              "propertiesMilliseconds": 8.756500005722046,
-              "reportMilliseconds": 1.432800054550171,
-              "structureMilliseconds": 700.4145998954773
+              "digestMilliseconds": 59.96389999985695,
+              "geometryMilliseconds": 244.7905000001192,
+              "propertiesMilliseconds": 9.011199999600649,
+              "reportMilliseconds": 1.5678000003099442,
+              "structureMilliseconds": 691.4681000001729
             }
           }
         }
@@ -1345,10 +1485,10 @@
     {
       "index": 3,
       "exitCode": 0,
-      "processMilliseconds": 52926.4,
-      "compileMilliseconds": 52805.2,
-      "peakWorkingSetBytes": 1869623296,
-      "peakPrivateBytes": 2431803392,
+      "processMilliseconds": 52031.4,
+      "compileMilliseconds": 51916,
+      "peakWorkingSetBytes": 1889259520,
+      "peakPrivateBytes": 2447998976,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
@@ -1360,6 +1500,7 @@
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "disabled"
       },
+      "assembly": null,
       "warnings": [],
       "outputFiles": {
         "adapter-report.json": {
@@ -1412,86 +1553,87 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 52798.401399999995,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 51909.6443,
         "stages": {
-          "inspectSources": 43.541399999999996,
-          "toolchainIdentity": 0.030799999999999272,
+          "inspectSources": 43.226499999999994,
+          "toolchainIdentity": 0.030800000000013483,
           "cacheLookup": 0,
-          "adapter": 49714.1248,
-          "readSceneIr": 1935.9988000000012,
-          "hydrate": 10.62949999999546,
-          "compile": 854.2819999999992,
-          "validateCompiled": 13.745700000006764,
-          "dependencyIndex": 32.35369999999966,
-          "writePackage": 163.92429999999877,
-          "writeDependencyIndex": 8.59889999999723,
+          "adapter": 48876.6975,
+          "assembleFederation": 0,
+          "readSceneIr": 1894.386099999996,
+          "hydrate": 9.119100000003527,
+          "compile": 844.4787999999971,
+          "validateCompiled": 14.295899999997346,
+          "dependencyIndex": 34.05720000000292,
+          "writePackage": 165.18570000000182,
+          "writeDependencyIndex": 8.223799999999756,
           "retainSceneIr": 0,
           "cachePublish": 0
         },
-        "unattributedMilliseconds": 21.17149999999674,
-        "structureReadMilliseconds": 1930.6705000000002,
+        "unattributedMilliseconds": 19.942900000001828,
+        "structureReadMilliseconds": 1889.4424,
         "compileStages": {
-          "validateScene": 93.17629999999917,
-          "encodeGeometry": 328.82280000000173,
-          "measureDocument": 198.07510000000184,
-          "other": 234.2077999999965
+          "validateScene": 92.79719999999361,
+          "encodeGeometry": 342.36529999999766,
+          "measureDocument": 192.88409999999567,
+          "other": 216.4322000000102
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 76.287109375,
-          "importMilliseconds": 239.231689453125,
-          "importsToMainMilliseconds": 5.03125,
-          "mainMilliseconds": 49303.906005859375,
-          "finishToCloseMilliseconds": 89.5439453125,
+          "spawnToModuleStartMilliseconds": 61.655517578125,
+          "importMilliseconds": 225.879638671875,
+          "importsToMainMilliseconds": 4.65478515625,
+          "mainMilliseconds": 48497.255615234375,
+          "finishToCloseMilliseconds": 87.554443359375,
           "ledger": {
             "documents": [
               {
                 "discipline": "architecture",
-                "extractMilliseconds": 4301.132700204849,
+                "extractMilliseconds": 4282.00149999978,
                 "outcome": "extracted",
-                "readMilliseconds": 5.473599910736084,
+                "readMilliseconds": 5.409500000067055,
                 "sourceBytes": 9022255
               },
               {
                 "discipline": "heating",
-                "extractMilliseconds": 13104.377900123596,
+                "extractMilliseconds": 13062.779300000053,
                 "outcome": "extracted",
-                "readMilliseconds": 12.793600082397461,
+                "readMilliseconds": 13.089699999894947,
                 "sourceBytes": 20890415
               },
               {
                 "discipline": "plumbing",
-                "extractMilliseconds": 25292.095900058746,
+                "extractMilliseconds": 24814.716099999845,
                 "outcome": "extracted",
-                "readMilliseconds": 15.502100229263306,
+                "readMilliseconds": 15.6449000001885,
                 "sourceBytes": 25178864
               },
               {
                 "discipline": "ventilation",
-                "extractMilliseconds": 5458.786499977112,
+                "extractMilliseconds": 5227.8256999999285,
                 "outcome": "extracted",
-                "readMilliseconds": 8.505300045013428,
+                "readMilliseconds": 8.45619999943301,
                 "sourceBytes": 12737833
               }
             ],
             "federation": {
-              "mergeMilliseconds": 11.356500148773193,
-              "propertyIndexMilliseconds": 69.2900002002716
+              "mergeMilliseconds": 8.450600000098348,
+              "propertyIndexMilliseconds": 54.773499999661
             },
-            "importMilliseconds": 239.231689453125,
+            "importMilliseconds": 225.879638671875,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278724974.456,
-              "importsFinishedAtMs": 1789278675665.5188,
-              "mainStartedAtMs": 1789278675670.55,
-              "moduleStartedAtMs": 1789278675426.287
+              "finishedAtMs": 1789484670791.4456,
+              "importsFinishedAtMs": 1789484622289.5352,
+              "mainStartedAtMs": 1789484622294.19,
+              "moduleStartedAtMs": 1789484622063.6555
             },
             "write": {
-              "digestMilliseconds": 56.95809984207153,
-              "geometryMilliseconds": 245.28799986839294,
-              "propertiesMilliseconds": 8.833499908447266,
-              "reportMilliseconds": 1.5959997177124023,
-              "structureMilliseconds": 704.8399000167847
+              "digestMilliseconds": 60.01040000002831,
+              "geometryMilliseconds": 243.07970000011846,
+              "propertiesMilliseconds": 9.876900000032037,
+              "reportMilliseconds": 1.4319000001996756,
+              "structureMilliseconds": 683.0378999998793
             }
           }
         }
@@ -1500,10 +1642,10 @@
     {
       "index": 4,
       "exitCode": 0,
-      "processMilliseconds": 54404,
-      "compileMilliseconds": 54272.9,
-      "peakWorkingSetBytes": 1853497344,
-      "peakPrivateBytes": 2394624000,
+      "processMilliseconds": 50473.4,
+      "compileMilliseconds": 50357.8,
+      "peakWorkingSetBytes": 1836965888,
+      "peakPrivateBytes": 2398253056,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
@@ -1515,6 +1657,7 @@
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "disabled"
       },
+      "assembly": null,
       "warnings": [],
       "outputFiles": {
         "adapter-report.json": {
@@ -1567,86 +1710,87 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 54266.1906,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 50351.465500000006,
         "stages": {
-          "inspectSources": 43.7183,
-          "toolchainIdentity": 0.03140000000000498,
+          "inspectSources": 43.23609999999999,
+          "toolchainIdentity": 0.02790000000000248,
           "cacheLookup": 0,
-          "adapter": 51238.075099999995,
-          "readSceneIr": 1889.4891999999963,
-          "hydrate": 8.89079999999376,
-          "compile": 840.6290000000008,
-          "validateCompiled": 15.518899999995483,
-          "dependencyIndex": 34.915500000002794,
-          "writePackage": 166.63990000000194,
-          "writeDependencyIndex": 8.016200000005483,
+          "adapter": 47244.2692,
+          "assembleFederation": 0,
+          "readSceneIr": 1940.336199999998,
+          "hydrate": 8.838299999995797,
+          "compile": 862.2981999999975,
+          "validateCompiled": 14.392200000002049,
+          "dependencyIndex": 33.14979999999923,
+          "writePackage": 176.16380000000208,
+          "writeDependencyIndex": 8.541000000004715,
           "retainSceneIr": 0,
           "cachePublish": 0
         },
-        "unattributedMilliseconds": 20.266300000010233,
-        "structureReadMilliseconds": 1884.1271999999954,
+        "unattributedMilliseconds": 20.212800000001153,
+        "structureReadMilliseconds": 1932.3862999999983,
         "compileStages": {
-          "validateScene": 96.20549999999639,
-          "encodeGeometry": 309.88850000000093,
-          "measureDocument": 188.68020000000251,
-          "other": 245.85480000000098
+          "validateScene": 95.48669999999402,
+          "encodeGeometry": 329.09990000000107,
+          "measureDocument": 193.29149999999936,
+          "other": 244.420100000003
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 70.992919921875,
-          "importMilliseconds": 241.057373046875,
-          "importsToMainMilliseconds": 4.98974609375,
-          "mainMilliseconds": 50831.7421875,
-          "finishToCloseMilliseconds": 88.2177734375,
+          "spawnToModuleStartMilliseconds": 62.332763671875,
+          "importMilliseconds": 223.7265625,
+          "importsToMainMilliseconds": 4.455810546875,
+          "mainMilliseconds": 46861.67822265625,
+          "finishToCloseMilliseconds": 91.806640625,
           "ledger": {
             "documents": [
               {
                 "discipline": "architecture",
-                "extractMilliseconds": 4210.1615998744965,
+                "extractMilliseconds": 4218.218299999833,
                 "outcome": "extracted",
-                "readMilliseconds": 5.491000175476074,
+                "readMilliseconds": 5.48879999993369,
                 "sourceBytes": 9022255
               },
               {
                 "discipline": "heating",
-                "extractMilliseconds": 13908.532299995422,
+                "extractMilliseconds": 12854.088799999561,
                 "outcome": "extracted",
-                "readMilliseconds": 13.686500072479248,
+                "readMilliseconds": 12.882099999580532,
                 "sourceBytes": 20890415
               },
               {
                 "discipline": "plumbing",
-                "extractMilliseconds": 26193.229300260544,
+                "extractMilliseconds": 23371.192100000568,
                 "outcome": "extracted",
-                "readMilliseconds": 16.15750002861023,
+                "readMilliseconds": 15.480700000189245,
                 "sourceBytes": 25178864
               },
               {
                 "discipline": "ventilation",
-                "extractMilliseconds": 5327.355999946594,
+                "extractMilliseconds": 5292.8006000001915,
                 "outcome": "extracted",
-                "readMilliseconds": 8.225899934768677,
+                "readMilliseconds": 8.343099999707192,
                 "sourceBytes": 12737833
               }
             ],
             "federation": {
-              "mergeMilliseconds": 9.135699987411499,
-              "propertyIndexMilliseconds": 63.000099897384644
+              "mergeMilliseconds": 10.490299999713898,
+              "propertyIndexMilliseconds": 56.30489999987185
             },
-            "importMilliseconds": 241.057373046875,
+            "importMilliseconds": 223.7265625,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278789853.7822,
-              "importsFinishedAtMs": 1789278739017.0503,
-              "mainStartedAtMs": 1789278739022.04,
-              "moduleStartedAtMs": 1789278738775.993
+              "finishedAtMs": 1789484730481.1934,
+              "importsFinishedAtMs": 1789484683615.0593,
+              "mainStartedAtMs": 1789484683619.5151,
+              "moduleStartedAtMs": 1789484683391.3328
             },
             "write": {
-              "digestMilliseconds": 59.50479984283447,
-              "geometryMilliseconds": 276.5626997947693,
-              "propertiesMilliseconds": 9.050699949264526,
-              "reportMilliseconds": 1.4147000312805176,
-              "structureMilliseconds": 723.5109000205994
+              "digestMilliseconds": 59.18100000033155,
+              "geometryMilliseconds": 244.2653000005521,
+              "propertiesMilliseconds": 9.315599999856204,
+              "reportMilliseconds": 1.3541999999433756,
+              "structureMilliseconds": 696.4131999998353
             }
           }
         }
@@ -1655,10 +1799,10 @@
     {
       "index": 5,
       "exitCode": 0,
-      "processMilliseconds": 52925.9,
-      "compileMilliseconds": 52797.8,
-      "peakWorkingSetBytes": 1861201920,
-      "peakPrivateBytes": 2404737024,
+      "processMilliseconds": 51334.8,
+      "compileMilliseconds": 51223.3,
+      "peakWorkingSetBytes": 1847369728,
+      "peakPrivateBytes": 2398482432,
       "maxProcessCount": 4,
       "packageDigest": "c4b151e5f5d762e4f431c5f647aaec8a53a43d7bbf9737917e4874a1f022b3bb",
       "cache": {
@@ -1670,6 +1814,7 @@
         "schemaVersion": "naru.ifc-document-artifact.4",
         "status": "disabled"
       },
+      "assembly": null,
       "warnings": [],
       "outputFiles": {
         "adapter-report.json": {
@@ -1722,86 +1867,87 @@
         }
       },
       "stages": {
-        "schemaVersion": "naru.ifc-federation-stage-timing.1",
-        "totalMilliseconds": 52791.0343,
+        "schemaVersion": "naru.ifc-federation-stage-timing.2",
+        "totalMilliseconds": 51217.026,
         "stages": {
-          "inspectSources": 43.3313,
-          "toolchainIdentity": 0.029699999999991178,
+          "inspectSources": 43.5727,
+          "toolchainIdentity": 0.033799999999999386,
           "cacheLookup": 0,
-          "adapter": 49708.8941,
-          "readSceneIr": 1949.481200000002,
-          "hydrate": 9.11420000000362,
-          "compile": 835.9797000000035,
-          "validateCompiled": 13.33350000000064,
-          "dependencyIndex": 34.64800000000105,
-          "writePackage": 167.0498000000007,
-          "writeDependencyIndex": 8.96979999999894,
+          "adapter": 48061.314,
+          "assembleFederation": 0,
+          "readSceneIr": 1985.6736999999994,
+          "hydrate": 9.450799999998708,
+          "compile": 860.1779999999999,
+          "validateCompiled": 14.633399999998801,
+          "dependencyIndex": 36.69239999999991,
+          "writePackage": 176.72069999999803,
+          "writeDependencyIndex": 8.56930000000284,
           "retainSceneIr": 0,
           "cachePublish": 0
         },
-        "unattributedMilliseconds": 20.202999999994063,
-        "structureReadMilliseconds": 1944.2643000000025,
+        "unattributedMilliseconds": 20.187200000000303,
+        "structureReadMilliseconds": 1979.7001000000018,
         "compileStages": {
-          "validateScene": 93.81879999999364,
-          "encodeGeometry": 323.191899999998,
-          "measureDocument": 184.96650000000227,
-          "other": 234.0025000000096
+          "validateScene": 96.33329999999842,
+          "encodeGeometry": 343.5120999999999,
+          "measureDocument": 202.56139999999868,
+          "other": 217.77120000000286
         },
         "adapter": {
-          "spawnToModuleStartMilliseconds": 77.551513671875,
-          "importMilliseconds": 251.978515625,
-          "importsToMainMilliseconds": 4.879150390625,
-          "mainMilliseconds": 49284.736572265625,
-          "finishToCloseMilliseconds": 89.854248046875,
+          "spawnToModuleStartMilliseconds": 62.730224609375,
+          "importMilliseconds": 225.24853515625,
+          "importsToMainMilliseconds": 4.59521484375,
+          "mainMilliseconds": 47672.202880859375,
+          "finishToCloseMilliseconds": 96.22314453125,
           "ledger": {
             "documents": [
               {
                 "discipline": "architecture",
-                "extractMilliseconds": 4189.426099777222,
+                "extractMilliseconds": 4352.348300000653,
                 "outcome": "extracted",
-                "readMilliseconds": 5.818699836730957,
+                "readMilliseconds": 5.703700000420213,
                 "sourceBytes": 9022255
               },
               {
                 "discipline": "heating",
-                "extractMilliseconds": 13189.67979979515,
+                "extractMilliseconds": 13369.373300000094,
                 "outcome": "extracted",
-                "readMilliseconds": 13.529200077056885,
+                "readMilliseconds": 12.931600000243634,
                 "sourceBytes": 20890415
               },
               {
                 "discipline": "plumbing",
-                "extractMilliseconds": 25310.324100017548,
+                "extractMilliseconds": 23746.363700000104,
                 "outcome": "extracted",
-                "readMilliseconds": 16.089799880981445,
+                "readMilliseconds": 15.850300000049174,
                 "sourceBytes": 25178864
               },
               {
                 "discipline": "ventilation",
-                "extractMilliseconds": 5417.274600028992,
+                "extractMilliseconds": 5079.594100000337,
                 "outcome": "extracted",
-                "readMilliseconds": 8.174300193786621,
+                "readMilliseconds": 8.396199999842793,
                 "sourceBytes": 12737833
               }
             ],
             "federation": {
-              "mergeMilliseconds": 11.462300062179565,
-              "propertyIndexMilliseconds": 79.77170014381409
+              "mergeMilliseconds": 9.014799999538809,
+              "propertyIndexMilliseconds": 57.90789999999106
             },
-            "importMilliseconds": 251.978515625,
+            "importMilliseconds": 225.24853515625,
             "schemaVersion": "naru.ifc-adapter-stage-timing.1",
             "wallClock": {
-              "finishedAtMs": 1789278853179.1458,
-              "importsFinishedAtMs": 1789278803889.53,
-              "mainStartedAtMs": 1789278803894.4092,
-              "moduleStartedAtMs": 1789278803637.5515
+              "finishedAtMs": 1789484791377.7769,
+              "importsFinishedAtMs": 1789484743700.9788,
+              "mainStartedAtMs": 1789484743705.574,
+              "moduleStartedAtMs": 1789484743475.7302
             },
             "write": {
-              "digestMilliseconds": 57.482099771499634,
-              "geometryMilliseconds": 255.0443000793457,
-              "propertiesMilliseconds": 8.768499851226807,
-              "reportMilliseconds": 1.3696999549865723,
-              "structureMilliseconds": 713.8903999328613
+              "digestMilliseconds": 56.99349999986589,
+              "geometryMilliseconds": 248.3640000000596,
+              "propertiesMilliseconds": 9.055699999909848,
+              "reportMilliseconds": 1.528599999845028,
+              "structureMilliseconds": 692.6636999999173
             }
           }
         }
@@ -1821,6 +1967,7 @@
       "ledgerNamesEveryDocument": true,
       "changedDocumentExtracted": true,
       "unchangedDocumentsRestoredVerified": true,
+      "federationAssembledInCompiler": true,
       "met": true
     },
     {
@@ -1834,6 +1981,7 @@
       "ledgerNamesEveryDocument": true,
       "changedDocumentExtracted": true,
       "unchangedDocumentsRestoredVerified": true,
+      "federationAssembledInCompiler": true,
       "met": true
     },
     {
@@ -1847,6 +1995,7 @@
       "ledgerNamesEveryDocument": true,
       "changedDocumentExtracted": true,
       "unchangedDocumentsRestoredVerified": true,
+      "federationAssembledInCompiler": true,
       "met": true
     },
     {
@@ -1860,6 +2009,7 @@
       "ledgerNamesEveryDocument": true,
       "changedDocumentExtracted": true,
       "unchangedDocumentsRestoredVerified": true,
+      "federationAssembledInCompiler": true,
       "met": true
     },
     {
@@ -1873,6 +2023,7 @@
       "ledgerNamesEveryDocument": true,
       "changedDocumentExtracted": true,
       "unchangedDocumentsRestoredVerified": true,
+      "federationAssembledInCompiler": true,
       "met": true
     }
   ],
@@ -1887,6 +2038,7 @@
       "adapterLedgerWithinMain": true,
       "ledgerNamesEveryDocument": true,
       "everyDocumentExtractedWithoutArtifacts": true,
+      "noFederationAssembly": true,
       "met": true
     },
     {
@@ -1899,6 +2051,7 @@
       "adapterLedgerWithinMain": true,
       "ledgerNamesEveryDocument": true,
       "everyDocumentExtractedWithoutArtifacts": true,
+      "noFederationAssembly": true,
       "met": true
     },
     {
@@ -1911,6 +2064,7 @@
       "adapterLedgerWithinMain": true,
       "ledgerNamesEveryDocument": true,
       "everyDocumentExtractedWithoutArtifacts": true,
+      "noFederationAssembly": true,
       "met": true
     },
     {
@@ -1923,6 +2077,7 @@
       "adapterLedgerWithinMain": true,
       "ledgerNamesEveryDocument": true,
       "everyDocumentExtractedWithoutArtifacts": true,
+      "noFederationAssembly": true,
       "met": true
     },
     {
@@ -1935,6 +2090,7 @@
       "adapterLedgerWithinMain": true,
       "ledgerNamesEveryDocument": true,
       "everyDocumentExtractedWithoutArtifacts": true,
+      "noFederationAssembly": true,
       "met": true
     }
   ],
@@ -1942,239 +2098,252 @@
     "whole": {
       "processMilliseconds": {
         "values": [
-          10346.6,
-          10271.2,
-          10373.8,
-          10250.5,
-          10302.4
+          9268.1,
+          9211.1,
+          9351.6,
+          9138.1,
+          9458.9
         ],
-        "median": 10302.4,
-        "p95": 10373.8,
-        "minimum": 10250.5,
-        "maximum": 10373.8
+        "median": 9268.1,
+        "p95": 9458.9,
+        "minimum": 9138.1,
+        "maximum": 9458.9
       },
       "compileMilliseconds": {
         "values": [
-          10239.2,
-          10167.5,
-          10264.8,
-          10143.2,
-          10191.6
+          9171.9,
+          9111.8,
+          9253.3,
+          9039.5,
+          9355.1
         ],
-        "median": 10191.6,
-        "p95": 10264.8,
-        "minimum": 10143.2,
-        "maximum": 10264.8
+        "median": 9171.9,
+        "p95": 9355.1,
+        "minimum": 9039.5,
+        "maximum": 9355.1
       },
       "totalMilliseconds": {
         "values": [
-          10233.3,
-          10161.6,
-          10258.8,
-          10137.8,
-          10185.3
+          9169.7,
+          9109.4,
+          9251,
+          9037.3,
+          9352.4
         ],
-        "median": 10185.3,
-        "p95": 10258.8,
-        "minimum": 10137.8,
-        "maximum": 10258.8
+        "median": 9169.7,
+        "p95": 9352.4,
+        "minimum": 9037.3,
+        "maximum": 9352.4
       },
       "harnessOverheadMilliseconds": {
         "values": [
-          107.4,
-          103.7,
-          109,
-          107.3,
-          110.8
+          96.2,
+          99.3,
+          98.3,
+          98.6,
+          103.8
         ],
-        "median": 107.4,
-        "p95": 110.8,
-        "minimum": 103.7,
-        "maximum": 110.8
+        "median": 98.6,
+        "p95": 103.8,
+        "minimum": 96.2,
+        "maximum": 103.8
       },
       "inProcessCompilerWorkMilliseconds": {
         "values": [
-          3566.4,
-          3550.4,
-          3647.5,
-          3545.2,
-          3570.9
+          3499.6,
+          3508.1,
+          3489.6,
+          3436.1,
+          3602.7
         ],
-        "median": 3566.4,
-        "p95": 3647.5,
-        "minimum": 3545.2,
-        "maximum": 3647.5
+        "median": 3499.6,
+        "p95": 3602.7,
+        "minimum": 3436.1,
+        "maximum": 3602.7
       },
       "peakWorkingSetBytes": {
         "values": [
-          441253888,
-          432340992,
-          448622592,
-          441708544,
-          446070784
+          436633600,
+          443351040,
+          433561600,
+          430436352,
+          434372608
         ],
-        "median": 441708544,
-        "p95": 448622592,
-        "minimum": 432340992,
-        "maximum": 448622592
+        "median": 434372608,
+        "p95": 443351040,
+        "minimum": 430436352,
+        "maximum": 443351040
       },
       "peakPrivateBytes": {
         "values": [
-          901632000,
-          894476288,
-          938635264,
-          905908224,
-          920989696
+          905281536,
+          897044480,
+          904814592,
+          900419584,
+          903065600
         ],
-        "median": 905908224,
-        "p95": 938635264,
-        "minimum": 894476288,
-        "maximum": 938635264
+        "median": 903065600,
+        "p95": 905281536,
+        "minimum": 897044480,
+        "maximum": 905281536
       }
     },
     "compilerStages": {
       "inspectSources": {
         "values": [
-          43.8,
+          46.4,
           43.2,
+          44,
           43.2,
-          43.8,
           43.5
         ],
         "median": 43.5,
-        "p95": 43.8,
+        "p95": 46.4,
         "minimum": 43.2,
-        "maximum": 43.8
+        "maximum": 46.4
       },
       "toolchainIdentity": {
         "values": [
-          397.7,
-          401.9,
-          401.2,
-          407.2,
-          414.3
+          359.6,
+          363.4,
+          373.3,
+          366.3,
+          359.5
         ],
-        "median": 401.9,
-        "p95": 414.3,
-        "minimum": 397.7,
-        "maximum": 414.3
+        "median": 363.4,
+        "p95": 373.3,
+        "minimum": 359.5,
+        "maximum": 373.3
       },
       "cacheLookup": {
         "values": [
-          0.5,
-          0.6,
-          0.6,
-          0.6,
-          0.5
+          0.3,
+          0.3,
+          0.3,
+          0.3,
+          0.3
         ],
-        "median": 0.6,
-        "p95": 0.6,
-        "minimum": 0.5,
-        "maximum": 0.6
+        "median": 0.3,
+        "p95": 0.3,
+        "minimum": 0.3,
+        "maximum": 0.3
       },
       "adapter": {
         "values": [
-          6666.9,
-          6611.2,
-          6611.3,
-          6592.6,
-          6614.4
+          5670.2,
+          5601.3,
+          5761.4,
+          5601.2,
+          5749.7
         ],
-        "median": 6611.3,
-        "p95": 6666.9,
-        "minimum": 6592.6,
-        "maximum": 6666.9
+        "median": 5670.2,
+        "p95": 5761.4,
+        "minimum": 5601.2,
+        "maximum": 5761.4
+      },
+      "assembleFederation": {
+        "values": [
+          1859.2,
+          1817.7,
+          1813.4,
+          1777.2,
+          1933.6
+        ],
+        "median": 1817.7,
+        "p95": 1933.6,
+        "minimum": 1777.2,
+        "maximum": 1933.6
       },
       "readSceneIr": {
         "values": [
-          1966.1,
-          1934.8,
-          2014,
-          1878.2,
-          1878
+          0,
+          0,
+          0,
+          0,
+          0
         ],
-        "median": 1934.8,
-        "p95": 2014,
-        "minimum": 1878,
-        "maximum": 2014
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
       },
       "hydrate": {
         "values": [
-          9.8,
-          9,
-          9.3,
-          8.9,
-          9
+          13.8,
+          14,
+          14.5,
+          13.9,
+          14.6
         ],
-        "median": 9,
-        "p95": 9.8,
-        "minimum": 8.9,
-        "maximum": 9.8
+        "median": 14,
+        "p95": 14.6,
+        "minimum": 13.8,
+        "maximum": 14.6
       },
       "compile": {
         "values": [
-          829.5,
-          844.8,
-          852.3,
-          870.5,
-          874.7
+          890.8,
+          933.1,
+          891.8,
+          896.9,
+          906.8
         ],
-        "median": 852.3,
-        "p95": 874.7,
-        "minimum": 829.5,
-        "maximum": 874.7
+        "median": 896.9,
+        "p95": 933.1,
+        "minimum": 890.8,
+        "maximum": 933.1
       },
       "validateCompiled": {
         "values": [
-          13.4,
-          12.5,
-          13.5,
           13.3,
-          14.2
+          13.9,
+          16.3,
+          13,
+          13.1
         ],
-        "median": 13.4,
-        "p95": 14.2,
-        "minimum": 12.5,
-        "maximum": 14.2
+        "median": 13.3,
+        "p95": 16.3,
+        "minimum": 13,
+        "maximum": 16.3
       },
       "dependencyIndex": {
         "values": [
-          34.2,
-          33.3,
-          34,
-          34.8,
-          36.6
+          47.7,
+          44.9,
+          51.5,
+          53.1,
+          43.6
         ],
-        "median": 34.2,
-        "p95": 36.6,
-        "minimum": 33.3,
-        "maximum": 36.6
+        "median": 47.7,
+        "p95": 53.1,
+        "minimum": 43.6,
+        "maximum": 53.1
       },
       "writePackage": {
         "values": [
-          169.5,
-          169.2,
-          175,
-          185.9,
-          199.7
+          166,
+          173.3,
+          182.6,
+          167.9,
+          181.3
         ],
-        "median": 175,
-        "p95": 199.7,
-        "minimum": 169.2,
-        "maximum": 199.7
+        "median": 173.3,
+        "p95": 182.6,
+        "minimum": 166,
+        "maximum": 182.6
       },
       "writeDependencyIndex": {
         "values": [
-          9.4,
-          9.8,
-          10.2,
-          9.5,
-          8.5
+          8.6,
+          8.8,
+          8.7,
+          9.1,
+          8.7
         ],
-        "median": 9.5,
-        "p95": 10.2,
-        "minimum": 8.5,
-        "maximum": 10.2
+        "median": 8.7,
+        "p95": 9.1,
+        "minimum": 8.6,
+        "maximum": 9.1
       },
       "retainSceneIr": {
         "values": [
@@ -2191,177 +2360,177 @@
       },
       "cachePublish": {
         "values": [
-          72.1,
-          70.6,
-          74.1,
-          71.6,
-          71
+          73.2,
+          75.6,
+          73.1,
+          75,
+          77.6
         ],
-        "median": 71.6,
-        "p95": 74.1,
-        "minimum": 70.6,
-        "maximum": 74.1
+        "median": 75,
+        "p95": 77.6,
+        "minimum": 73.1,
+        "maximum": 77.6
       }
     },
     "unattributedMilliseconds": {
       "values": [
-        20.5,
-        20.5,
-        20.3,
-        21,
-        20.9
+        20.4,
+        20.1,
+        20.1,
+        20.1,
+        20.2
       ],
-      "median": 20.5,
-      "p95": 21,
-      "minimum": 20.3,
-      "maximum": 21
+      "median": 20.1,
+      "p95": 20.4,
+      "minimum": 20.1,
+      "maximum": 20.4
     },
     "structureReadMilliseconds": {
       "values": [
-        1960.6,
-        1929.7,
-        2008.8,
-        1872.7,
-        1872.3
+        0,
+        0,
+        0,
+        0,
+        0
       ],
-      "median": 1929.7,
-      "p95": 2008.8,
-      "minimum": 1872.3,
-      "maximum": 2008.8
+      "median": 0,
+      "p95": 0,
+      "minimum": 0,
+      "maximum": 0
     },
     "compileStages": {
       "validateScene": {
         "values": [
-          92.6,
-          90.9,
-          93.6,
-          89.4,
-          93.5
+          106.2,
+          111.6,
+          111.2,
+          109.9,
+          122.5
         ],
-        "median": 92.6,
-        "p95": 93.6,
-        "minimum": 89.4,
-        "maximum": 93.6
+        "median": 111.2,
+        "p95": 122.5,
+        "minimum": 106.2,
+        "maximum": 122.5
       },
       "encodeGeometry": {
         "values": [
-          313.5,
-          312.7,
-          322.2,
-          377.3,
-          373.4
+          331.5,
+          329.9,
+          338.3,
+          334.3,
+          322.7
         ],
-        "median": 322.2,
-        "p95": 377.3,
-        "minimum": 312.7,
-        "maximum": 377.3
+        "median": 331.5,
+        "p95": 338.3,
+        "minimum": 322.7,
+        "maximum": 338.3
       },
       "measureDocument": {
         "values": [
-          177.3,
-          184.3,
-          220.4,
-          178.3,
-          175.6
+          191.8,
+          220.5,
+          186.2,
+          193.4,
+          195.3
         ],
-        "median": 178.3,
-        "p95": 220.4,
-        "minimum": 175.6,
-        "maximum": 220.4
+        "median": 193.4,
+        "p95": 220.5,
+        "minimum": 186.2,
+        "maximum": 220.5
       },
       "other": {
         "values": [
-          246,
-          256.9,
-          216.1,
-          225.5,
-          232.3
+          261.4,
+          271.1,
+          256.2,
+          259.3,
+          266.3
         ],
-        "median": 232.3,
-        "p95": 256.9,
-        "minimum": 216.1,
-        "maximum": 256.9
+        "median": 261.4,
+        "p95": 271.1,
+        "minimum": 256.2,
+        "maximum": 271.1
       }
     },
     "adapterProcess": {
       "spawnToModuleStartMilliseconds": {
         "values": [
-          72.9,
-          66.6,
-          69,
-          67.1,
-          69.2
+          56.8,
+          60.2,
+          58.9,
+          58.5,
+          56.3
         ],
-        "median": 69,
-        "p95": 72.9,
-        "minimum": 66.6,
-        "maximum": 72.9
+        "median": 58.5,
+        "p95": 60.2,
+        "minimum": 56.3,
+        "maximum": 60.2
       },
       "importMilliseconds": {
         "values": [
-          237.8,
-          235.4,
-          235.9,
-          242.8,
-          240.9
+          208.3,
+          220,
+          222,
+          221,
+          212.2
         ],
-        "median": 237.8,
-        "p95": 242.8,
-        "minimum": 235.4,
-        "maximum": 242.8
+        "median": 220,
+        "p95": 222,
+        "minimum": 208.3,
+        "maximum": 222
       },
       "importsToMainMilliseconds": {
         "values": [
-          4.7,
-          4.4,
-          4.7,
-          4.9,
-          4.3
+          4,
+          4.1,
+          5,
+          5.4,
+          4.1
         ],
-        "median": 4.7,
-        "p95": 4.9,
-        "minimum": 4.3,
-        "maximum": 4.9
+        "median": 4.1,
+        "p95": 5.4,
+        "minimum": 4,
+        "maximum": 5.4
       },
       "mainMilliseconds": {
         "values": [
-          6276.2,
-          6228.3,
-          6226.8,
-          6186.4,
-          6220.6
+          5357,
+          5276.9,
+          5434.7,
+          5276.9,
+          5436.2
         ],
-        "median": 6226.8,
-        "p95": 6276.2,
-        "minimum": 6186.4,
-        "maximum": 6276.2
+        "median": 5357,
+        "p95": 5436.2,
+        "minimum": 5276.9,
+        "maximum": 5436.2
       },
       "finishToCloseMilliseconds": {
         "values": [
-          75.3,
-          76.2,
-          74.6,
-          91.8,
-          78.9
+          44,
+          40.9,
+          40.5,
+          39.2,
+          40.3
         ],
-        "median": 76.2,
-        "p95": 91.8,
-        "minimum": 74.6,
-        "maximum": 91.8
+        "median": 40.5,
+        "p95": 44,
+        "minimum": 39.2,
+        "maximum": 44
       }
     },
     "adapterMainUnattributedMilliseconds": {
       "values": [
-        47.5,
-        56.3,
-        47.5,
-        47.7,
-        47.1
+        51.7,
+        53.2,
+        56.2,
+        53.5,
+        53.2
       ],
-      "median": 47.5,
-      "p95": 56.3,
-      "minimum": 47.1,
-      "maximum": 56.3
+      "median": 53.2,
+      "p95": 56.2,
+      "minimum": 51.7,
+      "maximum": 56.2
     },
     "adapterDocuments": {
       "architecture": {
@@ -2369,42 +2538,42 @@
         "artifactState": "absent",
         "extractMilliseconds": {
           "values": [
-            4248.3,
-            4234.8,
-            4160.6,
-            4215.8,
-            4247.6
+            4227.9,
+            4169.1,
+            4305.1,
+            4157.9,
+            4300.8
           ],
-          "median": 4234.8,
-          "p95": 4248.3,
-          "minimum": 4160.6,
-          "maximum": 4248.3
+          "median": 4227.9,
+          "p95": 4305.1,
+          "minimum": 4157.9,
+          "maximum": 4305.1
         },
         "publishMilliseconds": {
           "values": [
-            721.4,
-            727.5,
-            747.3,
-            720.6,
-            725.9
+            722.1,
+            725,
+            727.4,
+            720.2,
+            730.4
           ],
-          "median": 725.9,
-          "p95": 747.3,
-          "minimum": 720.6,
-          "maximum": 747.3
+          "median": 725,
+          "p95": 730.4,
+          "minimum": 720.2,
+          "maximum": 730.4
         },
         "readMilliseconds": {
           "values": [
-            9.9,
+            9.8,
             5.5,
+            5.6,
             5.5,
-            5.5,
-            5.5
+            5.4
           ],
           "median": 5.5,
-          "p95": 9.9,
-          "minimum": 5.5,
-          "maximum": 9.9
+          "p95": 9.8,
+          "minimum": 5.4,
+          "maximum": 9.8
         },
         "sourceBytes": {
           "values": [
@@ -2425,42 +2594,42 @@
         "artifactState": "verified",
         "artifactBytes": {
           "values": [
-            4484677,
-            4484677,
-            4484677,
-            4484677,
-            4484677
+            4484674,
+            4484674,
+            4484674,
+            4484674,
+            4484674
           ],
-          "median": 4484677,
-          "p95": 4484677,
-          "minimum": 4484677,
-          "maximum": 4484677
+          "median": 4484674,
+          "p95": 4484674,
+          "minimum": 4484674,
+          "maximum": 4484674
         },
         "artifactLoadMilliseconds": {
           "values": [
-            42.8,
-            45.8,
-            44.5,
-            42.2,
-            42
+            42.5,
+            38.9,
+            39,
+            38.9,
+            43.9
           ],
-          "median": 42.8,
-          "p95": 45.8,
-          "minimum": 42,
-          "maximum": 45.8
+          "median": 39,
+          "p95": 43.9,
+          "minimum": 38.9,
+          "maximum": 43.9
         },
         "artifactParseMilliseconds": {
           "values": [
-            67.1,
-            58.7,
-            59.5,
-            57.2,
-            57.4
+            58.6,
+            56.7,
+            56.2,
+            55,
+            62.7
           ],
-          "median": 58.7,
-          "p95": 67.1,
-          "minimum": 57.2,
-          "maximum": 67.1
+          "median": 56.7,
+          "p95": 62.7,
+          "minimum": 55,
+          "maximum": 62.7
         },
         "artifactPayloadBytes": {
           "values": [
@@ -2477,42 +2646,42 @@
         },
         "artifactVerifyMilliseconds": {
           "values": [
+            9.8,
             9.9,
-            10,
-            10.3,
+            9.7,
             9.8,
             9.8
           ],
-          "median": 9.9,
-          "p95": 10.3,
-          "minimum": 9.8,
-          "maximum": 10.3
+          "median": 9.8,
+          "p95": 9.9,
+          "minimum": 9.7,
+          "maximum": 9.9
         },
         "readMilliseconds": {
           "values": [
-            12.8,
+            14.9,
             12.9,
-            13.3,
-            13.4,
-            12.9
+            12.5,
+            12.4,
+            12.5
           ],
-          "median": 12.9,
-          "p95": 13.4,
-          "minimum": 12.8,
-          "maximum": 13.4
+          "median": 12.5,
+          "p95": 14.9,
+          "minimum": 12.4,
+          "maximum": 14.9
         },
         "restoreMilliseconds": {
           "values": [
-            0.2,
-            0.1,
-            0.1,
-            0.1,
-            0.2
+            7.4,
+            7.3,
+            7.1,
+            7,
+            7.8
           ],
-          "median": 0.1,
-          "p95": 0.2,
-          "minimum": 0.1,
-          "maximum": 0.2
+          "median": 7.3,
+          "p95": 7.8,
+          "minimum": 7,
+          "maximum": 7.8
         },
         "sourceBytes": {
           "values": [
@@ -2533,42 +2702,42 @@
         "artifactState": "verified",
         "artifactBytes": {
           "values": [
-            7328176,
-            7328176,
-            7328176,
-            7328176,
-            7328176
+            7328148,
+            7328148,
+            7328148,
+            7328148,
+            7328148
           ],
-          "median": 7328176,
-          "p95": 7328176,
-          "minimum": 7328176,
-          "maximum": 7328176
+          "median": 7328148,
+          "p95": 7328148,
+          "minimum": 7328148,
+          "maximum": 7328148
         },
         "artifactLoadMilliseconds": {
           "values": [
-            57.1,
-            55.2,
-            54.5,
-            51.4,
-            51.5
+            63.3,
+            52.5,
+            61.7,
+            51.3,
+            56.1
           ],
-          "median": 54.5,
-          "p95": 57.1,
-          "minimum": 51.4,
-          "maximum": 57.1
+          "median": 56.1,
+          "p95": 63.3,
+          "minimum": 51.3,
+          "maximum": 63.3
         },
         "artifactParseMilliseconds": {
           "values": [
-            40.3,
-            34.6,
-            31.4,
-            30.8,
-            31.3
+            30.6,
+            29.3,
+            39.2,
+            43.9,
+            32.6
           ],
-          "median": 31.4,
-          "p95": 40.3,
-          "minimum": 30.8,
-          "maximum": 40.3
+          "median": 32.6,
+          "p95": 43.9,
+          "minimum": 29.3,
+          "maximum": 43.9
         },
         "artifactPayloadBytes": {
           "values": [
@@ -2585,839 +2754,41 @@
         },
         "artifactVerifyMilliseconds": {
           "values": [
-            11.3,
-            10.8,
             10.7,
-            10.6,
-            10.8
+            10.7,
+            10.7,
+            10.7,
+            10.7
           ],
-          "median": 10.8,
-          "p95": 11.3,
-          "minimum": 10.6,
-          "maximum": 11.3
+          "median": 10.7,
+          "p95": 10.7,
+          "minimum": 10.7,
+          "maximum": 10.7
         },
         "readMilliseconds": {
           "values": [
-            16.2,
+            15.6,
             15.9,
-            15.5,
-            16.4,
-            15.6
+            15.9,
+            15.6,
+            15.8
           ],
-          "median": 15.9,
-          "p95": 16.4,
-          "minimum": 15.5,
-          "maximum": 16.4
+          "median": 15.8,
+          "p95": 15.9,
+          "minimum": 15.6,
+          "maximum": 15.9
         },
         "restoreMilliseconds": {
           "values": [
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1
-          ],
-          "median": 0.1,
-          "p95": 0.1,
-          "minimum": 0.1,
-          "maximum": 0.1
-        },
-        "sourceBytes": {
-          "values": [
-            25178864,
-            25178864,
-            25178864,
-            25178864,
-            25178864
-          ],
-          "median": 25178864,
-          "p95": 25178864,
-          "minimum": 25178864,
-          "maximum": 25178864
-        }
-      },
-      "ventilation": {
-        "outcome": "restored",
-        "artifactState": "verified",
-        "artifactBytes": {
-          "values": [
-            1428967,
-            1428967,
-            1428967,
-            1428967,
-            1428967
-          ],
-          "median": 1428967,
-          "p95": 1428967,
-          "minimum": 1428967,
-          "maximum": 1428967
-        },
-        "artifactLoadMilliseconds": {
-          "values": [
-            24.1,
-            17.9,
-            16.7,
-            16.7,
-            16.6
-          ],
-          "median": 16.7,
-          "p95": 24.1,
-          "minimum": 16.6,
-          "maximum": 24.1
-        },
-        "artifactParseMilliseconds": {
-          "values": [
-            44.8,
-            43.4,
-            46.9,
-            41,
-            38.6
-          ],
-          "median": 43.4,
-          "p95": 46.9,
-          "minimum": 38.6,
-          "maximum": 46.9
-        },
-        "artifactPayloadBytes": {
-          "values": [
-            12301588,
-            12301588,
-            12301588,
-            12301588,
-            12301588
-          ],
-          "median": 12301588,
-          "p95": 12301588,
-          "minimum": 12301588,
-          "maximum": 12301588
-        },
-        "artifactVerifyMilliseconds": {
-          "values": [
-            4.9,
-            4.9,
-            4.9,
-            4.9,
-            4.9
-          ],
-          "median": 4.9,
-          "p95": 4.9,
-          "minimum": 4.9,
-          "maximum": 4.9
-        },
-        "readMilliseconds": {
-          "values": [
-            9,
-            9,
-            8.2,
-            8.4,
-            8.3
-          ],
-          "median": 8.4,
-          "p95": 9,
-          "minimum": 8.2,
-          "maximum": 9
-        },
-        "restoreMilliseconds": {
-          "values": [
-            0.1,
-            0.1,
-            0.1,
-            0.1,
-            0.1
-          ],
-          "median": 0.1,
-          "p95": 0.1,
-          "minimum": 0.1,
-          "maximum": 0.1
-        },
-        "sourceBytes": {
-          "values": [
-            12737833,
-            12737833,
-            12737833,
-            12737833,
-            12737833
-          ],
-          "median": 12737833,
-          "p95": 12737833,
-          "minimum": 12737833,
-          "maximum": 12737833
-        }
-      }
-    },
-    "adapterFederation": {
-      "mergeMilliseconds": {
-        "values": [
-          7.1,
-          7,
-          8.7,
-          6.4,
-          6.6
-        ],
-        "median": 7,
-        "p95": 8.7,
-        "minimum": 6.4,
-        "maximum": 8.7
-      },
-      "propertyIndexMilliseconds": {
-        "values": [
-          62.2,
-          63.9,
-          85.3,
-          59.8,
-          61.6
-        ],
-        "median": 62.2,
-        "p95": 85.3,
-        "minimum": 59.8,
-        "maximum": 85.3
-      }
-    },
-    "adapterWrite": {
-      "digestMilliseconds": {
-        "values": [
-          56.9,
-          56.4,
-          60.8,
-          58.7,
-          57.9
-        ],
-        "median": 57.9,
-        "p95": 60.8,
-        "minimum": 56.4,
-        "maximum": 60.8
-      },
-      "geometryMilliseconds": {
-        "values": [
-          88.7,
-          82.1,
-          99.8,
-          82.2,
-          81
-        ],
-        "median": 82.2,
-        "p95": 99.8,
-        "minimum": 81,
-        "maximum": 99.8
-      },
-      "propertiesMilliseconds": {
-        "values": [
-          9.8,
-          8,
-          8.4,
-          12.5,
-          11.2
-        ],
-        "median": 9.8,
-        "p95": 12.5,
-        "minimum": 8,
-        "maximum": 12.5
-      },
-      "reportMilliseconds": {
-        "values": [
-          1.4,
-          1.4,
-          1.3,
-          1.7,
-          1.7
-        ],
-        "median": 1.4,
-        "p95": 1.7,
-        "minimum": 1.3,
-        "maximum": 1.7
-      },
-      "structureMilliseconds": {
-        "values": [
-          682.1,
-          666.1,
-          684.7,
-          672.2,
-          674.7
-        ],
-        "median": 674.7,
-        "p95": 684.7,
-        "minimum": 666.1,
-        "maximum": 684.7
-      }
-    },
-    "unchangedArtifactLoadMilliseconds": {
-      "values": [
-        124,
-        118.9,
-        115.7,
-        110.3,
-        110.1
-      ],
-      "median": 115.7,
-      "p95": 124,
-      "minimum": 110.1,
-      "maximum": 124
-    },
-    "unchangedArtifactVerifyMilliseconds": {
-      "values": [
-        26.1,
-        25.6,
-        25.8,
-        25.3,
-        25.4
-      ],
-      "median": 25.6,
-      "p95": 26.1,
-      "minimum": 25.3,
-      "maximum": 26.1
-    },
-    "unchangedArtifactParseMilliseconds": {
-      "values": [
-        152.2,
-        136.7,
-        137.8,
-        129.1,
-        127.2
-      ],
-      "median": 136.7,
-      "p95": 152.2,
-      "minimum": 127.2,
-      "maximum": 152.2
-    },
-    "unchangedArtifactBytes": 13241820,
-    "unchangedArtifactPayloadBytes": 64227000
-  },
-  "cleanDistributions": {
-    "whole": {
-      "processMilliseconds": {
-        "values": [
-          53825.4,
-          53754.4,
-          52926.4,
-          54404,
-          52925.9
-        ],
-        "median": 53754.4,
-        "p95": 54404,
-        "minimum": 52925.9,
-        "maximum": 54404
-      },
-      "compileMilliseconds": {
-        "values": [
-          53689.8,
-          53623.5,
-          52805.2,
-          54272.9,
-          52797.8
-        ],
-        "median": 53623.5,
-        "p95": 54272.9,
-        "minimum": 52797.8,
-        "maximum": 54272.9
-      },
-      "totalMilliseconds": {
-        "values": [
-          53683.2,
-          53616.6,
-          52798.4,
-          54266.2,
-          52791
-        ],
-        "median": 53616.6,
-        "p95": 54266.2,
-        "minimum": 52791,
-        "maximum": 54266.2
-      },
-      "harnessOverheadMilliseconds": {
-        "values": [
-          135.6,
-          130.9,
-          121.2,
-          131.1,
-          128.1
-        ],
-        "median": 130.9,
-        "p95": 135.6,
-        "minimum": 121.2,
-        "maximum": 135.6
-      },
-      "inProcessCompilerWorkMilliseconds": {
-        "values": [
-          3080,
-          3115.2,
-          3084.3,
-          3028.1,
-          3082.1
-        ],
-        "median": 3082.1,
-        "p95": 3115.2,
-        "minimum": 3028.1,
-        "maximum": 3115.2
-      },
-      "peakWorkingSetBytes": {
-        "values": [
-          1822502912,
-          1824673792,
-          1869623296,
-          1853497344,
-          1861201920
-        ],
-        "median": 1853497344,
-        "p95": 1869623296,
-        "minimum": 1822502912,
-        "maximum": 1869623296
-      },
-      "peakPrivateBytes": {
-        "values": [
-          2364850176,
-          2374909952,
-          2431803392,
-          2394624000,
-          2404737024
-        ],
-        "median": 2394624000,
-        "p95": 2431803392,
-        "minimum": 2364850176,
-        "maximum": 2431803392
-      }
-    },
-    "compilerStages": {
-      "inspectSources": {
-        "values": [
-          44,
-          44.3,
-          43.5,
-          43.7,
-          43.3
-        ],
-        "median": 43.7,
-        "p95": 44.3,
-        "minimum": 43.3,
-        "maximum": 44.3
-      },
-      "toolchainIdentity": {
-        "values": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "median": 0,
-        "p95": 0,
-        "minimum": 0,
-        "maximum": 0
-      },
-      "cacheLookup": {
-        "values": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "median": 0,
-        "p95": 0,
-        "minimum": 0,
-        "maximum": 0
-      },
-      "adapter": {
-        "values": [
-          50603.3,
-          50501.4,
-          49714.1,
-          51238.1,
-          49708.9
-        ],
-        "median": 50501.4,
-        "p95": 51238.1,
-        "minimum": 49708.9,
-        "maximum": 51238.1
-      },
-      "readSceneIr": {
-        "values": [
-          1907.7,
-          1951.9,
-          1936,
-          1889.5,
-          1949.5
-        ],
-        "median": 1936,
-        "p95": 1951.9,
-        "minimum": 1889.5,
-        "maximum": 1951.9
-      },
-      "hydrate": {
-        "values": [
-          8.9,
-          9.6,
-          10.6,
-          8.9,
-          9.1
-        ],
-        "median": 9.1,
-        "p95": 10.6,
-        "minimum": 8.9,
-        "maximum": 10.6
-      },
-      "compile": {
-        "values": [
-          839.5,
-          847.9,
-          854.3,
-          840.6,
-          836
-        ],
-        "median": 840.6,
-        "p95": 854.3,
-        "minimum": 836,
-        "maximum": 854.3
-      },
-      "validateCompiled": {
-        "values": [
-          14.1,
-          13.8,
-          13.7,
-          15.5,
-          13.3
-        ],
-        "median": 13.8,
-        "p95": 15.5,
-        "minimum": 13.3,
-        "maximum": 15.5
-      },
-      "dependencyIndex": {
-        "values": [
-          42.4,
-          33.8,
-          32.4,
-          34.9,
-          34.6
-        ],
-        "median": 34.6,
-        "p95": 42.4,
-        "minimum": 32.4,
-        "maximum": 42.4
-      },
-      "writePackage": {
-        "values": [
-          193.2,
-          183.9,
-          163.9,
-          166.6,
-          167
-        ],
-        "median": 167,
-        "p95": 193.2,
-        "minimum": 163.9,
-        "maximum": 193.2
-      },
-      "writeDependencyIndex": {
-        "values": [
-          9.3,
-          9.9,
-          8.6,
-          8,
-          9
-        ],
-        "median": 9,
-        "p95": 9.9,
-        "minimum": 8,
-        "maximum": 9.9
-      },
-      "retainSceneIr": {
-        "values": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "median": 0,
-        "p95": 0,
-        "minimum": 0,
-        "maximum": 0
-      },
-      "cachePublish": {
-        "values": [
-          0,
-          0,
-          0,
-          0,
-          0
-        ],
-        "median": 0,
-        "p95": 0,
-        "minimum": 0,
-        "maximum": 0
-      }
-    },
-    "unattributedMilliseconds": {
-      "values": [
-        21,
-        20.1,
-        21.2,
-        20.3,
-        20.2
-      ],
-      "median": 20.3,
-      "p95": 21.2,
-      "minimum": 20.1,
-      "maximum": 21.2
-    },
-    "structureReadMilliseconds": {
-      "values": [
-        1903.1,
-        1946.1,
-        1930.7,
-        1884.1,
-        1944.3
-      ],
-      "median": 1930.7,
-      "p95": 1946.1,
-      "minimum": 1884.1,
-      "maximum": 1946.1
-    },
-    "compileStages": {
-      "validateScene": {
-        "values": [
-          91.8,
-          94.4,
-          93.2,
-          96.2,
-          93.8
-        ],
-        "median": 93.8,
-        "p95": 96.2,
-        "minimum": 91.8,
-        "maximum": 96.2
-      },
-      "encodeGeometry": {
-        "values": [
-          360.3,
-          361,
-          328.8,
-          309.9,
-          323.2
-        ],
-        "median": 328.8,
-        "p95": 361,
-        "minimum": 309.9,
-        "maximum": 361
-      },
-      "measureDocument": {
-        "values": [
-          179.1,
-          179.9,
-          198.1,
-          188.7,
-          185
-        ],
-        "median": 185,
-        "p95": 198.1,
-        "minimum": 179.1,
-        "maximum": 198.1
-      },
-      "other": {
-        "values": [
-          208.4,
-          212.6,
-          234.2,
-          245.9,
-          234
-        ],
-        "median": 234,
-        "p95": 245.9,
-        "minimum": 208.4,
-        "maximum": 245.9
-      }
-    },
-    "adapterProcess": {
-      "spawnToModuleStartMilliseconds": {
-        "values": [
-          76.5,
-          75.1,
-          76.3,
-          71,
-          77.6
-        ],
-        "median": 76.3,
-        "p95": 77.6,
-        "minimum": 71,
-        "maximum": 77.6
-      },
-      "importMilliseconds": {
-        "values": [
-          241.1,
-          245.5,
-          239.2,
-          241.1,
-          252
-        ],
-        "median": 241.1,
-        "p95": 252,
-        "minimum": 239.2,
-        "maximum": 252
-      },
-      "importsToMainMilliseconds": {
-        "values": [
-          4.7,
-          4.8,
-          5,
-          5,
-          4.9
-        ],
-        "median": 4.9,
-        "p95": 5,
-        "minimum": 4.7,
-        "maximum": 5
-      },
-      "mainMilliseconds": {
-        "values": [
-          50181.6,
-          50087.2,
-          49303.9,
-          50831.7,
-          49284.7
-        ],
-        "median": 50087.2,
-        "p95": 50831.7,
-        "minimum": 49284.7,
-        "maximum": 50831.7
-      },
-      "finishToCloseMilliseconds": {
-        "values": [
-          99.1,
-          88.4,
-          89.5,
-          88.2,
-          89.9
-        ],
-        "median": 89.5,
-        "p95": 99.1,
-        "minimum": 88.2,
-        "maximum": 99.1
-      }
-    },
-    "adapterMainUnattributedMilliseconds": {
-      "values": [
-        4.9,
-        4.5,
-        7.1,
-        6.7,
-        6.6
-      ],
-      "median": 6.6,
-      "p95": 7.1,
-      "minimum": 4.5,
-      "maximum": 7.1
-    },
-    "adapterDocuments": {
-      "architecture": {
-        "outcome": "extracted",
-        "extractMilliseconds": {
-          "values": [
-            4146.6,
-            4185.5,
-            4301.1,
-            4210.2,
-            4189.4
-          ],
-          "median": 4189.4,
-          "p95": 4301.1,
-          "minimum": 4146.6,
-          "maximum": 4301.1
-        },
-        "readMilliseconds": {
-          "values": [
-            5.4,
-            5.4,
-            5.5,
-            5.5,
-            5.8
-          ],
-          "median": 5.5,
-          "p95": 5.8,
-          "minimum": 5.4,
-          "maximum": 5.8
-        },
-        "sourceBytes": {
-          "values": [
-            9022255,
-            9022255,
-            9022255,
-            9022255,
-            9022255
-          ],
-          "median": 9022255,
-          "p95": 9022255,
-          "minimum": 9022255,
-          "maximum": 9022255
-        }
-      },
-      "heating": {
-        "outcome": "extracted",
-        "extractMilliseconds": {
-          "values": [
-            13764.4,
-            13694.4,
-            13104.4,
-            13908.5,
-            13189.7
-          ],
-          "median": 13694.4,
-          "p95": 13908.5,
-          "minimum": 13104.4,
-          "maximum": 13908.5
-        },
-        "readMilliseconds": {
-          "values": [
-            12.9,
-            12.8,
-            12.8,
-            13.7,
-            13.5
-          ],
-          "median": 12.9,
-          "p95": 13.7,
-          "minimum": 12.8,
-          "maximum": 13.7
-        },
-        "sourceBytes": {
-          "values": [
-            20890415,
-            20890415,
-            20890415,
-            20890415,
-            20890415
-          ],
-          "median": 20890415,
-          "p95": 20890415,
-          "minimum": 20890415,
-          "maximum": 20890415
-        }
-      },
-      "plumbing": {
-        "outcome": "extracted",
-        "extractMilliseconds": {
-          "values": [
-            25709.8,
-            25746.8,
-            25292.1,
-            26193.2,
-            25310.3
-          ],
-          "median": 25709.8,
-          "p95": 26193.2,
-          "minimum": 25292.1,
-          "maximum": 26193.2
-        },
-        "readMilliseconds": {
-          "values": [
-            15.5,
-            15.5,
-            15.5,
+            11.6,
+            12.6,
+            11.9,
             16.2,
-            16.1
+            12.6
           ],
-          "median": 15.5,
+          "median": 12.6,
           "p95": 16.2,
-          "minimum": 15.5,
+          "minimum": 11.6,
           "maximum": 16.2
         },
         "sourceBytes": {
@@ -3435,31 +2806,763 @@
         }
       },
       "ventilation": {
+        "outcome": "restored",
+        "artifactState": "verified",
+        "artifactBytes": {
+          "values": [
+            1428970,
+            1428970,
+            1428970,
+            1428970,
+            1428970
+          ],
+          "median": 1428970,
+          "p95": 1428970,
+          "minimum": 1428970,
+          "maximum": 1428970
+        },
+        "artifactLoadMilliseconds": {
+          "values": [
+            21.5,
+            16.7,
+            16.5,
+            17.3,
+            17.8
+          ],
+          "median": 17.3,
+          "p95": 21.5,
+          "minimum": 16.5,
+          "maximum": 21.5
+        },
+        "artifactParseMilliseconds": {
+          "values": [
+            38.5,
+            39.7,
+            39.3,
+            39.3,
+            42.5
+          ],
+          "median": 39.3,
+          "p95": 42.5,
+          "minimum": 38.5,
+          "maximum": 42.5
+        },
+        "artifactPayloadBytes": {
+          "values": [
+            12301588,
+            12301588,
+            12301588,
+            12301588,
+            12301588
+          ],
+          "median": 12301588,
+          "p95": 12301588,
+          "minimum": 12301588,
+          "maximum": 12301588
+        },
+        "artifactVerifyMilliseconds": {
+          "values": [
+            4.8,
+            4.8,
+            4.9,
+            4.9,
+            4.9
+          ],
+          "median": 4.9,
+          "p95": 4.9,
+          "minimum": 4.8,
+          "maximum": 4.9
+        },
+        "readMilliseconds": {
+          "values": [
+            8.1,
+            8.3,
+            8.2,
+            9.5,
+            8.3
+          ],
+          "median": 8.3,
+          "p95": 9.5,
+          "minimum": 8.1,
+          "maximum": 9.5
+        },
+        "restoreMilliseconds": {
+          "values": [
+            6.6,
+            7.1,
+            6.5,
+            7.2,
+            7.4
+          ],
+          "median": 7.1,
+          "p95": 7.4,
+          "minimum": 6.5,
+          "maximum": 7.4
+        },
+        "sourceBytes": {
+          "values": [
+            12737833,
+            12737833,
+            12737833,
+            12737833,
+            12737833
+          ],
+          "median": 12737833,
+          "p95": 12737833,
+          "minimum": 12737833,
+          "maximum": 12737833
+        }
+      }
+    },
+    "adapterFederation": {},
+    "adapterWrite": {
+      "manifestMilliseconds": {
+        "values": [
+          1,
+          0.8,
+          0.9,
+          0.8,
+          0.8
+        ],
+        "median": 0.8,
+        "p95": 1,
+        "minimum": 0.8,
+        "maximum": 1
+      }
+    },
+    "unchangedArtifactLoadMilliseconds": {
+      "values": [
+        127.3,
+        108,
+        117.2,
+        107.5,
+        117.8
+      ],
+      "median": 117.2,
+      "p95": 127.3,
+      "minimum": 107.5,
+      "maximum": 127.3
+    },
+    "unchangedArtifactVerifyMilliseconds": {
+      "values": [
+        25.3,
+        25.5,
+        25.3,
+        25.3,
+        25.4
+      ],
+      "median": 25.3,
+      "p95": 25.5,
+      "minimum": 25.3,
+      "maximum": 25.5
+    },
+    "unchangedArtifactParseMilliseconds": {
+      "values": [
+        127.7,
+        125.7,
+        134.8,
+        138.2,
+        137.8
+      ],
+      "median": 134.8,
+      "p95": 138.2,
+      "minimum": 125.7,
+      "maximum": 138.2
+    },
+    "unchangedArtifactBytes": 13241792,
+    "unchangedArtifactPayloadBytes": 64227000
+  },
+  "cleanDistributions": {
+    "whole": {
+      "processMilliseconds": {
+        "values": [
+          54870.9,
+          50623.7,
+          52031.4,
+          50473.4,
+          51334.8
+        ],
+        "median": 51334.8,
+        "p95": 54870.9,
+        "minimum": 50473.4,
+        "maximum": 54870.9
+      },
+      "compileMilliseconds": {
+        "values": [
+          54756.1,
+          50506.2,
+          51916,
+          50357.8,
+          51223.3
+        ],
+        "median": 51223.3,
+        "p95": 54756.1,
+        "minimum": 50357.8,
+        "maximum": 54756.1
+      },
+      "totalMilliseconds": {
+        "values": [
+          54749.7,
+          50499.9,
+          51909.6,
+          50351.5,
+          51217
+        ],
+        "median": 51217,
+        "p95": 54749.7,
+        "minimum": 50351.5,
+        "maximum": 54749.7
+      },
+      "harnessOverheadMilliseconds": {
+        "values": [
+          114.8,
+          117.5,
+          115.4,
+          115.6,
+          111.5
+        ],
+        "median": 115.4,
+        "p95": 117.5,
+        "minimum": 111.5,
+        "maximum": 117.5
+      },
+      "inProcessCompilerWorkMilliseconds": {
+        "values": [
+          3028.3,
+          3092.1,
+          3032.9,
+          3107.2,
+          3155.7
+        ],
+        "median": 3092.1,
+        "p95": 3155.7,
+        "minimum": 3028.3,
+        "maximum": 3155.7
+      },
+      "peakWorkingSetBytes": {
+        "values": [
+          1838301184,
+          1813430272,
+          1889259520,
+          1836965888,
+          1847369728
+        ],
+        "median": 1838301184,
+        "p95": 1889259520,
+        "minimum": 1813430272,
+        "maximum": 1889259520
+      },
+      "peakPrivateBytes": {
+        "values": [
+          2400636928,
+          2362486784,
+          2447998976,
+          2398253056,
+          2398482432
+        ],
+        "median": 2398482432,
+        "p95": 2447998976,
+        "minimum": 2362486784,
+        "maximum": 2447998976
+      }
+    },
+    "compilerStages": {
+      "inspectSources": {
+        "values": [
+          43.2,
+          43.3,
+          43.2,
+          43.2,
+          43.6
+        ],
+        "median": 43.2,
+        "p95": 43.6,
+        "minimum": 43.2,
+        "maximum": 43.6
+      },
+      "toolchainIdentity": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
+      },
+      "cacheLookup": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
+      },
+      "adapter": {
+        "values": [
+          51721.3,
+          47407.8,
+          48876.7,
+          47244.3,
+          48061.3
+        ],
+        "median": 48061.3,
+        "p95": 51721.3,
+        "minimum": 47244.3,
+        "maximum": 51721.3
+      },
+      "assembleFederation": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
+      },
+      "readSceneIr": {
+        "values": [
+          1893.7,
+          1919.4,
+          1894.4,
+          1940.3,
+          1985.7
+        ],
+        "median": 1919.4,
+        "p95": 1985.7,
+        "minimum": 1893.7,
+        "maximum": 1985.7
+      },
+      "hydrate": {
+        "values": [
+          9.6,
+          9.4,
+          9.1,
+          8.8,
+          9.5
+        ],
+        "median": 9.4,
+        "p95": 9.6,
+        "minimum": 8.8,
+        "maximum": 9.6
+      },
+      "compile": {
+        "values": [
+          830.7,
+          861.9,
+          844.5,
+          862.3,
+          860.2
+        ],
+        "median": 860.2,
+        "p95": 862.3,
+        "minimum": 830.7,
+        "maximum": 862.3
+      },
+      "validateCompiled": {
+        "values": [
+          14.3,
+          15.1,
+          14.3,
+          14.4,
+          14.6
+        ],
+        "median": 14.4,
+        "p95": 15.1,
+        "minimum": 14.3,
+        "maximum": 15.1
+      },
+      "dependencyIndex": {
+        "values": [
+          34.9,
+          37.9,
+          34.1,
+          33.1,
+          36.7
+        ],
+        "median": 34.9,
+        "p95": 37.9,
+        "minimum": 33.1,
+        "maximum": 37.9
+      },
+      "writePackage": {
+        "values": [
+          173.1,
+          175.7,
+          165.2,
+          176.2,
+          176.7
+        ],
+        "median": 175.7,
+        "p95": 176.7,
+        "minimum": 165.2,
+        "maximum": 176.7
+      },
+      "writeDependencyIndex": {
+        "values": [
+          8.6,
+          8.9,
+          8.2,
+          8.5,
+          8.6
+        ],
+        "median": 8.6,
+        "p95": 8.9,
+        "minimum": 8.2,
+        "maximum": 8.9
+      },
+      "retainSceneIr": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
+      },
+      "cachePublish": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "median": 0,
+        "p95": 0,
+        "minimum": 0,
+        "maximum": 0
+      }
+    },
+    "unattributedMilliseconds": {
+      "values": [
+        20.3,
+        20.4,
+        19.9,
+        20.2,
+        20.2
+      ],
+      "median": 20.2,
+      "p95": 20.4,
+      "minimum": 19.9,
+      "maximum": 20.4
+    },
+    "structureReadMilliseconds": {
+      "values": [
+        1887.5,
+        1914.2,
+        1889.4,
+        1932.4,
+        1979.7
+      ],
+      "median": 1914.2,
+      "p95": 1979.7,
+      "minimum": 1887.5,
+      "maximum": 1979.7
+    },
+    "compileStages": {
+      "validateScene": {
+        "values": [
+          95.3,
+          95.2,
+          92.8,
+          95.5,
+          96.3
+        ],
+        "median": 95.3,
+        "p95": 96.3,
+        "minimum": 92.8,
+        "maximum": 96.3
+      },
+      "encodeGeometry": {
+        "values": [
+          332.1,
+          361.6,
+          342.4,
+          329.1,
+          343.5
+        ],
+        "median": 342.4,
+        "p95": 361.6,
+        "minimum": 329.1,
+        "maximum": 361.6
+      },
+      "measureDocument": {
+        "values": [
+          179,
+          191,
+          192.9,
+          193.3,
+          202.6
+        ],
+        "median": 192.9,
+        "p95": 202.6,
+        "minimum": 179,
+        "maximum": 202.6
+      },
+      "other": {
+        "values": [
+          224.3,
+          214.2,
+          216.4,
+          244.4,
+          217.8
+        ],
+        "median": 217.8,
+        "p95": 244.4,
+        "minimum": 214.2,
+        "maximum": 244.4
+      }
+    },
+    "adapterProcess": {
+      "spawnToModuleStartMilliseconds": {
+        "values": [
+          62.7,
+          65.5,
+          61.7,
+          62.3,
+          62.7
+        ],
+        "median": 62.7,
+        "p95": 65.5,
+        "minimum": 61.7,
+        "maximum": 65.5
+      },
+      "importMilliseconds": {
+        "values": [
+          258.5,
+          218.9,
+          225.9,
+          223.7,
+          225.2
+        ],
+        "median": 225.2,
+        "p95": 258.5,
+        "minimum": 218.9,
+        "maximum": 258.5
+      },
+      "importsToMainMilliseconds": {
+        "values": [
+          43.7,
+          4.2,
+          4.7,
+          4.5,
+          4.6
+        ],
+        "median": 4.6,
+        "p95": 43.7,
+        "minimum": 4.2,
+        "maximum": 43.7
+      },
+      "mainMilliseconds": {
+        "values": [
+          51262.2,
+          47028.4,
+          48497.3,
+          46861.7,
+          47672.2
+        ],
+        "median": 47672.2,
+        "p95": 51262.2,
+        "minimum": 46861.7,
+        "maximum": 51262.2
+      },
+      "finishToCloseMilliseconds": {
+        "values": [
+          93.8,
+          91,
+          87.6,
+          91.8,
+          96.2
+        ],
+        "median": 91.8,
+        "p95": 96.2,
+        "minimum": 87.6,
+        "maximum": 96.2
+      }
+    },
+    "adapterMainUnattributedMilliseconds": {
+      "values": [
+        7.6,
+        5.5,
+        6.7,
+        5.9,
+        6.1
+      ],
+      "median": 6.1,
+      "p95": 7.6,
+      "minimum": 5.5,
+      "maximum": 7.6
+    },
+    "adapterDocuments": {
+      "architecture": {
         "outcome": "extracted",
         "extractMilliseconds": {
           "values": [
-            5425.2,
-            5347.6,
-            5458.8,
-            5327.4,
-            5417.3
+            4716.6,
+            4167.6,
+            4282,
+            4218.2,
+            4352.3
           ],
-          "median": 5417.3,
-          "p95": 5458.8,
-          "minimum": 5327.4,
-          "maximum": 5458.8
+          "median": 4282,
+          "p95": 4716.6,
+          "minimum": 4167.6,
+          "maximum": 4716.6
+        },
+        "readMilliseconds": {
+          "values": [
+            9.3,
+            5.4,
+            5.4,
+            5.5,
+            5.7
+          ],
+          "median": 5.5,
+          "p95": 9.3,
+          "minimum": 5.4,
+          "maximum": 9.3
+        },
+        "sourceBytes": {
+          "values": [
+            9022255,
+            9022255,
+            9022255,
+            9022255,
+            9022255
+          ],
+          "median": 9022255,
+          "p95": 9022255,
+          "minimum": 9022255,
+          "maximum": 9022255
+        }
+      },
+      "heating": {
+        "outcome": "extracted",
+        "extractMilliseconds": {
+          "values": [
+            14241.4,
+            12983.2,
+            13062.8,
+            12854.1,
+            13369.4
+          ],
+          "median": 13062.8,
+          "p95": 14241.4,
+          "minimum": 12854.1,
+          "maximum": 14241.4
+        },
+        "readMilliseconds": {
+          "values": [
+            12.9,
+            13.4,
+            13.1,
+            12.9,
+            12.9
+          ],
+          "median": 12.9,
+          "p95": 13.4,
+          "minimum": 12.9,
+          "maximum": 13.4
+        },
+        "sourceBytes": {
+          "values": [
+            20890415,
+            20890415,
+            20890415,
+            20890415,
+            20890415
+          ],
+          "median": 20890415,
+          "p95": 20890415,
+          "minimum": 20890415,
+          "maximum": 20890415
+        }
+      },
+      "plumbing": {
+        "outcome": "extracted",
+        "extractMilliseconds": {
+          "values": [
+            25833,
+            23699.5,
+            24814.7,
+            23371.2,
+            23746.4
+          ],
+          "median": 23746.4,
+          "p95": 25833,
+          "minimum": 23371.2,
+          "maximum": 25833
+        },
+        "readMilliseconds": {
+          "values": [
+            15.1,
+            15.5,
+            15.6,
+            15.5,
+            15.9
+          ],
+          "median": 15.5,
+          "p95": 15.9,
+          "minimum": 15.1,
+          "maximum": 15.9
+        },
+        "sourceBytes": {
+          "values": [
+            25178864,
+            25178864,
+            25178864,
+            25178864,
+            25178864
+          ],
+          "median": 25178864,
+          "p95": 25178864,
+          "minimum": 25178864,
+          "maximum": 25178864
+        }
+      },
+      "ventilation": {
+        "outcome": "extracted",
+        "extractMilliseconds": {
+          "values": [
+            5348.7,
+            5058.9,
+            5227.8,
+            5292.8,
+            5079.6
+          ],
+          "median": 5227.8,
+          "p95": 5348.7,
+          "minimum": 5058.9,
+          "maximum": 5348.7
         },
         "readMilliseconds": {
           "values": [
             8.4,
+            8.3,
             8.5,
-            8.5,
-            8.2,
-            8.2
+            8.3,
+            8.4
           ],
           "median": 8.4,
           "p95": 8.5,
-          "minimum": 8.2,
+          "minimum": 8.3,
           "maximum": 8.5
         },
         "sourceBytes": {
@@ -3480,96 +3583,96 @@
     "adapterFederation": {
       "mergeMilliseconds": {
         "values": [
+          9.2,
           9.1,
-          8.8,
-          11.4,
-          9.1,
-          11.5
+          8.5,
+          10.5,
+          9
         ],
         "median": 9.1,
-        "p95": 11.5,
-        "minimum": 8.8,
-        "maximum": 11.5
+        "p95": 10.5,
+        "minimum": 8.5,
+        "maximum": 10.5
       },
       "propertyIndexMilliseconds": {
         "values": [
-          55.4,
+          55.2,
+          55.3,
           54.8,
-          69.3,
-          63,
-          79.8
+          56.3,
+          57.9
         ],
-        "median": 63,
-        "p95": 79.8,
+        "median": 55.3,
+        "p95": 57.9,
         "minimum": 54.8,
-        "maximum": 79.8
+        "maximum": 57.9
       }
     },
     "adapterWrite": {
       "digestMilliseconds": {
         "values": [
-          58.3,
-          56.8,
-          57,
           59.5,
-          57.5
+          60,
+          60,
+          59.2,
+          57
         ],
-        "median": 57.5,
-        "p95": 59.5,
-        "minimum": 56.8,
-        "maximum": 59.5
+        "median": 59.5,
+        "p95": 60,
+        "minimum": 57,
+        "maximum": 60
       },
       "geometryMilliseconds": {
         "values": [
-          237.9,
-          235.1,
-          245.3,
-          276.6,
-          255
+          246.6,
+          244.8,
+          243.1,
+          244.3,
+          248.4
         ],
-        "median": 245.3,
-        "p95": 276.6,
-        "minimum": 235.1,
-        "maximum": 276.6
+        "median": 244.8,
+        "p95": 248.4,
+        "minimum": 243.1,
+        "maximum": 248.4
       },
       "propertiesMilliseconds": {
         "values": [
           8.7,
-          8.8,
-          8.8,
-          9.1,
-          8.8
+          9,
+          9.9,
+          9.3,
+          9.1
         ],
-        "median": 8.8,
-        "p95": 9.1,
+        "median": 9.1,
+        "p95": 9.9,
         "minimum": 8.7,
-        "maximum": 9.1
+        "maximum": 9.9
       },
       "reportMilliseconds": {
         "values": [
-          1.4,
-          1.4,
+          1.8,
           1.6,
           1.4,
-          1.4
+          1.4,
+          1.5
         ],
-        "median": 1.4,
-        "p95": 1.6,
+        "median": 1.5,
+        "p95": 1.8,
         "minimum": 1.4,
-        "maximum": 1.6
+        "maximum": 1.8
       },
       "structureMilliseconds": {
         "values": [
-          717.5,
-          700.4,
-          704.8,
-          723.5,
-          713.9
+          688.5,
+          691.5,
+          683,
+          696.4,
+          692.7
         ],
-        "median": 713.9,
-        "p95": 723.5,
-        "minimum": 700.4,
-        "maximum": 723.5
+        "median": 691.5,
+        "p95": 696.4,
+        "minimum": 683,
+        "maximum": 696.4
       }
     }
   },
@@ -4042,131 +4145,131 @@
       "adapter": {
         "loadMilliseconds": {
           "values": [
-            124,
-            118.9,
-            115.7,
-            110.3,
-            110.1
+            127.3,
+            108,
+            117.2,
+            107.5,
+            117.8
           ],
-          "median": 115.7,
-          "p95": 124,
-          "minimum": 110.1,
-          "maximum": 124
+          "median": 117.2,
+          "p95": 127.3,
+          "minimum": 107.5,
+          "maximum": 127.3
         },
         "verifyMilliseconds": {
           "values": [
-            26.1,
-            25.6,
-            25.8,
+            25.3,
+            25.5,
+            25.3,
             25.3,
             25.4
           ],
-          "median": 25.6,
-          "p95": 26.1,
+          "median": 25.3,
+          "p95": 25.5,
           "minimum": 25.3,
-          "maximum": 26.1
+          "maximum": 25.5
         },
         "loadPlusVerifyMilliseconds": {
           "values": [
-            150.1,
-            144.5,
-            141.6,
-            135.6,
-            135.5
+            152.6,
+            133.5,
+            142.6,
+            132.8,
+            143.2
           ],
-          "median": 141.6,
-          "p95": 150.1,
-          "minimum": 135.5,
-          "maximum": 150.1
+          "median": 142.6,
+          "p95": 152.6,
+          "minimum": 132.8,
+          "maximum": 152.6
         },
         "parseMilliseconds": {
           "values": [
-            152.2,
-            136.7,
-            137.8,
-            129.1,
-            127.2
+            127.7,
+            125.7,
+            134.8,
+            138.2,
+            137.8
           ],
-          "median": 136.7,
-          "p95": 152.2,
-          "minimum": 127.2,
-          "maximum": 152.2
+          "median": 134.8,
+          "p95": 138.2,
+          "minimum": 125.7,
+          "maximum": 138.2
         },
-        "artifactBytes": 13241820,
+        "artifactBytes": 13241792,
         "artifactPayloadBytes": 64227000
       },
       "reference": {
         "documents": {
           "heating": {
             "schemaVersion": "naru.ifc-document-artifact.4",
-            "fileBytes": 4484677,
+            "fileBytes": 4484674,
             "payloadBytes": 24799144,
             "milliseconds": {
               "values": [
-                37.3,
-                37.3,
+                37.1,
+                38.6,
                 36,
-                36.3,
-                36
+                35.8,
+                35.5
               ],
-              "median": 36.3,
-              "p95": 37.3,
-              "minimum": 36,
-              "maximum": 37.3
+              "median": 36,
+              "p95": 38.6,
+              "minimum": 35.5,
+              "maximum": 38.6
             }
           },
           "plumbing": {
             "schemaVersion": "naru.ifc-document-artifact.4",
-            "fileBytes": 7328176,
+            "fileBytes": 7328148,
             "payloadBytes": 27126268,
             "milliseconds": {
               "values": [
-                48.1,
-                52.1,
-                45.4,
-                45.5,
-                45
+                50.1,
+                47.9,
+                49,
+                46.6,
+                45.6
               ],
-              "median": 45.5,
-              "p95": 52.1,
-              "minimum": 45,
-              "maximum": 52.1
+              "median": 47.9,
+              "p95": 50.1,
+              "minimum": 45.6,
+              "maximum": 50.1
             }
           },
           "ventilation": {
             "schemaVersion": "naru.ifc-document-artifact.4",
-            "fileBytes": 1428967,
+            "fileBytes": 1428970,
             "payloadBytes": 12301588,
             "milliseconds": {
               "values": [
-                17.1,
-                17,
-                18.4,
-                17.3,
-                18
+                16.9,
+                15.8,
+                15.6,
+                15.3,
+                14.6
               ],
-              "median": 17.3,
-              "p95": 18.4,
-              "minimum": 17,
-              "maximum": 18.4
+              "median": 15.6,
+              "p95": 16.9,
+              "minimum": 14.6,
+              "maximum": 16.9
             }
           }
         },
         "totalMilliseconds": {
           "values": [
-            102.5,
-            106.4,
-            99.8,
-            99.1,
-            99
+            104.1,
+            102.3,
+            100.6,
+            97.7,
+            95.7
           ],
-          "median": 99.8,
-          "p95": 106.4,
-          "minimum": 99,
-          "maximum": 106.4
+          "median": 100.6,
+          "p95": 104.1,
+          "minimum": 95.7,
+          "maximum": 104.1
         }
       },
-      "ratioAdapterToReference": 1.419,
+      "ratioAdapterToReference": 1.417,
       "gate0": {
         "processMilliseconds": 19872.9,
         "unchangedArtifactLoadMilliseconds": 899.3,
@@ -4179,23 +4282,23 @@
     },
     "gate4": {
       "rule": "The whole-process median of the transport rebuild is lower than the clean rebuild median by more than three times the clean samples' spread (maximum minus minimum), and the transport median peak process-tree working set is no higher than the clean median. Both arms are fresh processes recorded in this session, interleaved per index.",
-      "slice": "3a",
+      "slice": "3b",
       "transport": {
-        "processMedianMilliseconds": 10302.4,
-        "processMinimumMilliseconds": 10250.5,
-        "processMaximumMilliseconds": 10373.8,
-        "peakWorkingSetMedianBytes": 441708544
+        "processMedianMilliseconds": 9268.1,
+        "processMinimumMilliseconds": 9138.1,
+        "processMaximumMilliseconds": 9458.9,
+        "peakWorkingSetMedianBytes": 434372608
       },
       "clean": {
-        "processMedianMilliseconds": 53754.4,
-        "processMinimumMilliseconds": 52925.9,
-        "processMaximumMilliseconds": 54404,
-        "spreadMilliseconds": 1478.1,
-        "peakWorkingSetMedianBytes": 1853497344
+        "processMedianMilliseconds": 51334.8,
+        "processMinimumMilliseconds": 50473.4,
+        "processMaximumMilliseconds": 54870.9,
+        "spreadMilliseconds": 4397.5,
+        "peakWorkingSetMedianBytes": 1838301184
       },
-      "savingMilliseconds": 43452,
-      "savingRatio": 0.192,
-      "requiredSavingMilliseconds": 4434.3,
+      "savingMilliseconds": 42066.7,
+      "savingRatio": 0.181,
+      "requiredSavingMilliseconds": 13192.5,
       "fasterByMoreThanThreeSpreads": true,
       "peakMemoryNoHigher": true,
       "met": true

@@ -766,9 +766,14 @@ reader views instead of decoding, and then the property key table and value
 heap interned per document so the federation pass only remaps pre-encoded bytes
 (`naru.ifc-document-artifact.4`, pinned by the compiler in
 [`ifc-federation.ts`](../packages/compiler/src/ifc-federation.ts)). Together
-those cut the adapter's parse of an unchanged document. The compiler's own
-structure scan and the in-compiler federation assembly are what the remaining
-slice addresses.
+those cut the adapter's parse of an unchanged document. The last slice
+(2026-09-16) removed the compiler's own structure scan: with
+`--assemble-federation` the adapter writes a `naru.ifc-federation-manifest.1`
+manifest instead of the monolithic Scene IR and the compiler assembles the
+federation from the verified artifacts in process
+([`ifc-federation-assembly.ts`](../packages/compiler/src/ifc-federation-assembly.ts)),
+falling back to one monolithic adapter run on any mismatch. The record that
+closed it moved ADR-0019 and ADR-0010 to Accepted.
 
 [ADR-0018](adr/0018-content-addressed-compiled-payloads.md) was the reviewed
 design for that payload tier: reuse one unit, the prototype payload -- the

@@ -32,6 +32,7 @@ IFC options:
   --omit-default-node-transforms Omit identity matrices; emit pure translations
   --retain-scene-ir              Keep the split intermediate pair under output
   --staged-preview <directory>   Publish each document's tree there as soon as it parses
+  --assemble-federation          Merge cached document artifacts in the compiler (needs --cache)
 
 General options:
   --spatial-index                Emit the optional occurrence demand BVH
@@ -77,6 +78,7 @@ export interface IfcCompileArguments {
   readonly reducedLodMeters?: number;
   readonly retainSceneIr: boolean;
   readonly stagedPreviewDirectory?: string;
+  readonly assembleFederation: boolean;
   readonly jsonEvents: boolean;
 }
 
@@ -110,6 +112,7 @@ const ifcOptions = {
   "omit-default-node-transforms": { type: "boolean" },
   "retain-scene-ir": { type: "boolean" },
   "staged-preview": { type: "string" },
+  "assemble-federation": { type: "boolean" },
 } as const;
 
 /**
@@ -284,6 +287,10 @@ export function parseIfcCompileArguments(
   );
   const spatialPayloadOrder = values["spatial-payload-order"] ?? false;
   assertSpatialDependants(spatialIndex, spatialLeafCapacity, spatialPayloadOrder);
+  const assembleFederation = values["assemble-federation"] ?? false;
+  if (assembleFederation && !cacheDirectory) {
+    throw new TypeError(`--assemble-federation requires --cache.\n\n${usage}`);
+  }
 
   return {
     documents: [...documents.entries()].map(([discipline, sourcePath]) => {
@@ -310,6 +317,7 @@ export function parseIfcCompileArguments(
     ...(reducedLodMeters === undefined ? {} : { reducedLodMeters }),
     retainSceneIr: values["retain-scene-ir"] ?? false,
     ...(stagedPreviewDirectory ? { stagedPreviewDirectory } : {}),
+    assembleFederation,
     jsonEvents: values["json-events"] ?? false,
   };
 }

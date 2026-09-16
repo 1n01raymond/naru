@@ -125,6 +125,8 @@ export interface IfcFederationAssembly {
   readonly status: "assembled";
   /** The split structure, as `JSON.parse` of the adapter's scene file would return it. */
   readonly scene: Record<string, unknown>;
+  /** Float-source table for `scene`; `serializeCanonicalJson` needs it to reproduce the structure bytes. */
+  readonly floats: FloatSourceTable;
   /** Digest of the canonical structure JSON plus its trailing newline. */
   readonly structure: CanonicalJsonDigest;
   readonly geometry: Buffer;
@@ -859,6 +861,27 @@ function packProperties(columns: MergedPropertyColumns): {
   return { header, bytes: writer.finish() };
 }
 
+/**
+ * Orders every key the way the adapter's key-sorted structure file reads back,
+ * so the compiler sees the same object shape either way. In place, because the
+ * float-source table is keyed by holder identity.
+ */
+function sortKeysInPlace(value: unknown): void {
+  if (Array.isArray(value)) {
+    for (const item of value) sortKeysInPlace(item);
+    return;
+  }
+  if (!isRecord(value) || ArrayBuffer.isView(value)) return;
+  const keys = Object.keys(value);
+  const sorted = [...keys].sort(compareCodePoints);
+  if (sorted.some((key, index) => key !== keys[index])) {
+    const entries = sorted.map((key) => [key, value[key]] as const);
+    for (const key of keys) delete value[key];
+    for (const [key, item] of entries) value[key] = item;
+  }
+  for (const key of sorted) sortKeysInPlace(value[key]);
+}
+
 function sortKeysDeep(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(sortKeysDeep);
   if (!isRecord(value)) return value;
@@ -1021,6 +1044,7 @@ export async function assembleIfcFederation(
     propertyIndex,
     propertyValues,
   };
+  sortKeysInPlace(scene);
   const structure = digestCanonicalJson(scene, floats, "\n");
 
   const totals = new Map<string, number>();
@@ -1117,6 +1141,7 @@ export async function assembleIfcFederation(
   return {
     status: "assembled",
     scene,
+    floats,
     structure,
     geometry,
     properties,

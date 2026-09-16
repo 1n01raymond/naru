@@ -168,6 +168,7 @@ export type { StepSourceInspection, SupportedStepSchema } from "./step-source.js
 export type {
   IfcAdapterProcessTiming,
   IfcFederationCompilationResult,
+  IfcFederationCompileAssembly,
   IfcFederationCompileOptions,
   IfcFederationDocumentInput,
   IfcFederationStageName,
