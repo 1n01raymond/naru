@@ -9,7 +9,7 @@ A preview directory holds one canonical-JSON file per document plus an
 and renamed into place, so a reader never observes a half-written tree, and the
 index records each file's ``sha256`` and ``byteLength`` so a reader verifies
 stored bytes before parsing them -- the same contract
-``naru.ifc-document-artifact.3`` uses (ADR-0019 slice 1).
+``naru.ifc-document-artifact.4`` uses (ADR-0019 slice 1).
 
 A preview is not a package and can never be mistaken for one: it carries its
 own schema identifier, no ``scene.gltf``, no ``scene.bin``, and no digest

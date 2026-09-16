@@ -48,8 +48,11 @@ from placement_math import (
     rounded,
     sanitized_matrix,
 )
-from property_columns import encode_property_value_columns
-from property_index import index_property_bags
+from property_columns import (
+    encode_property_value_columns,
+    merge_property_value_columns,
+)
+from property_index import index_property_bags, merge_property_indexes
 from structure_preview import StructurePreviewPublisher, build_structure_preview
 
 
@@ -927,6 +930,24 @@ def inspect_document(
             },
         },
     }
+    # Intern this document's property keys and encode its values here, so a
+    # federation merge moves a key table and a value heap instead of running the
+    # interner and the JSON encoder over every bag again, and a restored artifact
+    # carries both already encoded (ADR-0019 slice 3).
+    property_index, property_references = index_property_bags(
+        [semantic["properties"]["entries"] for semantic in semantics]
+    )
+    for row, (semantic, reference) in enumerate(
+        zip(semantics, property_references, strict=True)
+    ):
+        semantic["properties"] = {
+            "schema": semantic["properties"]["schema"],
+            "set": reference["set"],
+            "row": row,
+        }
+    property_columns = encode_property_value_columns(
+        [reference["values"] for reference in property_references]
+    )
     counts = {
         "part21EntityCount": part21_entity_count,
         "semanticEntityCount": len(semantics),
@@ -968,6 +989,8 @@ def inspect_document(
         "occurrences": occurrences,
         "representations": sorted(representations.values(), key=lambda item: item["id"]),
         "materials": sorted(materials.values(), key=lambda item: item["id"]),
+        "propertyIndex": property_index,
+        "propertyValues": property_columns,
         "diagnostics": diagnostics,
         "counts": counts,
         "prototypeReuse": sorted(
@@ -1197,6 +1220,15 @@ def extract_federation(
         preview_publisher,
     )
     merge_started = StageTiming.now()
+    # Each document interned its own property keys and encoded its own values, so
+    # a semantic's `set` and `row` are local to the document it came from. The
+    # cross-document sort below loses that provenance, so record it now; the
+    # federation remap below replaces `properties` wholesale and drops it again,
+    # and it cannot reach an artifact because publication happens per document,
+    # before this function runs.
+    for position, item in enumerate(extracted):
+        for record in item["semantics"]:
+            record["properties"]["document"] = position
     digest_input = [
         {"discipline": item["input"].discipline, "sha256": item["sourceDigest"]}
         for item in extracted
@@ -1272,31 +1304,39 @@ def extract_federation(
             },
         ],
     }
-    # Property keys repeat across entities, so the federation-level pass interns
-    # them once: distinct keys and key combinations move into `propertyIndex`.
-    # The values themselves then leave the JSON entirely: every distinct value
-    # is encoded once into the binary column heap and each semantic keeps only
-    # `{schema, set, row}`, where `row` is its run in the shared reference
-    # column. Both passes run after the cross-document merge because the
-    # tables must span the federation.
+    # Property keys repeat across entities, so they are interned: distinct keys
+    # and key combinations live in `propertyIndex`, and the values themselves
+    # leave the JSON entirely into the binary column heap, each semantic keeping
+    # only `{schema, set, row}` where `row` is its run in the shared reference
+    # column. Each document already did that for its own bags, so the federation
+    # pass is a merge -- union the key tables, dedupe the encoded values, remap
+    # every semantic into the merged tables -- and never runs the interner or the
+    # JSON encoder over a bag again. That is what lets a restored artifact carry
+    # its columns already encoded (ADR-0019 slice 3).
     if timing:
         timing.federation["mergeMilliseconds"] = StageTiming.now() - merge_started
     property_started = StageTiming.now()
-    property_index, property_references = index_property_bags(
-        [semantic["properties"]["entries"] for semantic in scene["semantics"]]
+    property_index, set_remaps = merge_property_indexes(
+        [item["propertyIndex"] for item in extracted]
     )
-    for row, (semantic, reference) in enumerate(
-        zip(scene["semantics"], property_references, strict=True)
-    ):
+    property_columns = merge_property_value_columns(
+        [item["propertyValues"] for item in extracted],
+        [
+            (semantic["properties"]["document"], semantic["properties"]["row"])
+            for semantic in scene["semantics"]
+        ],
+    )
+    merged_sets: list[int] = []
+    for row, semantic in enumerate(scene["semantics"]):
+        properties = semantic["properties"]
+        merged_set = set_remaps[properties["document"]][properties["set"]]
+        merged_sets.append(merged_set)
         semantic["properties"] = {
-            "schema": semantic["properties"]["schema"],
-            "set": reference["set"],
+            "schema": properties["schema"],
+            "set": merged_set,
             "row": row,
         }
     scene["propertyIndex"] = property_index
-    property_columns = encode_property_value_columns(
-        [reference["values"] for reference in property_references]
-    )
     # Raw columns; `write_scene` streams them into the properties file and
     # replaces this member with the `madi.property-columns.1` header.
     scene["propertyValues"] = property_columns
@@ -1326,8 +1366,7 @@ def extract_federation(
     # encoded row must hold exactly as many values as its interned key set —
     # the same cross-check the compiler repeats when it opens the columns.
     expected_value_count = sum(
-        len(property_index["sets"][reference["set"]])
-        for reference in property_references
+        len(property_index["sets"][merged_set]) for merged_set in merged_sets
     )
     if expected_value_count != property_columns["value_count"]:
         raise ValueError(

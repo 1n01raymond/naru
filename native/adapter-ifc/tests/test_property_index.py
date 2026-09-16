@@ -11,7 +11,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
 
-from property_index import index_property_bags  # noqa: E402
+from property_index import (  # noqa: E402
+    index_property_bags,
+    merge_property_indexes,
+)
 
 
 def resolve(property_index, reference):
@@ -66,3 +69,42 @@ def test_index_is_independent_of_bag_order():
     forward, _ = index_property_bags(bags)
     backward, _ = index_property_bags(list(reversed(bags)))
     assert forward == backward
+DOCUMENT_BAGS = [
+    [{"b": 2, "a": 1}, {"a": "x"}],
+    [{}, {"c": None, "a": True}, {"b": 7, "c": 8}],
+    [{"Zeta": 1}],
+]
+
+
+def test_merging_per_document_indexes_equals_one_pass_over_every_bag():
+    """The federation merge must be the single pass, or ADR-0019 gate 1 fails.
+
+    A document interns its own keys, so the merge has to rebuild exactly the
+    tables `index_property_bags` would have produced over the concatenation --
+    same keys, same sets, and the same set index for every bag.
+    """
+    expected_index, expected_references = index_property_bags(
+        [bag for document in DOCUMENT_BAGS for bag in document]
+    )
+    per_document = [index_property_bags(document) for document in DOCUMENT_BAGS]
+    merged_index, set_remaps = merge_property_indexes(
+        [index for index, _ in per_document]
+    )
+    assert merged_index == expected_index
+    remapped = [
+        set_remaps[document][reference["set"]]
+        for document, (_, references) in enumerate(per_document)
+        for reference in references
+    ]
+    assert remapped == [reference["set"] for reference in expected_references]
+
+
+def test_merging_one_index_reproduces_it():
+    index, _ = index_property_bags(DOCUMENT_BAGS[1])
+    merged_index, set_remaps = merge_property_indexes([index])
+    assert merged_index == index
+    assert set_remaps == [list(range(len(index["sets"])))]
+
+
+def test_merging_no_index_yields_empty_tables():
+    assert merge_property_indexes([]) == ({"keys": [], "sets": []}, [])

@@ -55,7 +55,7 @@ it cannot be re-recorded from the current tree.
 
 `rebuild-stages/` is ADR-0019's gate record (`naru.rebuild-stage-evidence.2`):
 the same changed-discipline rebuild compiled through restored
-`naru.ifc-document-artifact.3` artifacts and, interleaved in the same
+`naru.ifc-document-artifact.4` artifacts and, interleaved in the same
 session, with no cache directory at all, five fresh-process samples per arm
 per model, each decomposed into adapter stages (interpreter start,
 changed-document extraction, per-document artifact load, verification, and

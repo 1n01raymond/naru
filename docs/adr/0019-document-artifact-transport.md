@@ -179,6 +179,13 @@ measured against gate 0 before the next begins:
    performs today (sorted record ids, material dedup, property-key interning)
    in-process. Where the adapter still writes a monolithic split Scene IR
    (no cache directory, or a consumer that asks for it), nothing changes.
+   **Slice 3a landed 2026-09-13** as `naru.ifc-document-artifact.4`: property
+   interning and value encoding moved into the per-document pass, so the
+   artifact carries a document-local key table plus the deduped value heap and
+   its three `u32` index tables as raw regions, and the federation pass is a
+   remap over pre-encoded byte strings. That is the prerequisite for assembling
+   the merge in TypeScript, for the reason recorded under *Implementation
+   notes* below. The manifest and the in-compiler merge are slice 3b.
 
 `--payload-cache` **is removed.** Its ceiling is the encoder's share, so no
 tuning can pass gate 4; a flag that can never be recommended is an option
@@ -318,6 +325,11 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   (`c4b151e5...`, `05707534...`), so the second format change also moved no
   package byte; on sixty5 ten of the eleven package files are byte-identical
   across the five pairs and `adapter-report.json` is identical outside the
+  same excluded key. **Slice 3a: met 2026-09-13** -- both digests reproduced a
+  third time (`c4b151e5...`, `05707534...`), so moving property interning and
+  value encoding into the per-document pass moved no package byte either; on
+  both models ten of the eleven package files are byte-identical across the
+  five interleaved pairs and `adapter-report.json` is identical outside the
   same excluded key.
 - **Gate 2, exact decisions:** the adapter report names every document's
   restore or extraction and its reason; a corrupt artifact warns and
@@ -329,7 +341,12 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   miss on Digital Hub, six and one on sixty5, identical across all five
   samples on both models; a `.2` artifact is refused by its schema line and
   republished at the same path, which both warm-ups confirm (seven misses,
-  zero hits).
+  zero hits). **Slice 3a: met 2026-09-13** -- the same decisions under
+  `naru.ifc-document-artifact.4`: on Digital Hub `heating`, `plumbing`, and
+  `ventilation` verified against `architecture` absent, on sixty5 six verified
+  against `structure` absent, identical across all five samples on both
+  models, and the `.3` files are refused by their schema line and republished
+  at the same path (both warm-ups zero hits, four and seven misses).
 - **Gate 3, restore cost:** the verification stage of an unchanged document,
   measured in the gate 0 decomposition, is bounded by one read and one hash
   of its stored bytes -- no stage re-serializes, re-parses for verification,
@@ -339,7 +356,13 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   ledgered apart so nothing hides inside it. **Slice 1: met 2026-09-03** --
   Digital Hub 1.402x, sixty5 1.326x. **Slice 2: met 2026-09-13** -- Digital
   Hub 1.44x, sixty5 1.364x, both inside the 2x bound, with the ledgered parse
-  down from 650.6 to 167.3 ms and from 5,482.0 to 3,161.0 ms.
+  down from 650.6 to 167.3 ms and from 5,482.0 to 3,161.0 ms. **Slice 3a: met
+  2026-09-13** -- Digital Hub 1.419x, sixty5 1.352x; verification itself is
+  25.6 ms and 229.5 ms, against the gate 0 decomposition's 4,434.2 and
+  34,204.2 ms, and the ledgered parse is 136.7 and 3,664.1 ms -- Digital Hub's
+  fell again from 167.3 ms, sixty5's rose from 3,161.0 ms while its load fell
+  from 1,108.5 to 788.5 ms and its verification from 329.0 to 229.5 ms. The
+  record reports both directions and states which four numbers are measured.
 - **Gate 4, the same rule as ADR-0018:** after each slice, the whole-process
   median of a changed-discipline rebuild is lower than the clean rebuild
   median on Digital Hub and on sixty5, by more than three times the clean
@@ -362,7 +385,12 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   against 317,588.2 ms (saving 246,920.7 ms, three spreads 23,595.0 ms; peak
   3.61 GB against 5.11 GB). The clean arm is re-measured in each session, so
   its medians moved between the two slices; only the same-session pair is a
-  comparison.
+  comparison. **Slice 3a: met 2026-09-13** -- Digital Hub 10,302.4 ms against
+  53,754.4 ms (saving 43,452.0 ms, three clean spreads 4,434.3 ms; peak
+  working set 0.44 GB against 1.85 GB); sixty5 61,672.4 ms against
+  316,082.6 ms (saving 254,410.2 ms, three spreads 17,402.1 ms; peak 2.96 GB
+  against 4.63 GB). Slice 3b is the only slice left, and the record that
+  closes it decides this ADR.
 
 The removal of `--payload-cache` is its own slice and needs no gate beyond
 `pnpm check`: the ADR-0018 record's validator keeps validating the committed
@@ -403,3 +431,30 @@ here:
   the adapter's self-hash set (`extract_federation_scene_ir.py`), so the bump
   is a cold namespace; both warm-ups confirm it (Digital Hub 0 hits and 4
   misses, sixty5 0 hits and 7 misses).
+
+### Implementation notes (2026-09-13, per-document property columns slice)
+
+Slice 3a moves no bytes and adds no gate; it exists because slice 3b is
+impossible without it.
+
+- **Property values must be moved, never re-encoded.** `properties.bin` is the
+  adapter's own `encode_property_value` output, and the compiler copies it
+  through untouched. Python and JavaScript do not agree on the canonical JSON
+  of a number (`1.0` against `1`, `1e+16` against `10000000000000000`), so a
+  TypeScript federation merge that re-encoded a property value would change
+  `properties.bin` and every package digest with it. Interning and encoding
+  therefore happen once, in the per-document pass that already owns the
+  document's records, and the artifact stores the result: a document-local key
+  table, the deduped value heap, and `value_offsets`, `row_refs`, and
+  `row_offsets` as `u32` regions beside the geometry regions slice 2
+  introduced. The federation pass sorts and dedupes opaque byte sequences and
+  remaps indices -- an operation TypeScript reproduces exactly.
+- **The equivalence is asserted, not assumed.** Six unit tests assert that the
+  merge of per-document columns equals a single pass over their concatenation,
+  heap bytes included, under an interleaved federation row order. That is
+  gate 1 in miniature; gate 1 itself is unchanged and still the proof.
+- **The lineage extends to `.4` at the same path**, still a cold namespace by
+  the adapter self-hash. `ledger.federation` still carries exactly
+  `mergeMilliseconds` and `propertyIndexMilliseconds`; the latter now times
+  only the merge, because the encoding it used to include has moved into the
+  per-document stages.

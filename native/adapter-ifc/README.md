@@ -91,25 +91,28 @@ compiler consumes it through `stageTiming: true` for the
 
 On a whole-package miss, `naru compile-ifc --cache <directory>` also supplies
 `<directory>/ifc-documents` to the adapter. Each
-`naru.ifc-document-artifact.3` entry contains the pre-federation extraction for
+`naru.ifc-document-artifact.4` entry contains the pre-federation extraction for
 one discipline in one deterministic gzip, keyed by
 discipline, source digest, URI hint, thread count, and the exact adapter
 fingerprint. The gzip holds a one-line canonical-JSON header (schema, key,
 key input, payload byte length, payload SHA-256, structure byte length)
 followed by exactly that many payload bytes: the record structure as canonical
-JSON, zero padding to an eight-byte boundary, then each mesh array as raw
-little-endian binary in the dtype the Scene IR packer already wants. The
+JSON, zero padding to an eight-byte boundary, then each hoisted binary
+region as raw little-endian bytes in the dtype the Scene IR packer already
+wants: first the mesh arrays, then the document's interned property value heap
+with its `value_offsets`, `row_refs`, and `row_offsets` index tables, each
+region padded to the same eight-byte boundary. The
 loader verifies the stored bytes -- header fields, declared length, and one
 SHA-256 over the payload bytes as read -- then parses only the structure
-region and re-attaches the geometry as typed views over the payload buffer,
-so a mesh array is never rebuilt element by element, and it never
-re-serializes the parsed value to verify it
+region and re-attaches the regions as typed views over the payload buffer,
+so a mesh array or a property heap is never rebuilt element by element, and it
+never re-serializes the parsed value to verify it
 ([ADR-0019](../../docs/adr/0019-document-artifact-transport.md)
-slices 1 and 2, [tests](tests/test_document_artifact_cache.py)). A stored entry
+slices 1, 2, and 3a, [tests](tests/test_document_artifact_cache.py)). A stored entry
 that fails any check is reported as invalid with its reason, treated as a
 miss, and re-extracted; the loader never loads executable serialization such
-as pickle. Publication is atomic. The key input is unchanged across both format
-bumps, so an entry an earlier writer left at the same path is refused by its
+as pickle. Publication is atomic. The key input is unchanged across every
+format bump, so an entry an earlier writer left at the same path is refused by its
 schema line, re-extracted, and republished -- never silently reused.
 
 Adapter report `naru.ifc-adapter-report.6` records ordered per-document hits and
@@ -211,6 +214,10 @@ concatenated little-endian streams those references point into, and
 (`madi.property-columns.1`): every distinct semantic property value encoded
 once as canonical compact JSON in a byte-sorted UTF-8 heap, with u32 reference
 and offset columns joining each semantic's row back to its interned key set.
+Keys and values are interned once per document and the federation pass dedupes
+and re-sorts the already encoded bytes, so a document's artifact can carry its
+own columns and nothing re-encodes a value
+([ADR-0019](../../docs/adr/0019-document-artifact-transport.md) slice 3a).
 Every stream starts on an eight-byte boundary so the compiler can take
 typed-array views without copying, and the report carries a SHA-256 for each
 of the three files. Reviewed counts and hashes live under `artifacts/ifc/`;

@@ -41,3 +41,40 @@ def index_property_bags(
         "sets": [list(entry) for entry in distinct_sets],
     }
     return property_index, references
+
+
+def merge_property_indexes(
+    indexes: Sequence[Mapping[str, Any]],
+) -> tuple[dict[str, Any], list[list[int]]]:
+    """Merges per-document property indexes into one federation-level index.
+
+    Each element of ``indexes`` is an index in the shape
+    :func:`index_property_bags` returns. The result is
+    ``(property_index, set_remaps)``: ``property_index`` is what
+    :func:`index_property_bags` would have produced from the concatenation of
+    every document's bags, and ``set_remaps[d][s]`` is the federation set index
+    of document ``d``'s local set ``s``.
+
+    The key remap is monotone -- each document's keys are a subset of the
+    federation keys and both tables are sorted -- so a locally ascending key
+    tuple stays ascending and lexicographic set order is preserved.
+    """
+    keys = sorted({key for index in indexes for key in index["keys"]})
+    key_positions = {key: position for position, key in enumerate(keys)}
+    remapped_sets = [
+        [
+            tuple(key_positions[index["keys"][local]] for local in entry)
+            for entry in index["sets"]
+        ]
+        for index in indexes
+    ]
+    distinct_sets = sorted({entry for document in remapped_sets for entry in document})
+    set_positions = {entry: position for position, entry in enumerate(distinct_sets)}
+    set_remaps = [
+        [set_positions[entry] for entry in document] for document in remapped_sets
+    ]
+    property_index = {
+        "keys": keys,
+        "sets": [list(entry) for entry in distinct_sets],
+    }
+    return property_index, set_remaps
