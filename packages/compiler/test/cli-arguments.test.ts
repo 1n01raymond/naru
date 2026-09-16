@@ -161,27 +161,20 @@ describe("naru compile-ifc arguments", () => {
     });
   });
 
-  it("accepts --assemble-federation only beside --cache", () => {
-    const parsed = parseIfcCompileArguments([
-      "--document",
-      "architecture=arch.ifc",
-      "--output",
-      "out",
-      "--cache",
-      "cache",
-      "--assemble-federation",
-    ]);
-    expect(parsed.cacheDirectory).toBe("cache");
-    expect(parsed.assembleFederation).toBe(true);
-    expect(() =>
-      parseIfcCompileArguments([
-        "--document",
-        "architecture=arch.ifc",
-        "--output",
-        "out",
-        "--assemble-federation",
-      ]),
-    ).toThrow(/--assemble-federation requires --cache/u);
+  it("assembles the federation by default beside --cache and honours the opt-out", () => {
+    const withoutCache = ["--document", "architecture=arch.ifc", "--output", "out"];
+    const withCache = [...withoutCache, "--cache", "cache"];
+    expect(parseIfcCompileArguments(withCache).assembleFederation).toBe(true);
+    expect(parseIfcCompileArguments([...withCache, "--assemble-federation"]).assembleFederation).toBe(
+      true,
+    );
+    expect(
+      parseIfcCompileArguments([...withCache, "--no-assemble-federation"]).assembleFederation,
+    ).toBe(false);
+    expect(parseIfcCompileArguments(withoutCache).assembleFederation).toBe(false);
+    expect(() => parseIfcCompileArguments([...withoutCache, "--assemble-federation"])).toThrow(
+      /--assemble-federation requires --cache/u,
+    );
   });
 
   it("leaves every document-shrinking option off unless asked for", () => {

@@ -187,7 +187,9 @@ measured against gate 0 before the next begins:
    remap over pre-encoded byte strings. That is the prerequisite for assembling
    the merge in TypeScript, for the reason recorded under *Implementation
    notes* below. **Slice 3b landed 2026-09-16** behind
-   `--assemble-federation` (`assembleFederation: true`, needs `--cache`): the
+   `--assemble-federation` (`assembleFederation: true`, needs `--cache`; the
+   default under `--cache` since 2026-09-17, `--no-assemble-federation` opts
+   out): the
    adapter's `--federation-manifest` mode writes a
    `naru.ifc-federation-manifest.1` manifest instead of the split Scene IR,
    and the compiler assembles the federation from the verified artifacts in
@@ -529,7 +531,11 @@ Slice 3b is the compiler-side half of decision 3, landed in three commits
 - **The option is not a cache-key input.** Assembled and monolithic compiles
   produce the same package, proven per file on the explicit-wall fixture and
   per model in the rebuild record, so `assembleFederation` neither changes
-  the key nor appears in the job identity. The stage ledger is bumped to
+  the key nor appears in the job identity; since 2026-09-17 it is on by
+  default whenever `cacheDirectory` is set (`--no-assemble-federation` and
+  `assembleFederation: false` opt out;
+  [default test](../../packages/compiler/test/ifc-federation.test.ts)). The
+  stage ledger is bumped to
   `naru.ifc-federation-stage-timing.2` with an `assembleFederation` stage;
   in manifest mode the adapter ledger's `federation` block is empty and its
   `write` block carries only `manifestMilliseconds`.

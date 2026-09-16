@@ -57,6 +57,51 @@ const sourcePath = documentArgument.slice(documentArgument.indexOf("=") + 1);
 const uriHint = uriArgument.slice(uriArgument.indexOf("=") + 1);
 const source = await readFile(sourcePath);
 const sourceDigest = createHash("sha256").update(source).digest("hex");
+if (args.includes("--federation-manifest")) {
+  // Manifest mode names an artifact this fake never wrote, so the compiler's
+  // default assembly falls back to one monolithic run; tests that exercise
+  // the package cache pass assembleFederation: false to stay on that run.
+  const pair = '[{"discipline":' + JSON.stringify(discipline)
+    + ',"sha256":' + JSON.stringify(sourceDigest) + "}]";
+  await writeFile(option("--federation-manifest"), JSON.stringify({
+    schemaVersion: "naru.ifc-federation-manifest.1",
+    artifactSchemaVersion: "naru.ifc-document-artifact.4",
+    adapter: {
+      schemaVersion: "naru.ifc-adapter-identity.1",
+      name: "IfcOpenShell",
+      version: "test",
+      fingerprint: "2".repeat(64),
+      toolchain: {},
+    },
+    federation: {
+      sourceDigest: createHash("sha256").update(pair).digest("hex"),
+      documentOrder: [discipline],
+      options: {},
+    },
+    documents: [{
+      discipline,
+      uriHint,
+      sourceDigest,
+      byteLength: source.byteLength,
+      keyInput: {
+        schemaVersion: "naru.ifc-document-artifact-key.1",
+        discipline,
+        sourceDigest,
+        uriHint,
+      },
+      artifactKey: "b".repeat(64),
+      artifactPayloadSha256: "d".repeat(64),
+      outcome: "extracted",
+    }],
+    documentArtifactCache: {
+      schemaVersion: "naru.ifc-document-artifact.4",
+      status: "enabled",
+      hits: [],
+      misses: [discipline],
+    },
+  }));
+  process.exit(0);
+}
 const federationDigest = "a".repeat(64);
 const scene = JSON.parse(await readFile(${JSON.stringify(sceneTemplatePath)}, "utf8"));
 scene.revision.sourceDigest = "sha256:" + federationDigest;
@@ -306,6 +351,7 @@ describe("IFC federation compiler orchestration", () => {
         adapterScriptPath: adapterPath,
         retainSceneIr: true,
         cacheDirectory,
+        assembleFederation: false,
         spatialIndex: true,
         spatialLeafCapacity: 2,
         spatialPayloadOrder: true,
@@ -324,6 +370,7 @@ describe("IFC federation compiler orchestration", () => {
         adapterScriptPath: adapterPath,
         retainSceneIr: true,
         cacheDirectory,
+        assembleFederation: false,
         spatialIndex: true,
         spatialLeafCapacity: 2,
         spatialPayloadOrder: true,
@@ -365,6 +412,7 @@ describe("IFC federation compiler orchestration", () => {
         adapterScriptPath: adapterPath,
         retainSceneIr: true,
         cacheDirectory,
+        assembleFederation: false,
         spatialIndex: true,
         spatialLeafCapacity: 2,
         spatialPayloadOrder: true,
@@ -387,6 +435,7 @@ describe("IFC federation compiler orchestration", () => {
         adapterScriptPath: adapterPath,
         retainSceneIr: true,
         cacheDirectory,
+        assembleFederation: false,
         spatialIndex: true,
         spatialLeafCapacity: 2,
         spatialPayloadOrder: true,
@@ -431,6 +480,7 @@ describe("IFC federation compiler orchestration", () => {
           adapterScriptPath: adapterPath,
           retainSceneIr: true,
           cacheDirectory,
+          assembleFederation: false,
           spatialIndex: true,
           spatialLeafCapacity: 2,
           spatialPayloadOrder: true,
@@ -884,11 +934,15 @@ describe("staged import preview", () => {
     const fixture = await stagedFixture();
     try {
       const cacheDirectory = join(fixture.root, "cache");
-      const first = await fixture.compile("compiled-cold", { cacheDirectory });
+      const first = await fixture.compile("compiled-cold", {
+        cacheDirectory,
+        assembleFederation: false,
+      });
       expect(first.cache.status).toBe("miss");
       const stagedDirectory = join(fixture.root, "staged");
       const warm = await fixture.compile("compiled-warm", {
         cacheDirectory,
+        assembleFederation: false,
         stagedPreviewDirectory: stagedDirectory,
       });
       expect(warm.cache).toEqual({ status: "hit", key: first.cache.key });
@@ -913,6 +967,44 @@ describe("in-compiler federation assembly", () => {
       expect(await readFile(fixture.adapterCountPath, "utf8")).toBe("1");
       expect(result.stages?.stages.assembleFederation).toBe(0);
       expect(result.stages?.stages.readSceneIr).toBeGreaterThan(0);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("is on by default with a cache directory and falls back when an artifact is absent", async () => {
+    const fixture = await stagedFixture();
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      const result = await fixture.compile("compiled", {
+        cacheDirectory: join(fixture.root, "cache"),
+      });
+      expect(result.assembly).toEqual({
+        status: "fallback",
+        discipline: "architecture",
+        reason: "absent",
+      });
+      expect(result.cache.status).toBe("miss");
+      expect(await readFile(fixture.adapterCountPath, "utf8")).toBe("2");
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("federation assembly fell back (architecture: absent)"),
+      );
+    } finally {
+      warn.mockRestore();
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the monolithic adapter run when assembleFederation is false", async () => {
+    const fixture = await stagedFixture();
+    try {
+      const result = await fixture.compile("compiled", {
+        cacheDirectory: join(fixture.root, "cache"),
+        assembleFederation: false,
+      });
+      expect(result.assembly).toBeUndefined();
+      expect(result.cache.status).toBe("miss");
+      expect(await readFile(fixture.adapterCountPath, "utf8")).toBe("1");
     } finally {
       await rm(fixture.root, { recursive: true, force: true });
     }
@@ -985,6 +1077,7 @@ describe.skipIf(adapterPython === undefined || adapterPython === "")(
           const monolithic = await compileIfcFederation({
             ...shared,
             outputDirectory: join(root, "monolithic"),
+            assembleFederation: false,
           });
           expect(monolithic.cache.status).toBe("miss");
           expect(monolithic.assembly).toBeUndefined();

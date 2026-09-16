@@ -562,6 +562,7 @@ describe("cancelling a federation import after a tree was staged", () => {
       pythonExecutable: process.execPath,
       adapterScriptPath: adapterPath,
       cacheDirectory,
+      assembleFederation: false,
       stagedPreviewDirectory: stagedDirectory,
       job: { onEvent: (event) => events.push(event), signal: controller.signal },
     });
