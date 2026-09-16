@@ -53,13 +53,16 @@ successor reuse unit and removed the flag together with this record's recorder
 (2026-09-03), so the record is historical: its validator still checks it, but
 it cannot be re-recorded from the current tree.
 
-`rebuild-stages/` is ADR-0019's gate record (`naru.rebuild-stage-evidence.2`):
+`rebuild-stages/` is ADR-0019's gate record (`naru.rebuild-stage-evidence.3`):
 the same changed-discipline rebuild compiled through restored
-`naru.ifc-document-artifact.4` artifacts and, interleaved in the same
-session, with no cache directory at all, five fresh-process samples per arm
-per model, each decomposed into adapter stages (interpreter start,
-changed-document extraction, per-document artifact load, verification, and
-parse, merge, property index, Scene IR writes) and compiler stages (structure
+`naru.ifc-document-artifact.4` artifacts with the federation assembled in the
+compiler from them (`--assemble-federation`; the adapter writes a
+`naru.ifc-federation-manifest.1` manifest instead of the Scene IR) and,
+interleaved in the same session, with no cache directory at all, five
+fresh-process samples per arm per model, each decomposed into adapter stages
+(interpreter start, changed-document extraction, per-document artifact load,
+verification, and parse, then the manifest write or the merge, property index,
+and Scene IR writes) and compiler stages (federation assembly or structure
 read, hydration, encoding, document streaming, package write) with the
 sampled process tree. It carries the ADR's gates 1-4 as pinned verdicts,
 validated by `scripts/validate-rebuild-stage-evidence.mjs`. Its `.1`

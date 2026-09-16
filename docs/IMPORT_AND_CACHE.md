@@ -319,8 +319,12 @@ numbers. Slice 3a is the prerequisite for assembling the merge outside Python,
 because Python and JavaScript disagree on the canonical JSON of a number and
 `properties.bin` is passed through untouched; with the values already encoded
 the federation pass only remaps opaque bytes. Slice 3b (in-compiler federation
-assembly) follows under the same gate 4; ADR-0010 stays Proposed until the
-record that closes it.
+assembly, `--assemble-federation`) landed 2026-09-16 under the same gate 4: the
+adapter writes a `naru.ifc-federation-manifest.1` instead of the merged Scene
+IR, and the compiler restores, verifies, and merges the artifacts itself,
+falling back to one monolithic adapter run on any mismatch
+([design](COMPILER.md#215-ifc-incremental-dependency-index)).
+That record closed the ADR and moved ADR-0010 to Accepted with it.
 
 Shared lookup reuses the same manifest and resource hashes. The resolution
 order is local verified entry, authorized shared entry, then local compilation.

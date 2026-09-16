@@ -1,8 +1,9 @@
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync, gzipSync } from "node:zlib";
 
 import {
   openPropertyValueColumns,
@@ -604,12 +605,13 @@ describe("IFC federation compiler orchestration", () => {
       ).not.toMatch(/Milliseconds|stages/);
 
       const stages = timed.stages;
-      expect(stages?.schemaVersion).toBe("naru.ifc-federation-stage-timing.1");
+      expect(stages?.schemaVersion).toBe("naru.ifc-federation-stage-timing.2");
       if (!stages) throw new Error("stages missing");
       const stageNames = Object.keys(stages.stages).sort();
       expect(stageNames).toEqual(
         [
           "adapter",
+          "assembleFederation",
           "cacheLookup",
           "cachePublish",
           "compile",
@@ -629,6 +631,7 @@ describe("IFC federation compiler orchestration", () => {
       expect(stages.unattributedMilliseconds).toBeGreaterThanOrEqual(0);
       expect(stages.stages.cacheLookup).toBe(0);
       expect(stages.stages.cachePublish).toBe(0);
+      expect(stages.stages.assembleFederation).toBe(0);
       expect(stages.stages.retainSceneIr).toBe(0);
       expect(stages.structureReadMilliseconds).toBeLessThanOrEqual(stages.stages.readSceneIr);
       const compileSubStages = Object.values(stages.compileStages).reduce(
@@ -896,3 +899,199 @@ describe("staged import preview", () => {
     }
   });
 });
+
+describe("in-compiler federation assembly", () => {
+  it("is inert without a cache directory: one monolithic adapter run, no assembly", async () => {
+    const fixture = await stagedFixture();
+    try {
+      const result = await fixture.compile("compiled", {
+        assembleFederation: true,
+        stageTiming: true,
+      });
+      expect(result.assembly).toBeUndefined();
+      expect(result.cache).toEqual({ status: "disabled" });
+      expect(await readFile(fixture.adapterCountPath, "utf8")).toBe("1");
+      expect(result.stages?.stages.assembleFederation).toBe(0);
+      expect(result.stages?.stages.readSceneIr).toBeGreaterThan(0);
+    } finally {
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  });
+});
+
+const adapterPython = process.env.NARU_IFC_PYTHON;
+const wallFixture = fileURLToPath(
+  new URL("../../../fixtures/ifc/explicit-edge-wall.ifc", import.meta.url),
+);
+
+async function packageFiles(directory: string): Promise<Map<string, Buffer>> {
+  const files = new Map<string, Buffer>();
+  for (const name of (await readdir(directory)).sort()) {
+    files.set(name, await readFile(join(directory, name)));
+  }
+  return files;
+}
+
+/**
+ * Every package file must match byte for byte except the adapter report,
+ * whose `documentArtifactCache` names the hits and misses of that run.
+ */
+function expectSameFiles(actual: Map<string, Buffer>, expected: Map<string, Buffer>): void {
+  expect([...actual.keys()]).toEqual([...expected.keys()]);
+  for (const [name, bytes] of expected) {
+    if (name === "adapter-report.json") {
+      const strip = (text: Buffer | undefined) => {
+        const report = JSON.parse(text?.toString("utf8") ?? "{}") as Record<string, unknown>;
+        return Object.fromEntries(
+          Object.entries(report).filter(([key]) => key !== "documentArtifactCache"),
+        );
+      };
+      expect(strip(actual.get(name))).toEqual(strip(bytes));
+      continue;
+    }
+    expect(actual.get(name)?.equals(bytes), name).toBe(true);
+  }
+}
+
+describe.skipIf(adapterPython === undefined || adapterPython === "")(
+  "in-compiler federation assembly versus the monolithic adapter",
+  () => {
+    it(
+      "assembles the package the adapter builds, byte for byte, and falls back on a bad artifact",
+      async () => {
+        const root = await mkdtemp(join(tmpdir(), "naru-ifc-assemble-"));
+        const warnings: string[] = [];
+        const warn = vi.spyOn(console, "warn").mockImplementation((message: unknown) => {
+          warnings.push(String(message));
+        });
+        try {
+          const cacheDirectory = join(root, "cache");
+          const disciplines = ["architecture", "structure"];
+          for (const discipline of disciplines) {
+            await copyFile(wallFixture, join(root, `${discipline}.ifc`));
+          }
+          const shared = {
+            documents: disciplines.map((discipline) => ({
+              discipline,
+              sourcePath: join(root, `${discipline}.ifc`),
+              uriHint: "explicit-edge-wall.ifc",
+            })),
+            pythonExecutable: adapterPython,
+            cacheDirectory,
+            threads: 1,
+            retainSceneIr: true,
+            stageTiming: true,
+          };
+          const monolithic = await compileIfcFederation({
+            ...shared,
+            outputDirectory: join(root, "monolithic"),
+          });
+          expect(monolithic.cache.status).toBe("miss");
+          expect(monolithic.assembly).toBeUndefined();
+          expect(monolithic.stages?.stages.assembleFederation).toBe(0);
+          const expected = await packageFiles(join(root, "monolithic"));
+          const dropPackageEntry = () =>
+            rm(join(cacheDirectory, String(monolithic.cache.key)), { recursive: true, force: true });
+
+          await dropPackageEntry();
+          const assembled = await compileIfcFederation({
+            ...shared,
+            outputDirectory: join(root, "assembled"),
+            assembleFederation: true,
+          });
+          expect(assembled.cache).toEqual({ status: "miss", key: monolithic.cache.key });
+          expect(assembled.assembly?.status).toBe("assembled");
+          if (assembled.assembly?.status !== "assembled") throw new Error("not assembled");
+          expect(assembled.assembly.documents.map(({ discipline }) => discipline)).toEqual([
+            "architecture",
+            "structure",
+          ]);
+          expect(assembled.report.output.packageDigest).toBe(monolithic.report.output.packageDigest);
+          expect(assembled.adapterReport).toMatchObject({
+            documentArtifactCache: { hits: ["architecture", "structure"], misses: [] },
+          });
+          expectSameFiles(await packageFiles(join(root, "assembled")), expected);
+          const stages = assembled.stages;
+          if (!stages) throw new Error("stages missing");
+          expect(stages.schemaVersion).toBe("naru.ifc-federation-stage-timing.2");
+          expect(stages.stages.assembleFederation).toBeGreaterThan(0);
+          expect(stages.stages.readSceneIr).toBe(0);
+          expect(stages.structureReadMilliseconds).toBe(0);
+          expect((stages.adapter?.ledger as { write: Record<string, number> }).write).toEqual({
+            manifestMilliseconds: expect.any(Number) as number,
+          });
+          expect(warnings).toEqual([]);
+
+          await dropPackageEntry();
+          const artifactDirectory = join(cacheDirectory, "ifc-documents");
+          const artifacts = (await readdir(artifactDirectory)).filter((name) =>
+            name.endsWith(".json.gz"),
+          );
+          expect(artifacts.length).toBeGreaterThan(0);
+          // The adapter verifies an artifact's digest and parses its structure;
+          // only the compiler needs the structure bytes to be canonical. One
+          // extra space is JSON the adapter restores and bytes the compiler
+          // cannot reproduce, so the compile must fall back to the adapter.
+          const artifactPath = join(artifactDirectory, artifacts[0] ?? "");
+          const stored = gunzipSync(await readFile(artifactPath));
+          const headerEnd = stored.indexOf(0x0a) + 1;
+          const header = JSON.parse(stored.toString("utf8", 0, headerEnd)) as Record<string, unknown>;
+          const payload = stored.subarray(headerEnd);
+          const structureBytes = Number(header.structureBytes);
+          const aligned = (length: number) => Math.ceil(length / 8) * 8;
+          const regions = payload.subarray(
+            payload.byteLength === structureBytes ? structureBytes : aligned(structureBytes),
+          );
+          const structure = Buffer.from(`{ ${payload.toString("utf8", 1, structureBytes)}`, "utf8");
+          const padding = Buffer.alloc(
+            regions.byteLength === 0 ? 0 : aligned(structure.byteLength) - structure.byteLength,
+          );
+          const loosened = Buffer.concat([structure, padding, regions]);
+          const loosenedHeader = {
+            ...header,
+            structureBytes: structure.byteLength,
+            payloadBytes: loosened.byteLength,
+            payloadSha256: createHash("sha256").update(loosened).digest("hex"),
+          };
+          await writeFile(
+            artifactPath,
+            gzipSync(
+              Buffer.concat([
+                Buffer.from(JSON.stringify(loosenedHeader), "utf8"),
+                Buffer.from([0x0a]),
+                loosened,
+              ]),
+            ),
+          );
+          const fallback = await compileIfcFederation({
+            ...shared,
+            outputDirectory: join(root, "fallback"),
+            assembleFederation: true,
+          });
+          expect(fallback.assembly).toEqual({
+            status: "fallback",
+            discipline: expect.stringMatching(/^(architecture|structure)$/u) as string,
+            reason: "structure bytes do not round-trip",
+          });
+          expect(fallback.adapterReport).toMatchObject({
+            documentArtifactCache: { hits: ["architecture", "structure"], misses: [] },
+          });
+          expect(warnings.some((message) => message.includes("federation assembly fell back"))).toBe(
+            true,
+          );
+          expect(fallback.report.output.packageDigest).toBe(monolithic.report.output.packageDigest);
+          expectSameFiles(await packageFiles(join(root, "fallback")), expected);
+          expect(fallback.stages?.stages.assembleFederation).toBeGreaterThan(0);
+          expect(fallback.stages?.stages.readSceneIr).toBeGreaterThan(0);
+          expect(
+            (fallback.stages?.adapter?.ledger as { write: Record<string, number> }).write,
+          ).toHaveProperty("reportMilliseconds");
+        } finally {
+          warn.mockRestore();
+          await rm(root, { recursive: true, force: true });
+        }
+      },
+      240_000,
+    );
+  },
+);

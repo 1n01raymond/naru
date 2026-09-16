@@ -83,7 +83,7 @@ and publication (`artifactState`, `artifactBytes`, `artifactPayloadBytes`,
 `artifactLoadMilliseconds`, `artifactVerifyMilliseconds`,
 `artifactParseMilliseconds`, and `artifactInvalidReason` when a stored entry
 was refused); then the federation merge, property indexing, and each Scene IR
-write. It never enters the adapter report, the Scene IR, or a cache key, so an
+write (in manifest mode, the manifest write alone). It never enters the adapter report, the Scene IR, or a cache key, so an
 instrumented run produces byte-identical output
 ([integration test](tests/test_document_artifact_integration.py)). The
 compiler consumes it through `stageTiming: true` for the
@@ -114,6 +114,18 @@ miss, and re-extracted; the loader never loads executable serialization such
 as pickle. Publication is atomic. The key input is unchanged across every
 format bump, so an entry an earlier writer left at the same path is refused by its
 schema line, re-extracted, and republished -- never silently reused.
+
+`--federation-manifest <path>` (requires `--document-cache`) is manifest mode,
+[ADR-0019](../../docs/adr/0019-document-artifact-transport.md) slice 3b: the
+adapter inspects every document as above -- restoring a verified artifact or
+extracting and publishing the document -- and then writes a
+`naru.ifc-federation-manifest.1` manifest (document order, each document's
+artifact key and payload SHA-256, the federation source digest, the adapter
+identity and options) instead of merging the documents and writing the split
+Scene IR. The compiler's `--assemble-federation` consumes it and performs the
+merge itself from the same artifacts; the
+[integration test](tests/test_document_artifact_integration.py) proves the
+manifest names exactly the artifacts a monolithic run would restore.
 
 Adapter report `naru.ifc-adapter-report.6` records ordered per-document hits and
 misses. The compiler requires those lists to cover every selected discipline.

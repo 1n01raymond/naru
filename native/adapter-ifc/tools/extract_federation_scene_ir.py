@@ -36,6 +36,7 @@ IMPORTS_FINISHED_AT_MS = time.time() * 1000.0
 
 from document_artifact_cache import (
     DOCUMENT_ARTIFACT_SCHEMA,
+    describe_document_artifact,
     prepare_document_payload,
     publish_document_artifact,
     read_document_artifact,
@@ -1103,7 +1104,17 @@ def inspect_documents(
     document_cache_directory: Path | None,
     timing: StageTiming | None = None,
     preview_publisher: StructurePreviewPublisher | None = None,
+    observe: Callable[[dict[str, Any]], None] | None = None,
+    retain: bool = True,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Inspect every document, restoring from the artifact cache where possible.
+
+    `observe` is called once per document with the facts a federation manifest
+    needs to name that document's artifact; `retain=False` drops the inspected
+    document afterwards, so a manifest run holds one document at a time instead
+    of the whole federation (ADR-0019 slice 3b).
+    """
+
     extracted: list[dict[str, Any]] = []
     hits: list[str] = []
     misses: list[str] = []
@@ -1190,7 +1201,28 @@ def inspect_documents(
             raise ValueError(
                 f"IFC document artifact digest mismatch for {document.discipline}."
             )
-        extracted.append(item)
+        if observe is not None:
+            header = (
+                describe_document_artifact(document_cache_directory, key_input)
+                if document_cache_directory is not None
+                else None
+            )
+            observe(
+                {
+                    "discipline": document.discipline,
+                    "uriHint": document.uri_hint,
+                    "sourceDigest": source_digest,
+                    "byteLength": len(source_bytes),
+                    "keyInput": key_input,
+                    "artifactKey": header["key"] if header is not None else None,
+                    "artifactPayloadSha256": (
+                        header["payloadSha256"] if header is not None else None
+                    ),
+                    "outcome": "restored" if payload is not None else "extracted",
+                }
+            )
+        if retain:
+            extracted.append(item)
     # Inspection order is a scheduling decision; assembly order is not. Sorting
     # every list this function returns makes them independent of the order the
     # loop ran in, so a staged run and an unstaged run write the same bytes.
@@ -1203,6 +1235,38 @@ def inspect_documents(
         "hits": hits,
         "misses": misses,
     }
+
+
+FEDERATION_OPTIONS = {
+    "geometryLibrary": "opencascade",
+    "useWorldCoordinates": False,
+    "weldVertices": True,
+    "includeSurfaces": True,
+    "includeEdges": True,
+    "edgeMode": "ifcopenshell-opencascade-face-boundaries",
+    "normalizeSceneToMeters": True,
+    "propertyMode": "indexed-column-values",
+}
+
+
+def federation_options() -> dict[str, Any]:
+    """Return the option set both federation paths must agree on.
+
+    The monolithic path hashes it into `revision.optionsDigest` and publishes it
+    in the adapter report; the manifest path publishes it so a consumer can
+    assemble the same federation without re-extracting. One definition keeps the
+    two from drifting apart.
+    """
+
+    return dict(FEDERATION_OPTIONS)
+
+
+def federation_source_digest(pairs: Sequence[tuple[str, str]]) -> str:
+    """Hash assembly-ordered (discipline, source digest) pairs."""
+
+    return sha256_json(
+        [{"discipline": discipline, "sha256": digest} for discipline, digest in pairs]
+    )
 
 
 def extract_federation(
@@ -1229,21 +1293,10 @@ def extract_federation(
     for position, item in enumerate(extracted):
         for record in item["semantics"]:
             record["properties"]["document"] = position
-    digest_input = [
-        {"discipline": item["input"].discipline, "sha256": item["sourceDigest"]}
-        for item in extracted
-    ]
-    federation_digest = sha256_json(digest_input)
-    options = {
-        "geometryLibrary": "opencascade",
-        "useWorldCoordinates": False,
-        "weldVertices": True,
-        "includeSurfaces": True,
-        "includeEdges": True,
-        "edgeMode": "ifcopenshell-opencascade-face-boundaries",
-        "normalizeSceneToMeters": True,
-        "propertyMode": "indexed-column-values",
-    }
+    federation_digest = federation_source_digest(
+        [(item["input"].discipline, item["sourceDigest"]) for item in extracted]
+    )
+    options = federation_options()
     created_at_candidates = sorted(
         item["timestamp"] for item in extracted if item["timestamp"]
     )
@@ -1424,6 +1477,65 @@ def extract_federation(
         ],
     }
     return scene, report
+
+
+FEDERATION_MANIFEST_SCHEMA = "naru.ifc-federation-manifest.1"
+
+
+def assemble_federation_manifest(
+    documents: Sequence[DocumentInput],
+    threads: int,
+    document_cache_directory: Path,
+    timing: StageTiming | None = None,
+    preview_publisher: StructurePreviewPublisher | None = None,
+) -> dict[str, Any]:
+    """Name every document's artifact without assembling the federation.
+
+    The adapter keeps ownership of extraction and of each document's artifact;
+    the consumer that hydrates an artifact is the one that verifies its bytes
+    (ADR-0019 slice 3b). So this reads no payload back: a cache hit is named
+    from the header already on disk and a miss from the header just written, and
+    each inspected document is released as the loop runs. Manifest assembly
+    therefore costs the memory of one document, not of the federation.
+    """
+
+    entries: list[dict[str, Any]] = []
+    _, document_artifact_cache = inspect_documents(
+        documents,
+        threads,
+        document_cache_directory,
+        timing,
+        preview_publisher,
+        observe=entries.append,
+        retain=False,
+    )
+    # Inspection order is a scheduling decision; assembly order is not. The
+    # manifest publishes the order a consumer must merge in, which is the order
+    # `inspect_documents` sorts its own output into.
+    entries.sort(key=lambda entry: entry["discipline"])
+    unnamed = [
+        entry["discipline"] for entry in entries if entry["artifactKey"] is None
+    ]
+    if unnamed:
+        raise ValueError(
+            "IFC federation manifest could not name artifacts for: "
+            + ", ".join(unnamed)
+            + "."
+        )
+    return {
+        "schemaVersion": FEDERATION_MANIFEST_SCHEMA,
+        "artifactSchemaVersion": DOCUMENT_ARTIFACT_SCHEMA,
+        "adapter": adapter_identity(),
+        "federation": {
+            "sourceDigest": federation_source_digest(
+                [(entry["discipline"], entry["sourceDigest"]) for entry in entries]
+            ),
+            "documentOrder": [entry["discipline"] for entry in entries],
+            "options": federation_options(),
+        },
+        "documents": entries,
+        "documentArtifactCache": document_artifact_cache,
+    }
 
 
 def digest_file(path: Path) -> dict[str, Any]:
@@ -1626,6 +1738,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--federation-manifest",
+        type=Path,
+        help=(
+            "Optional path for a naru.ifc-federation-manifest.1 manifest naming "
+            "each document's verified cache artifact instead of writing a "
+            "monolithic split Scene IR. Requires --document-cache."
+        ),
+    )
+    parser.add_argument(
         "--stage-timing",
         type=Path,
         help=(
@@ -1638,16 +1759,21 @@ def main() -> None:
     if arguments.identity:
         print(json.dumps(adapter_identity(), sort_keys=True, separators=(",", ":")))
         return
-    if (
-        not arguments.document
-        or arguments.scene is None
+    manifest_only = arguments.federation_manifest is not None
+    if not arguments.document:
+        parser.error("--document is required unless --identity is used")
+    if manifest_only:
+        if arguments.document_cache is None:
+            parser.error("--federation-manifest requires --document-cache.")
+    elif (
+        arguments.scene is None
         or arguments.geometry is None
         or arguments.properties is None
         or arguments.report is None
     ):
         parser.error(
-            "--document, --scene, --geometry, --properties, and --report are "
-            "required unless --identity is used"
+            "--scene, --geometry, --properties, and --report are required "
+            "unless --identity or --federation-manifest is used"
         )
     if arguments.threads < 1:
         parser.error("--threads must be a positive integer.")
@@ -1663,6 +1789,28 @@ def main() -> None:
         if arguments.structure_preview is not None
         else None
     )
+    if manifest_only:
+        manifest = assemble_federation_manifest(
+            documents,
+            arguments.threads,
+            arguments.document_cache,
+            timing,
+            preview_publisher,
+        )
+        started = StageTiming.now()
+        write_report(arguments.federation_manifest, manifest)
+        if timing is not None:
+            timing.write["manifestMilliseconds"] = StageTiming.now() - started
+            write_report(arguments.stage_timing, timing.to_json(main_started_at_ms))
+        document_cache = manifest["documentArtifactCache"]
+        print(
+            "[ifc] "
+            f"{len(manifest['documents'])} documents named, "
+            f"{len(document_cache['hits'])} hit(s), "
+            f"{len(document_cache['misses'])} miss(es)"
+        )
+        print(f"[ifc] federation manifest: {arguments.federation_manifest}")
+        return
     scene, report = extract_federation(
         documents,
         arguments.threads,

@@ -1,7 +1,8 @@
 /**
  * Validates artifacts/cache/rebuild-stages: the ADR-0019 gate record --
  * fresh-process changed-discipline rebuilds through the document-artifact
- * transport, each paired with a clean rebuild with no cache directory, both
+ * transport with the package assembled in the compiler from the document
+ * artifacts, each paired with a clean rebuild with no cache directory, both
  * decomposed into adapter and compiler stages.
  *
  * Pins are deliberate. The package digests are HOST-LOCAL (the IFC adapter's
@@ -16,11 +17,11 @@ import { resolve } from "node:path";
 const repositoryRoot = resolve(import.meta.dirname, "..");
 const recordDirectory = resolve(repositoryRoot, "artifacts/cache/rebuild-stages");
 
-const schemaVersion = "naru.rebuild-stage-evidence.2";
+const schemaVersion = "naru.rebuild-stage-evidence.3";
 const mode = "fresh-process-changed-discipline-transport-vs-clean-rebuild";
 const manifestSha256 = "77d7d587d6b32938a371325e281a4584e10c2ff3118a59f300a9da097eb2f478";
 const adapterLedgerSchema = "naru.ifc-adapter-stage-timing.1";
-const compilerLedgerSchema = "naru.ifc-federation-stage-timing.1";
+const compilerLedgerSchema = "naru.ifc-federation-stage-timing.2";
 const documentArtifactSchema = "naru.ifc-document-artifact.4";
 const reportExclusions = ["adapter-report.json:documentArtifactCache"];
 const compilerStageNames = [
@@ -28,6 +29,7 @@ const compilerStageNames = [
   "toolchainIdentity",
   "cacheLookup",
   "adapter",
+  "assembleFederation",
   "readSceneIr",
   "hydrate",
   "compile",
@@ -40,8 +42,17 @@ const compilerStageNames = [
 ];
 const compileStageNames = ["validateScene", "encodeGeometry", "measureDocument", "other"];
 const adapterProcessKeys = ["spawnToModuleStartMilliseconds", "importMilliseconds", "importsToMainMilliseconds", "mainMilliseconds", "finishToCloseMilliseconds"];
-const federationKeys = ["mergeMilliseconds", "propertyIndexMilliseconds"];
-const writeKeys = ["geometryMilliseconds", "propertiesMilliseconds", "structureMilliseconds", "digestMilliseconds", "reportMilliseconds"];
+/**
+ * The transport arm runs the adapter in manifest mode (no federation merge, one
+ * manifest write); the clean arm runs it monolithically.
+ */
+const adapterLedgerKeys = {
+  transport: { federation: [], write: ["manifestMilliseconds"] },
+  clean: {
+    federation: ["mergeMilliseconds", "propertyIndexMilliseconds"],
+    write: ["geometryMilliseconds", "propertiesMilliseconds", "structureMilliseconds", "digestMilliseconds", "reportMilliseconds"],
+  },
+};
 /** Every package resource both arms must write; the reports are compared outside their excluded keys. */
 const expectedOutputs = ["adapter-report.json", "build-report.json", "coarse.bin", "hierarchy.bin", "hierarchy.json", "incremental-dependencies.json", "properties.bin", "properties.json", "scene.bin", "scene.gltf", "spatial.bin"];
 
@@ -107,6 +118,7 @@ for (const [modelId, expected] of Object.entries(models)) {
   check(record.changedDocument?.edit?.entity && record.changedDocument?.edit?.replacement && record.changedDocument.edit.entity !== record.changedDocument.edit.replacement, `${label}: edit is not a change`);
   check(record.compileOptions?.compactJson === expected.compactJson, `${label}: compactJson ${record.compileOptions?.compactJson}`);
   check(record.compileOptions?.spatialIndex === true && record.compileOptions?.relocateHierarchyNodes === true, `${label}: compile options`);
+  check(record.compileOptions?.assembleFederation === true, `${label}: the transport arm must assemble the federation in the compiler`);
   check(record.compileOptions?.cleanArmCacheDirectory === null, `${label}: the clean arm must declare no cache directory`);
   for (const value of [record.compileOptions?.cacheDirectory, record.compileOptions?.pythonExecutable]) {
     check(typeof value === "string" && !machinePath.test(value), `${label}: machine path leaked: ${value}`);
@@ -150,7 +162,8 @@ for (const [modelId, expected] of Object.entries(models)) {
     check(adapter?.ledger?.schemaVersion === adapterLedgerSchema, `${tag}: adapter ledger schema ${adapter?.ledger?.schemaVersion}`);
     check(sum(adapterProcessKeys.map((k) => adapter?.[k] ?? 0)) <= stages.stages.adapter + 5, `${tag}: adapter process exceeds the adapter stage`);
     const ledger = adapter?.ledger;
-    check(ledger && sameSet(Object.keys(ledger.federation ?? {}), federationKeys) && sameSet(Object.keys(ledger.write ?? {}), writeKeys), `${tag}: adapter ledger keys`);
+    const ledgerKeys = adapterLedgerKeys[arm];
+    check(ledger && sameSet(Object.keys(ledger.federation ?? {}), ledgerKeys.federation) && sameSet(Object.keys(ledger.write ?? {}), ledgerKeys.write), `${tag}: adapter ledger keys`);
     check(ledger && sameSet((ledger.documents ?? []).map((d) => d.discipline), expected.documents), `${tag}: ledger documents`);
     for (const document of ledger?.documents ?? []) {
       const documentTag = `${tag}: ${document.discipline}`;
@@ -182,6 +195,8 @@ for (const [modelId, expected] of Object.entries(models)) {
     check(sameSet(sample.documentArtifactCache?.hits ?? [], unchanged), `${tag}: hits ${JSON.stringify(sample.documentArtifactCache?.hits)}`);
     check(sameSet(sample.documentArtifactCache?.misses ?? [], [expected.changedDiscipline]), `${tag}: misses ${JSON.stringify(sample.documentArtifactCache?.misses)}`);
     check(sample.stages?.stages?.cacheLookup > 0 && sample.stages?.stages?.cachePublish > 0, `${tag}: cache lookup/publish stages`);
+    check(sample.assembly?.status === "assembled" && sameSet((sample.assembly.documents ?? []).map((d) => d.discipline), expected.documents), `${tag}: federation assembly ${JSON.stringify(sample.assembly)}`);
+    check(sample.stages?.stages?.assembleFederation > 0 && sample.stages?.stages?.readSceneIr === 0 && sample.stages?.structureReadMilliseconds === 0, `${tag}: an assembled sample must spend nothing reading the Scene IR`);
     checkLedgers("transport", sample, index);
   }
   for (const [index, sample] of cleanSamples.entries()) {
@@ -190,6 +205,7 @@ for (const [modelId, expected] of Object.entries(models)) {
     check(sample.cache?.status === "disabled", `${tag}: package cache ${sample.cache?.status}`);
     check(sample.documentArtifactCache?.status === "disabled" && (sample.documentArtifactCache?.hits ?? []).length === 0 && (sample.documentArtifactCache?.misses ?? []).length === 0, `${tag}: document artifact cache ${JSON.stringify(sample.documentArtifactCache)}`);
     check(sample.stages?.stages?.cacheLookup === 0 && sample.stages?.stages?.cachePublish === 0, `${tag}: a clean sample must spend nothing on cache lookup/publish`);
+    check(sample.assembly === null && sample.stages?.stages?.assembleFederation === 0 && sample.stages?.stages?.readSceneIr > 0, `${tag}: a clean sample must read the adapter's Scene IR, not assemble`);
     checkLedgers("clean", sample, index);
   }
   for (const [arm, closures] of [["closure", record.closure], ["cleanClosure", record.cleanClosure]]) {
@@ -209,8 +225,8 @@ for (const [modelId, expected] of Object.entries(models)) {
     for (const name of compilerStageNames) checkDistribution(`${tag}.compilerStages.${name}`, distributions.compilerStages?.[name], set.map((s) => s.stages.stages[name]));
     for (const name of compileStageNames) checkDistribution(`${tag}.compileStages.${name}`, distributions.compileStages?.[name], set.map((s) => s.stages.compileStages[name]));
     for (const key of adapterProcessKeys) checkDistribution(`${tag}.adapterProcess.${key}`, distributions.adapterProcess?.[key], set.map((s) => s.stages.adapter[key]));
-    for (const key of federationKeys) checkDistribution(`${tag}.adapterFederation.${key}`, distributions.adapterFederation?.[key], set.map((s) => s.stages.adapter.ledger.federation[key]));
-    for (const key of writeKeys) checkDistribution(`${tag}.adapterWrite.${key}`, distributions.adapterWrite?.[key], set.map((s) => s.stages.adapter.ledger.write[key]));
+    for (const key of adapterLedgerKeys[arm].federation) checkDistribution(`${tag}.adapterFederation.${key}`, distributions.adapterFederation?.[key], set.map((s) => s.stages.adapter.ledger.federation[key]));
+    for (const key of adapterLedgerKeys[arm].write) checkDistribution(`${tag}.adapterWrite.${key}`, distributions.adapterWrite?.[key], set.map((s) => s.stages.adapter.ledger.write[key]));
     for (const discipline of expected.documents) {
       const first = ledgerDocument(set[0], discipline);
       check(distributions.adapterDocuments?.[discipline]?.outcome === first.outcome, `${tag}.adapterDocuments.${discipline}: outcome`);
@@ -296,7 +312,7 @@ for (const [modelId, expected] of Object.entries(models)) {
     const memoryVerdict = record.distributions.whole.peakWorkingSetBytes.median <= record.cleanDistributions.whole.peakWorkingSetBytes.median;
     check(gate4.peakMemoryNoHigher === memoryVerdict, `${label}: gate 4 memory verdict does not follow from the distributions`);
     check(gate4.met === (gate4.fasterByMoreThanThreeSpreads && gate4.peakMemoryNoHigher), `${label}: gate 4 verdict does not follow from its two conditions`);
-    check(gate4.slice === "3a", `${label}: gate 4 slice ${gate4.slice}`);
+    check(gate4.slice === "3b", `${label}: gate 4 slice ${gate4.slice}`);
   } else {
     failures.push(`${label}: gate 4 block or distributions missing`);
   }

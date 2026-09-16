@@ -183,3 +183,158 @@ def test_stage_timing_ledger_is_separate_and_leaves_the_output_bytes_unchanged(
         "digestMilliseconds",
         "reportMilliseconds",
     }
+
+
+def run_manifest(
+    manifest_path: Path,
+    documents: list[tuple[str, Path]],
+    cache_directory: Path | None,
+    stage_timing: Path | None = None,
+) -> subprocess.CompletedProcess[str]:
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    command = [sys.executable, str(ADAPTER)]
+    for discipline, path in documents:
+        command.extend(["--document", f"{discipline}={path}"])
+        command.extend(["--uri-hint", f"{discipline}=models/{discipline}.ifc"])
+    command.extend(
+        ["--federation-manifest", str(manifest_path), "--threads", "1"],
+    )
+    if cache_directory is not None:
+        command.extend(["--document-cache", str(cache_directory)])
+    if stage_timing is not None:
+        command.extend(["--stage-timing", str(stage_timing)])
+    return subprocess.run(command, capture_output=True, text=True)
+
+
+def read_manifest(
+    manifest_path: Path,
+    documents: list[tuple[str, Path]],
+    cache_directory: Path | None,
+    stage_timing: Path | None = None,
+) -> dict[str, object]:
+    completed = run_manifest(manifest_path, documents, cache_directory, stage_timing)
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(manifest_path.read_text("utf-8"))
+
+
+def test_federation_manifest_names_the_same_artifacts_the_monolithic_path_publishes(
+    tmp_path: Path,
+) -> None:
+    source = FIXTURE.read_bytes()
+    architecture = tmp_path / "architecture.ifc"
+    architecture.write_bytes(source)
+    structure = tmp_path / "structure.ifc"
+    structure.write_bytes(source)
+    # The manifest publishes the order a consumer must merge in, so the
+    # documents are handed over in the reverse of that order on purpose.
+    documents = [("structure", structure), ("architecture", architecture)]
+
+    manifest_cache = tmp_path / "manifest-cache"
+    cold = read_manifest(tmp_path / "cold.json", documents, manifest_cache)
+    warm = read_manifest(tmp_path / "warm.json", documents, manifest_cache)
+
+    assert cold["schemaVersion"] == "naru.ifc-federation-manifest.1"
+    assert cold["artifactSchemaVersion"] == "naru.ifc-document-artifact.4"
+    assert cold["federation"]["documentOrder"] == ["architecture", "structure"]
+    assert [entry["discipline"] for entry in cold["documents"]] == [
+        "architecture",
+        "structure",
+    ]
+    assert cold["documentArtifactCache"] == {
+        "schemaVersion": "naru.ifc-document-artifact.4",
+        "status": "enabled",
+        "hits": [],
+        "misses": ["architecture", "structure"],
+    }
+    assert warm["documentArtifactCache"]["hits"] == ["architecture", "structure"]
+    assert warm["documentArtifactCache"]["misses"] == []
+
+    for entry, expected in zip(cold["documents"], warm["documents"], strict=True):
+        assert set(entry) == {
+            "discipline",
+            "uriHint",
+            "sourceDigest",
+            "byteLength",
+            "keyInput",
+            "artifactKey",
+            "artifactPayloadSha256",
+            "outcome",
+        }
+        assert entry["byteLength"] == len(source)
+        assert entry["uriHint"] == f"models/{entry['discipline']}.ifc"
+        assert entry["keyInput"]["sourceDigest"] == entry["sourceDigest"]
+        assert entry["outcome"] == "extracted"
+        assert expected["outcome"] == "restored"
+        # Naming a hit from the stored header and naming a miss from the header
+        # just written have to agree, or a consumer could not trust either.
+        assert expected["artifactKey"] == entry["artifactKey"]
+        assert expected["artifactPayloadSha256"] == entry["artifactPayloadSha256"]
+        assert expected["keyInput"] == entry["keyInput"]
+
+    # Artifacts the monolithic path published are named by the manifest path,
+    # which is what lets a consumer hydrate a federation the adapter extracted.
+    shared_cache = tmp_path / "shared-cache"
+    report = run_adapter(tmp_path / "monolithic", architecture, structure, shared_cache)
+    shared = read_manifest(tmp_path / "shared.json", documents, shared_cache)
+    assert shared["documentArtifactCache"]["hits"] == ["architecture", "structure"]
+    assert [entry["artifactKey"] for entry in shared["documents"]] == [
+        entry["artifactKey"] for entry in cold["documents"]
+    ]
+    assert [entry["artifactPayloadSha256"] for entry in shared["documents"]] == [
+        entry["artifactPayloadSha256"] for entry in cold["documents"]
+    ]
+    assert shared["federation"] == {
+        "sourceDigest": report["federation"]["sourceDigest"],
+        "documentOrder": report["federation"]["documentOrder"],
+        "options": report["federation"]["options"],
+    }
+    # The report describes the adapter; the manifest has to identify it, because
+    # the consumer that hydrates an artifact verifies the identity that wrote it.
+    identity = subprocess.run(
+        [sys.executable, str(ADAPTER), "--identity"],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert shared["adapter"] == json.loads(identity.stdout)
+
+
+def test_federation_manifest_requires_a_document_cache(tmp_path: Path) -> None:
+    architecture = tmp_path / "architecture.ifc"
+    architecture.write_bytes(FIXTURE.read_bytes())
+    manifest = tmp_path / "manifest.json"
+
+    completed = run_manifest(manifest, [("architecture", architecture)], None)
+
+    assert completed.returncode != 0
+    assert "--federation-manifest requires --document-cache." in completed.stderr
+    assert not manifest.exists()
+
+
+def test_federation_manifest_stage_timing_reports_only_the_manifest_write(
+    tmp_path: Path,
+) -> None:
+    source = FIXTURE.read_bytes()
+    architecture = tmp_path / "architecture.ifc"
+    architecture.write_bytes(source)
+    structure = tmp_path / "structure.ifc"
+    structure.write_bytes(source)
+    documents = [("architecture", architecture), ("structure", structure)]
+    cache = tmp_path / "cache"
+    timing_path = tmp_path / "timing.json"
+
+    read_manifest(tmp_path / "manifest.json", documents, cache, timing_path)
+    ledger = json.loads(timing_path.read_text("utf-8"))
+
+    assert ledger["schemaVersion"] == "naru.ifc-adapter-stage-timing.1"
+    assert [entry["discipline"] for entry in ledger["documents"]] == [
+        "architecture",
+        "structure",
+    ]
+    for entry in ledger["documents"]:
+        assert entry["outcome"] == "extracted"
+    # Manifest assembly performs no merge and writes no Scene IR, so the only
+    # write it can report is the manifest itself.
+    assert ledger["federation"] == {}
+    assert set(ledger["write"]) == {"manifestMilliseconds"}
+    assert ledger["write"]["manifestMilliseconds"] >= 0

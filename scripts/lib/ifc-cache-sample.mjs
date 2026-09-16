@@ -136,6 +136,7 @@ async function compileSample() {
       ...(config.relocateHierarchyNodes ? { relocateHierarchyNodes: true } : {}),
       ...(config.pythonExecutable ? { pythonExecutable: config.pythonExecutable } : {}),
       ...(stageTiming ? { stageTiming: true } : {}),
+      ...(config.assembleFederation ? { assembleFederation: true } : {}),
     });
   } catch (error) {
     failure = {
@@ -161,6 +162,9 @@ async function compileSample() {
           // The adapter keeps its own per-document artifact cache, so a run
           // records which documents it inspected and which it restored.
           documentArtifactCache: result.adapterReport?.documentArtifactCache ?? null,
+          // With `assembleFederation`, the compiler says whether it assembled the
+          // package from those artifacts or fell back to the monolithic adapter.
+          assembly: result.assembly ?? null,
           sources: result.sources.map(({ discipline, uriHint, sha256, byteLength }) => ({
             discipline,
             uriHint,

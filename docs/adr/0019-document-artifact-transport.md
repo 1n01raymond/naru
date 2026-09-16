@@ -1,6 +1,7 @@
 # ADR-0019: Reuse verified per-document Scene IR artifacts across the adapter-compiler transport, retire the compiled payload tier
 
-Status: Proposed
+Status: Accepted
+Accepted: 2026-09-16
 
 ## Context
 
@@ -185,7 +186,15 @@ measured against gate 0 before the next begins:
    its three `u32` index tables as raw regions, and the federation pass is a
    remap over pre-encoded byte strings. That is the prerequisite for assembling
    the merge in TypeScript, for the reason recorded under *Implementation
-   notes* below. The manifest and the in-compiler merge are slice 3b.
+   notes* below. **Slice 3b landed 2026-09-16** behind
+   `--assemble-federation` (`assembleFederation: true`, needs `--cache`): the
+   adapter's `--federation-manifest` mode writes a
+   `naru.ifc-federation-manifest.1` manifest instead of the split Scene IR,
+   and the compiler assembles the federation from the verified artifacts in
+   process, falling back to one monolithic adapter run on any mismatch
+   ([module](../../packages/compiler/src/ifc-federation-assembly.ts),
+   [tests](../../packages/compiler/test/ifc-federation-assembly.test.ts),
+   [byte identity against the adapter](../../packages/compiler/test/ifc-federation.test.ts)).
 
 `--payload-cache` **is removed.** Its ceiling is the encoder's share, so no
 tuning can pass gate 4; a flag that can never be recommended is an option
@@ -330,7 +339,15 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   value encoding into the per-document pass moved no package byte either; on
   both models ten of the eleven package files are byte-identical across the
   five interleaved pairs and `adapter-report.json` is identical outside the
-  same excluded key.
+  same excluded key. **Slice 3b: met 2026-09-16** -- both digests reproduced
+  a fourth time (`c4b151e5...`, `05707534...`) with the transport arm's
+  package now assembled by the compiler from the artifacts and the clean
+  arm's by the adapter, so the compiler-side merge and canonical
+  serialization reproduce the adapter's bytes at full scale (Digital Hub
+  28,668,218 structure bytes re-serialized across four artifacts); on both
+  models ten of the eleven package files are byte-identical across
+  the five pairs and `adapter-report.json` is identical outside the same
+  excluded key.
 - **Gate 2, exact decisions:** the adapter report names every document's
   restore or extraction and its reason; a corrupt artifact warns and
   re-extracts; a wrong key never restores. **Slice 1: met 2026-09-03** -- the
@@ -347,6 +364,11 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   against `structure` absent, identical across all five samples on both
   models, and the `.3` files are refused by their schema line and republished
   at the same path (both warm-ups zero hits, four and seven misses).
+  **Slice 3b: met 2026-09-16** -- the same decisions from the adapter in
+  manifest mode, and the compiler's own verdict pinned beside them: every
+  transport sample's `assembly` is `assembled` naming all four (Digital Hub)
+  or seven (sixty5) documents, every clean sample's is `null`, and no sample
+  fell back to a monolithic run.
 - **Gate 3, restore cost:** the verification stage of an unchanged document,
   measured in the gate 0 decomposition, is bounded by one read and one hash
   of its stored bytes -- no stage re-serializes, re-parses for verification,
@@ -363,6 +385,11 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   fell again from 167.3 ms, sixty5's rose from 3,161.0 ms while its load fell
   from 1,108.5 to 788.5 ms and its verification from 329.0 to 229.5 ms. The
   record reports both directions and states which four numbers are measured.
+  **Slice 3b: met 2026-09-16** -- Digital Hub 1.417x, sixty5 1.289x; the
+  adapter's verification is the same code in manifest mode, so the columns
+  did not move (Digital Hub load 117.2, verify 25.3, parse 134.8 ms; sixty5
+  787.7, 231.0, 2,639.2 ms). The compiler's second verification of
+  the same files is inside `assembleFederation`, reported under gate 4.
 - **Gate 4, the same rule as ADR-0018:** after each slice, the whole-process
   median of a changed-discipline rebuild is lower than the clean rebuild
   median on Digital Hub and on sixty5, by more than three times the clean
@@ -389,8 +416,16 @@ rejects this ADR the way it rejected ADR-0018; no gate may be loosened to pass.
   53,754.4 ms (saving 43,452.0 ms, three clean spreads 4,434.3 ms; peak
   working set 0.44 GB against 1.85 GB); sixty5 61,672.4 ms against
   316,082.6 ms (saving 254,410.2 ms, three spreads 17,402.1 ms; peak 2.96 GB
-  against 4.63 GB). Slice 3b is the only slice left, and the record that
-  closes it decides this ADR.
+  against 4.63 GB). **Slice 3b: met 2026-09-16** -- Digital Hub 9,268.1 ms
+  against 51,334.8 ms (saving 42,066.7 ms, three clean spreads 13,192.5 ms;
+  peak working set 0.43 GB against 1.84 GB); sixty5 54,056.5 ms against 312,209.0 ms
+  (saving 258,152.5 ms, three spreads 42,564.6 ms; peak 3.26 GB against
+  4.62 GB). In the transport arm the adapter's federation merge, property
+  index, and Scene IR writes and the compiler's `readSceneIr` are gone, and
+  `assembleFederation` stands in their place (Digital Hub 1,817.7 ms against
+  a 1,919.4 ms structure scan in the clean arm; sixty5 25,990.8 against
+  25,424.6 ms). This is the record that closes slice 3b: this ADR and ADR-0010
+  are Accepted on it, 2026-09-16.
 
 The removal of `--payload-cache` is its own slice and needs no gate beyond
 `pnpm check`: the ADR-0018 record's validator keeps validating the committed
@@ -458,3 +493,43 @@ impossible without it.
   `mergeMilliseconds` and `propertyIndexMilliseconds`; the latter now times
   only the merge, because the encoding it used to include has moved into the
   per-document stages.
+
+### Implementation notes (2026-09-16, in-compiler federation assembly slice)
+
+Slice 3b is the compiler-side half of decision 3, landed in three commits
+(adapter manifest mode, the assembly module, the wiring and this record).
+
+- **The adapter still owns every artifact.** In manifest mode
+  (`--federation-manifest`, requires `--document-cache`) it inspects each
+  document exactly as before -- a verified artifact is restored, anything
+  else is extracted and published -- and then writes the manifest instead of
+  merging. A stored file the adapter refuses is therefore healed before the
+  compiler reads it, so the compiler's own checks (header, key, key input,
+  payload length, payload SHA-256 against the manifest) guard the transport,
+  not the disk.
+- **The compiler reproduces the adapter's bytes, not just its scene.** The
+  structure region is parsed once with a reviver that records which integral
+  numbers were written as Python floats; the scene the compiler builds keeps
+  that side table, sorts its keys by code point in place, and is
+  re-serialized through a port of Python's canonical JSON (`formatPythonFloat`
+  and `serializeCanonicalJson`, differentially fuzzed against a Python
+  interpreter when one is present) straight into a SHA-256, so the structure
+  digest matches without a structure file ever being written. Geometry and
+  property regions are attached as typed views and copied through; property
+  values are never re-encoded, which is what slice 3a bought.
+- **Any mismatch is one monolithic run.** An absent or corrupt artifact, a
+  key or digest that disagrees with the manifest, or a structure whose
+  canonical bytes the compiler cannot reproduce is a warning and a fallback
+  to the adapter's monolithic path, never an error; the result reports
+  `assembly.status` as `assembled` or `fallback` with the discipline and
+  reason. The wiring test exercises the fallback by loosening one artifact's
+  structure JSON by a single space and re-digesting it: the adapter accepts it
+  (its header, digest, and JSON are intact), the compiler cannot reproduce
+  it, and the package is still byte-identical.
+- **The option is not a cache-key input.** Assembled and monolithic compiles
+  produce the same package, proven per file on the explicit-wall fixture and
+  per model in the rebuild record, so `assembleFederation` neither changes
+  the key nor appears in the job identity. The stage ledger is bumped to
+  `naru.ifc-federation-stage-timing.2` with an `assembleFederation` stage;
+  in manifest mode the adapter ledger's `federation` block is empty and its
+  `write` block carries only `manifestMilliseconds`.

@@ -115,6 +115,13 @@ async function compileIfc(argumentList: readonly string[]): Promise<void> {
         `[naru] staged preview: ${result.stagedPreview.stagedCount}/${result.stagedPreview.totalCount} documents`,
       );
     }
+    if (result.assembly) {
+      terminal.report(
+        result.assembly.status === "assembled"
+          ? `[naru] federation assembly: assembled from ${result.assembly.documents.length} document artifacts`
+          : `[naru] federation assembly: fell back at ${result.assembly.discipline} (${result.assembly.reason})`,
+      );
+    }
     terminal.report(`[naru] output: ${result.outputDirectory}`);
   } finally {
     terminal.dispose();

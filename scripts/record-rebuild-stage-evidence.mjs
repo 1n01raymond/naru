@@ -1,8 +1,9 @@
 /**
  * Records the ADR-0019 gate evidence for one IFC federation: fresh-process
  * changed-discipline rebuilds through the document-artifact transport (one
- * document edited, every other document's artifact warm), each paired with a
- * clean rebuild of the same changed federation with no cache directory at all,
+ * document edited, every other document's artifact warm, the package assembled
+ * in the compiler from the document artifacts), each paired with a clean
+ * rebuild of the same changed federation with no cache directory at all,
  * both decomposed into adapter and compiler stages under the predeclared-sample
  * protocol of artifacts/cache/sixty5.
  *
@@ -207,7 +208,10 @@ async function writeConfig(name, documentSet, withCache) {
     uriHint: document.uriHint,
   }));
   const config = {
-    ...(withCache ? { cacheDirectory: portable(cacheDirectory) } : {}),
+    // The transport arm assembles the package in the compiler from the
+    // document artifacts (ADR-0019 slice 3b); the clean arm has nothing to
+    // assemble from.
+    ...(withCache ? { cacheDirectory: portable(cacheDirectory), assembleFederation: true } : {}),
     threads,
     compactJson: model.compactJson,
     spatialIndex: true,
@@ -315,6 +319,7 @@ function transportSampleFailures(sample, packageDigest) {
   const artifacts = sample.documentArtifactCache ?? {};
   if (!sameSet(artifacts.misses ?? [], [changedDocument.discipline])) failures.push(`document artifact misses ${JSON.stringify(artifacts.misses)}, expected [${changedDocument.discipline}]`);
   if (!sameSet(artifacts.hits ?? [], unchangedDisciplines)) failures.push(`document artifact hits ${JSON.stringify(artifacts.hits)}, expected the unchanged documents`);
+  if (sample.assembly?.status !== "assembled") failures.push(`federation assembly ${JSON.stringify(sample.assembly)}, expected assembled in the compiler`);
   if (sample.warnings.length > 0) failures.push(`warnings: ${sample.warnings.join(" | ")}`);
   if (!sample.stages) failures.push("the result carries no stage ledger");
   if (packageDigest && sample.report.output.packageDigest !== packageDigest) failures.push(`packageDigest ${sample.report.output.packageDigest} != ${packageDigest}`);
@@ -329,6 +334,7 @@ function cleanSampleFailures(sample, cleanPackageDigest) {
   if (sample.cache?.status !== "disabled") failures.push(`package cache status ${sample.cache?.status}, expected disabled`);
   const artifacts = sample.documentArtifactCache ?? {};
   if (artifacts.status !== "disabled" || (artifacts.hits ?? []).length > 0 || (artifacts.misses ?? []).length > 0) failures.push(`document artifact cache ${JSON.stringify(artifacts)}, expected disabled with no decisions`);
+  if (sample.assembly) failures.push(`federation assembly ${JSON.stringify(sample.assembly)}, expected none without a cache directory`);
   if (sample.warnings.length > 0) failures.push(`warnings: ${sample.warnings.join(" | ")}`);
   if (!sample.stages) failures.push("the result carries no stage ledger");
   if (cleanPackageDigest && sample.report.output.packageDigest !== cleanPackageDigest) failures.push(`packageDigest ${sample.report.output.packageDigest} != ${cleanPackageDigest}`);
@@ -431,9 +437,11 @@ function closure(sample, arm) {
       ? {
           changedDocumentExtracted: ledgerDocument(sample, changedDocument.discipline)?.outcome === "extracted" && ledgerDocument(sample, changedDocument.discipline)?.artifactState === "absent",
           unchangedDocumentsRestoredVerified: unchangedDisciplines.every((d) => ledgerDocument(sample, d)?.outcome === "restored" && ledgerDocument(sample, d)?.artifactState === "verified"),
+          federationAssembledInCompiler: stages.stages.assembleFederation > 0 && stages.stages.readSceneIr === 0 && stages.structureReadMilliseconds === 0,
         }
       : {
           everyDocumentExtractedWithoutArtifacts: ledgerDocuments.every((d) => d.outcome === "extracted" && d.artifactState === undefined),
+          noFederationAssembly: stages.stages.assembleFederation === 0,
         }),
   };
   return { ...checks, met: Object.values(checks).every(Boolean) };
@@ -601,7 +609,7 @@ const cleanSpread = round(cleanProcess.maximum - cleanProcess.minimum);
 const saving = round(cleanProcess.median - transportProcess.median);
 const gate4 = {
   rule: "The whole-process median of the transport rebuild is lower than the clean rebuild median by more than three times the clean samples' spread (maximum minus minimum), and the transport median peak process-tree working set is no higher than the clean median. Both arms are fresh processes recorded in this session, interleaved per index.",
-  slice: "3a",
+  slice: "3b",
   transport: {
     processMedianMilliseconds: transportProcess.median,
     processMinimumMilliseconds: transportProcess.minimum,
@@ -625,11 +633,11 @@ gate4.met = gate4.fasterByMoreThanThreeSpreads && gate4.peakMemoryNoHigher;
 
 const protocol = {
   processIsolation: "Every sample and the warm-up is one fresh `node scripts/lib/ifc-cache-sample.mjs` process; the adapter is a fresh Python process inside it.",
-  cacheState: "Warm-up extracts the ORIGINAL federation once (adapter only) so every document artifact is warm. Before each transport sample the package cache entries and the changed document's artifact are deleted; the unchanged documents' artifacts stay. Each transport sample therefore restores every unchanged document and re-extracts the changed one, and its package cache lookup is a miss. Each clean sample compiles the same changed federation with no cache directory: nothing is looked up, restored, or published.",
+  cacheState: "Warm-up extracts the ORIGINAL federation once (adapter only) so every document artifact is warm. Before each transport sample the package cache entries and the changed document's artifact are deleted; the unchanged documents' artifacts stay. Each transport sample therefore runs the adapter in manifest mode: it restores every unchanged document, re-extracts the changed one, and writes a federation manifest instead of the Scene IR; the compiler then assembles the package from the document artifacts (`assembleFederation: true`), and its package cache lookup is a miss. Each clean sample compiles the same changed federation with no cache directory: nothing is looked up, restored, or published.",
   ordering: "Per index: reset, transport sample, then clean sample, so host drift over the session lands on both arms alike.",
   change: `${changedDocument.discipline}: ${JSON.stringify(model.edit.entity)} -> ${JSON.stringify(model.edit.replacement)}`,
   timing: "Adapter stages come from `--stage-timing` (a separate ledger file, never the report); compiler stages from `stageTiming: true` on compileIfcFederation. Neither touches a package byte: every transport sample's packageDigest must equal the first transport sample's, and every clean sample's the first clean sample's.",
-  sampleValidity: "A transport sample counts only when the process exits 0, the package cache misses, the document artifact hits are exactly the unchanged documents and the miss is exactly the changed one, no warning is emitted, the stage ledger is present, and the package digest equals the first transport sample's. A clean sample counts only when the process exits 0, the package cache and the document artifact cache are disabled, no warning is emitted, the stage ledger is present, and the package digest equals the first clean sample's. Up to 3 attempts per index and arm; every discarded attempt is recorded. Byte identity across the arms is gate 1's verdict, never a validity rule.",
+  sampleValidity: "A transport sample counts only when the process exits 0, the package cache misses, the document artifact hits are exactly the unchanged documents and the miss is exactly the changed one, the compiler assembled the federation from the artifacts (no monolithic fallback), no warning is emitted, the stage ledger is present, and the package digest equals the first transport sample's. A clean sample counts only when the process exits 0, the package cache and the document artifact cache are disabled, no federation assembly took place, no warning is emitted, the stage ledger is present, and the package digest equals the first clean sample's. Up to 3 attempts per index and arm; every discarded attempt is recorded. Byte identity across the arms is gate 1's verdict, never a validity rule.",
   statistics: "median; p95 nearest-rank; minimum; maximum over the accepted samples of each arm",
   peakMemory: processTreeSampleMethod,
   uncontrolled: "Other processes on the host, disk cache state between samples, and CPU frequency scaling.",
@@ -646,13 +654,14 @@ const sampleRecord = (s) => ({
   packageDigest: s.report.output.packageDigest,
   cache: s.cache,
   documentArtifactCache: s.documentArtifactCache,
+  assembly: s.assembly,
   warnings: s.warnings,
   outputFiles: s.outputFiles,
   stages: s.stages,
 });
 
 const evidence = {
-  schemaVersion: "naru.rebuild-stage-evidence.2",
+  schemaVersion: "naru.rebuild-stage-evidence.3",
   mode: "fresh-process-changed-discipline-transport-vs-clean-rebuild",
   recordedAt: new Date().toISOString(),
   model: modelId,
@@ -683,6 +692,7 @@ const evidence = {
     spatialIndex: true,
     relocateHierarchyNodes: true,
     cacheDirectory: portable(cacheDirectory),
+    assembleFederation: true,
     cleanArmCacheDirectory: null,
     pythonExecutable: isAbsolute(ifcPython) && !relative(repositoryRoot, ifcPython).startsWith("..") ? portable(ifcPython) : basename(ifcPython),
   },

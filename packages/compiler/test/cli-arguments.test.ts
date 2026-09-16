@@ -156,8 +156,32 @@ describe("naru compile-ifc arguments", () => {
       relocateHierarchyNodes: true,
       retainSceneIr: true,
       stagedPreviewDirectory: "staged",
+      assembleFederation: false,
       jsonEvents: false,
     });
+  });
+
+  it("accepts --assemble-federation only beside --cache", () => {
+    const parsed = parseIfcCompileArguments([
+      "--document",
+      "architecture=arch.ifc",
+      "--output",
+      "out",
+      "--cache",
+      "cache",
+      "--assemble-federation",
+    ]);
+    expect(parsed.cacheDirectory).toBe("cache");
+    expect(parsed.assembleFederation).toBe(true);
+    expect(() =>
+      parseIfcCompileArguments([
+        "--document",
+        "architecture=arch.ifc",
+        "--output",
+        "out",
+        "--assemble-federation",
+      ]),
+    ).toThrow(/--assemble-federation requires --cache/u);
   });
 
   it("leaves every document-shrinking option off unless asked for", () => {

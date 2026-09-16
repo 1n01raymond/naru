@@ -130,8 +130,9 @@ the flag, `compiled-payload-store.ts`, `compiled-payload-cache.ts`, the
 recorder are gone. The record stays committed and validated.
 
 `compileIfcFederation(..., { stageTiming: true })` returns a
-`naru.ifc-federation-stage-timing.1` ledger beside the result -- the thirteen
-compiler stages from source inspection to cache publication, the compile
+`naru.ifc-federation-stage-timing.2` ledger beside the result -- the fourteen
+compiler stages from source inspection to cache publication (federation
+assembly among them), the compile
 sub-stages (`validateScene`, `encodeGeometry`, `measureDocument`), the
 structure stream read, and the adapter process parts with the adapter's own
 `--stage-timing` ledger. `compileSceneToGltf` takes the stage observer as a
@@ -186,6 +187,25 @@ report, and deletes Scene IR unless `--retain-scene-ir` is requested. When a
 cache is selected, retained intermediates are included only when that option is
 part of the key. The qualified four-discipline result is under
 `artifacts/ifc/digital-hub/`.
+
+`--assemble-federation` (`assembleFederation: true`; needs `--cache`) is
+[ADR-0019](../../docs/adr/0019-document-artifact-transport.md) slice 3b: on a
+whole-package miss the adapter runs in manifest mode, restoring or extracting
+each document's `naru.ifc-document-artifact.4` entry and writing a
+`naru.ifc-federation-manifest.1` manifest instead of the monolithic split Scene
+IR, and the compiler assembles the federation from the verified artifacts in
+process (`ifc-federation-assembly.ts`): header, key, length, and payload digest
+checked against the manifest, the structure parsed once with its geometry and
+property regions attached as typed views, then the same merge the adapter
+performs. Any mismatch -- a missing or corrupt artifact, a structure whose
+canonical bytes the compiler cannot reproduce -- is a warning and one
+monolithic adapter run, never an error. The option is not part of the cache
+key because the package is the same either way: the
+[test](test/ifc-federation.test.ts) compiles the explicit-wall fixture both
+ways and compares every file, and the
+[rebuild-stages record](../../artifacts/cache/rebuild-stages/README.md)
+does the same on Digital Hub and sixty5. The result's `assembly` field says
+which path a compile took.
 
 For very large federations, `--omit-resource-names` removes only the optional
 glTF `name` fields on meshes, buffer views, and accessors. Scene, node, and
