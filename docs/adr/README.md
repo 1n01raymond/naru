@@ -39,6 +39,7 @@ reverse. They explain context and trade-offs rather than only the final choice.
 | [0023](0023-public-package-delivery-origin.md) | Serve public demo packages from a Cloudflare R2 delivery origin | Accepted |
 | [0024](0024-persistent-package-cache.md) | Keep verified package resources in a quota-bounded browser cache tier | Proposed |
 | [0025](0025-shape-preserving-lod-representation.md) | Shape-preserving LOD as a declared-error representation | Accepted |
+| [0026](0026-scene-session-boundary.md) | Own the streamed-scene lifecycle in an experimental runtime session | Proposed |
 
 ## Phase 0 review
 
