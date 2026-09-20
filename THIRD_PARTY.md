@@ -12,11 +12,11 @@ browser runtime bundle by themselves.
 | Dependency | Version | License | Purpose |
 |---|---:|---|---|
 | TypeScript | 6.0.3 | Apache-2.0 | strict package compilation |
-| Vite | 8.2.2 | MIT | WebGPU spike development and production build |
+| Vite | 8.3.0 | MIT | WebGPU spike development and production build |
 | Vitest | 4.1.11 | MIT | unit tests |
-| ESLint / `@eslint/js` | 10.9.0 / 10.0.1 | MIT | static analysis |
-| `typescript-eslint` | 8.67.0 | MIT | TypeScript lint integration |
-| `@webgpu/types` | 0.1.72 | BSD-3-Clause | WebGPU API declarations |
+| ESLint / `@eslint/js` | 10.11.0 / 10.0.1 | MIT | static analysis |
+| `typescript-eslint` | 8.70.0 | MIT | TypeScript lint integration |
+| `@webgpu/types` | 0.1.74 | BSD-3-Clause | WebGPU API declarations |
 | Khronos `gltf-validator` | 2.0.0-dev.3.10 | Apache-2.0 | official glTF 2.0 schema and binary validation for compiler evidence |
 
 Versions are pinned in `package.json` and `pnpm-lock.yaml`. Updates must pass

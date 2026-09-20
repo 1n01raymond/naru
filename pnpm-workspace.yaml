@@ -4,7 +4,7 @@ packages:
   - tools/*
 
 catalog:
-  '@webgpu/types': 0.1.72
+  '@webgpu/types': 0.1.74
   typescript: 6.0.3
-  vite: 8.2.2
+  vite: 8.3.0
   vitest: 4.1.11
